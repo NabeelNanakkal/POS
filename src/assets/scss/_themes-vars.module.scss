@@ -1,0 +1,410 @@
+// paper & background
+$paper: #ffffff;
+
+$theme: #1a677a;
+$paperGrey :#f2effd;
+$tableHead :#182e4864;
+$lightTheme: #cbbcff;
+$darkTheme: #113e4a;
+
+
+// primary
+$primaryLight: #e6efff;
+$primaryMain: #2d5fa6;
+$primaryDark: #27579b;
+$primary200: #598cd2;
+$primary800: #1c3250;
+
+// secondary
+$secondaryLight: #e6efff;
+$secondaryMain: #2d5fa6;
+$secondaryDark: #26579b;
+$secondary200: #598cd2;
+$secondary800: #1c3250;
+
+
+// success Colors
+$successLight: #b9f6ca;
+$success200: #69f0ae;
+$successMain: #00e676;
+$successDark: #00c853;
+$success400: #06a046;
+
+
+// error
+$errorLight: #ef9a9a;
+$errorMain: #f44336;
+$errorDark: #c62828;
+
+// orange
+$orangeLight: #fbe9e7;
+$orangeMain: #ffab91;
+$orangeDark: #d84315;
+
+// warning
+$warningLight: #fff8e1;
+$warningMain: #ffe57f;
+$warningDark: #ffc107;
+
+// grey
+$grey50: #f8fafc;
+$grey75: #f2f6fa;
+$grey100: #eef2f6;
+$grey200: #e3e8ef;
+$grey300: #cdd5df;
+$grey500: #697586;
+$grey600: #4b5565;
+$grey700: #364152;
+$grey900: #121926;
+
+// ==============================|| DARK THEME VARIANTS ||============================== //
+
+// paper & background
+$darkBackground: #1a223f; // level 3
+$darkPaper: #111936; // level 4
+
+// dark 800 & 900
+$darkLevel1: #385eeb; // level 1
+$darkLevel2: #212946; // level 2
+
+// primary dark
+$darkPrimaryLight: #e3f2fd;
+$darkPrimaryMain: #2196f3;
+$darkPrimaryDark: #1e88e5;
+$darkPrimary200: #90caf9;
+$darkPrimary800: #1565c0;
+
+// secondary dark
+$darkSecondaryLight: #d1c4e9;
+$darkSecondaryMain: #7c4dff;
+$darkSecondaryDark: #651fff;
+$darkSecondary200: #b39ddb;
+$darkSecondary800: #6200ea;
+
+// text variants
+$darkTextTitle: #d7dcec;
+$darkTextPrimary: #bdc8f0;
+$darkTextSecondary: #8492c4;
+
+$statusActive: #00ff6e90;
+$statusInActive: #afafa568;
+$statusOutOfBound: #f66c6c8e;
+
+
+
+
+//status TEXT color
+$statusTextCreate: #1193f4;
+$statusTextComplete: #0f8741;
+$statsTextReOpen: #7136ad;
+
+$statusTextInprogress: #c89700;
+$statusTextComplete: #0f8741;
+$statusTextCompleted: #0f8741;
+$statusTextCompletedOne: #ecf6f0;
+$statsTextPending: #c79600;
+$statsTextGateIn: #1193f4;
+$statusTextReject: #aa0000;
+$statusTextRejectOne: #fbebeb;
+$statusTextSubmitted: #790c66;
+$statusTextSubmittedOne: #f1e6ef;
+$statusTextNew: #1193f4;
+$statusTextNewone: #ecf7ff;
+$statusTextOptioncreation: #ecf7ff;
+$statusTextOptioncreationOne: #1193f4;
+$statusTextExpired: #7b7b7b;
+$statusTextApproved: #0f8741;
+$statusTextApprovedone: #ecf6f0;
+$statusTextActive: #0f8741;
+$statusTextOpen: #1193f4;
+$statusTextClosed: #e74c3c;
+$statusTextSend: #0f8741;
+$statusTextVerified: #0f8741;
+$statsTextVendorSelection: #7136ad;
+$statsTextVendorSelectionOne: #f0eaf7;
+$statsTextQuoteCreation: #002179;
+$statsTextQuoteCreationOne: #e5e8f1;
+$statsTextRFPcreation: #0c66cc;
+$statsTextRFPcreationOne: #e6effa;
+$statsTextYetToBeAuthorize: #c89700;
+$statsTextAuthorized: #6e5204;
+$statsTextAuthorizedOne: #f0ede5;
+$statsTextHold: #7b7b7b;
+$statsTextVerification: #1193f4;
+$statsTextVerificationOne: #e7f4fe;
+$statsTextBooking: #0c66cc;
+$statsTextBookingOne: #e6effa;
+$statsTextExecution: #c89700;
+$statsTextExecutionOne: #f9f4e5;
+$statsTextDeliveryPending: #c89700;
+$statusTextArrived: #0c66cc;
+$statusTextArrivedOne: #e6effa;
+$statusTextInvoicing: #1193f4;
+$statusTextBlocked: #ec6f30;
+$statusTextDue: #b61616;
+$statusTextPaid: #0f8741;
+$statusTextCancelled: #868686;
+$statusTextCancelledOne: #f3f3f3;
+$statusTextDraft: #1193f4;
+$statusTextUnPaid: #c89700;
+$statusTextClosed1: #aa0000;
+
+// New Table status colour
+$TableStatusCreate: #ecf7fe;
+$TableStatusInprogress: #f9f4e5;
+$TableStatusComplete: #ecf6f0;
+$TableStatusReOpen: #ede2fad9;
+
+$TableStatusCompleted: #ecf6f0;
+$TableStatusCompletedOne: #0f874117;
+$TableStatsPending: #f9f4e5;
+$TableStatsGateIn: #ecf7fe;
+$TableStatusReject: #fbebeb;
+$TableStatusRejectOne: #aa0000;
+$TableStatusSubmitted: #f1e6ef;
+$TableStatusSubmittedOne: #790c66;
+$TableStatusNew: #ecf7ff;
+$TableStatusNewone: #1193f4;
+$TableStatusOptioncreation: #1193f4;
+$TableStatusOptioncreationOne: #ecf7ff;
+$TableStatusExpired: #f2f2f2;
+$TableStatusApproved: #ecf6f0;
+$TableStatusApprovedNewone: #0f8741;
+$TableStatusActive: #ecf6f0;
+$TableStatusOpen: #ecf7fe;
+$TableStatusClosed: #fbebeb;
+$TableStatusSend: #ecf6f0;
+$TableStatusVerified: #ecf6f0;
+$TableStatusCreated: #dae9ff;
+$TableStatusVendorSelection: #f0eaf7;
+$TableStatusVendorSelectionOne: #7136ad;
+$TableStatusQuoteCreation: #e5e8f1;
+$TableStatusQuoteCreationOne: #002179;
+
+$TableStatusRFPcreation: #e6effa;
+$TableStatusRFPcreationOne: #0c66cc;
+$TableStatusYetToBeAuthorize: #f9f4e5;
+$TableStatusAuthorized: #f0ede5;
+$TableStatusAuthorizedOne: #6e5204;
+$TableStatusHold: #f2f2f2;
+$TableStatusVerification: #e7f4fe;
+$TableStatusVerificationOne: #1193f4;
+$TableStatusBooking: #e6effa;
+$TableStatusBookingOne: #0c66cc;
+$TableStatusExecution: #f9f4e5;
+$TableStatusExecutionOne: #c89700;
+$TableStatusDeliveryPending: #f9f4e5;
+$TableStatusArrived: #e6effa;
+$TableStatusArrivedOne: #0c66cc;
+$TableStatusInvoicing: #f9f4e5;
+$TableStatusBlocked: #fdf0ea;
+$TableStatusDue: #f8e7e7;
+$TableStatusPaid: #e6f3eb;
+$TableStatusCancelled: #f3f3f3;
+$TableStatusCancelledOne: #868686;
+$TableStatusDraft: #e6f4fe;
+$TableStatusUnPaid: #f9f4e5;
+$grayShade1: #f5f5f5;
+$grayShade8: #e6e8ed;
+
+// ==============================|| JAVASCRIPT ||============================== //
+
+:export {
+  // paper & background
+  paper: $paper;
+  theme: $theme;
+  paperGrey: $paperGrey;
+  tableHead: $tableHead;
+  lightTheme: $lightTheme;
+  darkTheme: $darkTheme;
+  greyTheme: #e5deff;
+
+  // primary
+  primaryLight: $primaryLight;
+  primary200: $primary200;
+  primaryMain: $primaryMain;
+  primaryDark: $primaryDark;
+  primary800: $primary800;
+
+  // secondary
+  secondaryLight: $secondaryLight;
+  secondary200: $secondary200;
+  secondaryMain: $secondaryMain;
+  secondaryDark: $secondaryDark;
+  secondary800: $secondary800;
+
+  // success
+  successLight: $successLight;
+  success200: $success200;
+  successMain: $successMain;
+  successDark: $successDark;
+  success400: $success400;
+
+  // error
+  errorLight: $errorLight;
+  errorMain: $errorMain;
+  errorDark: $errorDark;
+
+  // orange
+  orangeLight: $orangeLight;
+  orangeMain: $orangeMain;
+  orangeDark: $orangeDark;
+
+  // warning
+  warningLight: $warningLight;
+  warningMain: $warningMain;
+  warningDark: $warningDark;
+
+  // grey
+  grey50: $grey50;
+  grey75: $grey75;
+  grey100: $grey100;
+  grey200: $grey200;
+  grey300: $grey300;
+  grey500: $grey500;
+  grey600: $grey600;
+  grey700: $grey700;
+  grey900: $grey900;
+
+  // ==============================|| DARK THEME VARIANTS ||============================== //
+
+  // paper & background
+  darkPaper: $darkPaper;
+  darkBackground: $darkBackground;
+
+  // dark 800 & 900
+  darkLevel1: $darkLevel1;
+  darkLevel2: $darkLevel2;
+
+  // text variants
+  darkTextTitle: $darkTextTitle;
+  darkTextPrimary: $darkTextPrimary;
+  darkTextSecondary: $darkTextSecondary;
+
+  // primary dark
+  darkPrimaryLight: $darkPrimaryLight;
+  darkPrimaryMain: $darkPrimaryMain;
+  darkPrimaryDark: $darkPrimaryDark;
+  darkPrimary200: $darkPrimary200;
+  darkPrimary800: $darkPrimary800;
+
+  // secondary dark
+  darkSecondaryLight: $darkSecondaryLight;
+  darkSecondaryMain: $darkSecondaryMain;
+  darkSecondaryDark: $darkSecondaryDark;
+  darkSecondary200: $darkSecondary200;
+  darkSecondary800: $darkSecondary800;
+
+
+  // Text status color
+  statusTextCreate: $statusTextCreate;
+  statusTextComplete: $statusTextComplete;
+  statusTextReOpen: $statsTextReOpen;
+
+
+  statusTextInprogress: $statusTextInprogress;
+  statusTextComplete: $statusTextComplete;
+  statusTextCompleted: $statusTextCompleted;
+  statusTextCompletedOne: $statusTextCompletedOne;
+  statsTextPending: $statsTextPending;
+  statsTextGateIn: $statsTextGateIn;
+  statusTextReject: $statusTextReject;
+  statusTextRejectOne: $statusTextRejectOne;
+  statusTextSubmitted: $statusTextSubmitted;
+  statusTextSubmittedOne: $statusTextSubmittedOne;
+  statusTextNew: $statusTextNew;
+  statusTextNewone: $statusTextNewone;
+  statusTextOptioncreation: $statusTextOptioncreation;
+  statusTextOptioncreationOne: $statusTextOptioncreationOne;
+  statusTextExpired: $statusTextExpired;
+  statusTextApproved: $statusTextApproved;
+  statusTextApprovedone: $statusTextApprovedone;
+  statusTextActive: $statusTextActive;
+  statusTextOpen: $statusTextOpen;
+  statusTextClosed: $statusTextClosed;
+  statusTextClosed1: $statusTextClosed1;
+  statusTextSend: $statusTextSend;
+  statusTextVerified: $statusTextVerified;
+  statsTextVendorSelection: $statsTextVendorSelection;
+  statsTextVendorSelectionOne: $statsTextVendorSelectionOne;
+  statsTextQuoteCreation: $statsTextQuoteCreation;
+  statsTextQuoteCreationOne: $statsTextQuoteCreationOne;
+  statsTextRFPcreation: $statsTextRFPcreation;
+  statsTextRFPcreationOne: $statsTextRFPcreationOne;
+  statsTextYetToBeAuthorize: $statsTextYetToBeAuthorize;
+  statsTextAuthorized: $statsTextAuthorized;
+  statsTextAuthorizedOne: $statsTextAuthorizedOne;
+  statsTextHold: $statsTextHold;
+  statsTextVerification: $statsTextVerification;
+  statsTextVerificationOne: $statsTextVerificationOne;
+  statsTextBooking: $statsTextBooking;
+  statsTextBookingOne: $statsTextBookingOne;
+  statsTextExecution: $statsTextExecution;
+  statsTextExecutionOne: $statsTextExecutionOne;
+  statusTextArrived: $statusTextArrived;
+  statusTextArrivedOne: $statusTextArrivedOne;
+  statusTextInvoicing: $statusTextInvoicing;
+  statusTextBlocked: $statusTextBlocked;
+  statusTextDue: $statusTextDue;
+  statusTextPaid: $statusTextPaid;
+  statusTextCancelled: $statusTextCancelled;
+  statusTextCancelledOne: $statusTextCancelledOne;
+  statusTextDraft: $statusTextDraft;
+  statusTextUnPaid: $statusTextUnPaid;
+
+  //New Table status
+  TableStatusCreate: $TableStatusCreate;
+  TableStatusComplete: $TableStatusComplete;
+  TableStatusReOpen: $TableStatusReOpen;
+
+
+  TableStatusInprogress: $TableStatusInprogress;
+  TableStatusCompleted: $TableStatusCompleted;
+  TableStatusCompletedOne: $TableStatusCompletedOne;
+  TableStatsPending: $TableStatsPending;
+  TableStatsGateIn: $TableStatsGateIn;
+  TableStatusReject: $TableStatusReject;
+  TableStatusRejectOne: $TableStatusRejectOne;
+  TableStatusSubmitted: $TableStatusSubmitted;
+  TableStatusSubmittedOne: $TableStatusSubmittedOne;
+  TableStatusNew: $TableStatusNew;
+  TableStatusNewone: $TableStatusNewone;
+  TableStatusOptioncreation: $TableStatusOptioncreation;
+  TableStatusOptioncreationOne: $TableStatusOptioncreationOne;
+  TableStatusExpired: $TableStatusExpired;
+  TableStatusApproved: $TableStatusApproved;
+  TableStatusApprovedNewone: $TableStatusApprovedNewone;
+  TableStatusActive: $TableStatusActive;
+  TableStatusOpen: $TableStatusOpen;
+  TableStatusClosed: $TableStatusClosed;
+  TableStatusSend: $TableStatusSend;
+  TableStatusVerified: $TableStatusVerified;
+  TableStatusCreated: $TableStatusCreated;
+  TableStatusVendorSelection: $TableStatusVendorSelection;
+  TableStatusVendorSelectionOne: $TableStatusVendorSelectionOne;
+  TableStatusQuoteCreation: $TableStatusQuoteCreation;
+  TableStatusQuoteCreationOne: $TableStatusQuoteCreationOne;
+  TableStatusRFPcreation: $TableStatusRFPcreation;
+  TableStatusRFPcreationOne: $TableStatusRFPcreationOne;
+  TableStatusYetToBeAuthorize: $TableStatusYetToBeAuthorize;
+  TableStatusAuthorized: $TableStatusAuthorized;
+  TableStatusAuthorizedOne: $TableStatusAuthorizedOne;
+  TableStatusHold: $TableStatusHold;
+  TableStatusVerification: $TableStatusVerification;
+  TableStatusVerificationOne: $TableStatusVerificationOne;
+  TableStatusBooking: $TableStatusBooking;
+  TableStatusBookingOne: $TableStatusBookingOne;
+  TableStatusExecution: $TableStatusExecution;
+  TableStatusExecutionOne: $TableStatusExecutionOne;
+  TableStatusArrived: $TableStatusArrived;
+  TableStatusArrivedOne: $TableStatusArrivedOne;
+  TableStatusInvoicing: $TableStatusInvoicing;
+  TableStatusBlocked: $TableStatusBlocked;
+  TableStatusDue: $TableStatusDue;
+  TableStatusPaid: $TableStatusPaid;
+  TableStatusCancelled: $TableStatusCancelled;
+  TableStatusCancelledOne: $TableStatusCancelledOne;
+  TableStatusDraft: $TableStatusDraft;
+  TableStatusUnPaid: $TableStatusUnPaid;
+  grayShade8: $grayShade8;
+}

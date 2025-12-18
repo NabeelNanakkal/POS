@@ -22,7 +22,7 @@ export default function Palette(mode, presetColor) {
       },
       primary: {
         light: colors.primaryLight,
-        main: "#0284c7",
+        main: colors.primaryMain,
         dark: colors.primaryDark,
         200: colors.primary200,
         800: colors.primary800

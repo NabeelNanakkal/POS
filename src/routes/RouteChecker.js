@@ -7,7 +7,7 @@ const InitialRouteChecker = () => {
   useEffect(() => {
     const token = localStorage.getItem(import.meta.env.VITE_APP_SESSION_TOKEN);
     if (token) {
-      navigate('/main/home');
+      navigate('/pos/dashboard');
     } else {
       navigate('/login');
     }

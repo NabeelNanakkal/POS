@@ -134,12 +134,8 @@ const Register = () => {
   };
 
   const roles = [
-  { id: 'Sales', icon: UserIcon, title: 'Sales' },
-  { id: 'Marketing', icon: UserIcon, title: 'Marketing' },
-  { id: 'BDR', icon: UserIcon, title: 'BDR' },
-  { id: 'Manager', icon: UserIcon, title: 'Manager' },
-  { id: 'Operations', icon: UserIcon, title: 'Operations' },
-  { id: 'Support', icon: UserIcon, title: 'Support' }
+    { id: 'Cashier', icon: UserIcon, title: 'Cashier' },
+    { id: 'Manager', icon: UserIcon, title: 'Manager' }
   ];
 
   return (

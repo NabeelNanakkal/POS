@@ -10,17 +10,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import LockIcon from '@mui/icons-material/Lock';
 import { IconPhoneFilled } from '@tabler/icons-react';
 
-// redux
-// import { userSignup } from 'container/RegisterContainer/slice';
-
 // project imports
 import styles from './style';
-// import PCMSignUp from './components/PCMSignUp';
-// import UserDetail from './components/UserDetail';
-
-// assets
-// import ClaimantIcon from 'assets/images/claimant.png';
-import ArbitratorIcon from 'assets/images/arb-med.png';
 
 const AuthRegister = () => {
   const theme = useTheme();
@@ -35,8 +26,8 @@ const AuthRegister = () => {
 
   // role selection
   const roles = [
-    { id: 'Law Firm', icon: null, title: 'Law Firm' },
-    { id: 'Arbitrator', icon: null, title: 'Arbitrator/Mediator' }
+    { id: 'Cashier', icon: null, title: 'Cashier' },
+    { id: 'Manager', icon: null, title: 'Manager' }
   ];
 
   const handleRoleSelect = (role) => setSelectedRole(role);
@@ -133,19 +124,9 @@ const AuthRegister = () => {
 
           {/* Step 1 - Registration form */}
           {step === 1 && (
-            <>
-              {selectedRole === 'Law Firm' ? (
-                <PCMSignUp onChange={handleUserDetailChange} handleNext={handleNext} initialValues={userData} selectedRole={selectedRole} />
-              ) : (
-                <UserDetail
-                  onChange={handleUserDetailChange}
-                  handleNext={handleNext}
-                  initialValues={userData}
-                  selectedRole={selectedRole}
-                />
-              )}
-
-              <Box textAlign="center" mt={2}>
+            <Box textAlign="center" mt={2}>
+              <Typography variant="h4">Registration Form Coming Soon</Typography>
+              <Box mt={3}>
                 <Typography
                   component={Link}
                   to="/login"
@@ -162,7 +143,7 @@ const AuthRegister = () => {
                   <span style={{ color: theme.palette.primary.main, fontWeight: 500 }}>Login</span>
                 </Typography>
               </Box>
-            </>
+            </Box>
           )}
 
           {/* Step 2 - Terms & Conditions */}

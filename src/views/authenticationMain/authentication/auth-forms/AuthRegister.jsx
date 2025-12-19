@@ -19,7 +19,7 @@ import styles from './style';
 // import UserDetail from './components/UserDetail';
 
 // assets
-import ClaimantIcon from 'assets/images/claimant.png';
+// import ClaimantIcon from 'assets/images/claimant.png';
 import ArbitratorIcon from 'assets/images/arb-med.png';
 
 const AuthRegister = () => {
@@ -35,8 +35,8 @@ const AuthRegister = () => {
 
   // role selection
   const roles = [
-    { id: 'Law Firm', icon: ClaimantIcon, title: 'Law Firm' },
-    { id: 'Arbitrator', icon: ArbitratorIcon, title: 'Arbitrator/Mediator' }
+    { id: 'Law Firm', icon: null, title: 'Law Firm' },
+    { id: 'Arbitrator', icon: null, title: 'Arbitrator/Mediator' }
   ];
 
   const handleRoleSelect = (role) => setSelectedRole(role);

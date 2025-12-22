@@ -15,30 +15,34 @@ const Reports = Loadable(lazy(() => import('views/cashier/Reports')));
 const PosRoutes = {
   path: '/',
   children: [
-    // Consolidated POS Routes under PosLayout
     {
-      path: '/pos',
+      path: '/',
       element: <PosLayout />,
       children: [
         {
-          path: '', // /pos
-          element: <Navigate to="/pos/dashboard" replace />
-        },
-        {
-          path: 'dashboard', // /pos/dashboard
+          index: true,
           element: <MainDashboard />
         },
         {
-          path: 'terminal', // /pos/terminal
-          element: <PosTerminal />
-        },
-        {
-          path: 'products', // /pos/products
-          element: <ProductManagement />
-        },
-        {
-          path: 'reports', // /pos/reports
-          element: <Reports />
+          path: 'pos',
+          children: [
+            {
+              path: 'dashboard',
+              element: <MainDashboard />
+            },
+            {
+              path: 'terminal',
+              element: <PosTerminal />
+            },
+            {
+              path: 'products',
+              element: <ProductManagement />
+            },
+            {
+              path: 'reports',
+              element: <Reports />
+            }
+          ]
         }
       ]
     }

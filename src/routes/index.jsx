@@ -5,7 +5,7 @@ import LoginRoutes from './AuthenticationRoutes';
 import PosRoutes from './PosRoutes';
 
 // ==============================|| ROUTING RENDER ||============================== //
-const router = createBrowserRouter([LoginRoutes, PosRoutes], {
+const router = createBrowserRouter([PosRoutes, LoginRoutes], {
   basename: "/"
 });
 

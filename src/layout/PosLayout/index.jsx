@@ -20,6 +20,7 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import LogoutIcon from '@mui/icons-material/Logout';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 
@@ -29,6 +30,7 @@ const MENU_ITEMS = [
   { text: 'Dashboard', icon: GridViewIcon, path: '/pos/dashboard' },
   { text: 'POS Terminal', icon: PointOfSaleIcon, path: '/pos/terminal' },
   { text: 'Products', icon: Inventory2OutlinedIcon, path: '/pos/products' },
+  { text: 'Shift Management', icon: EventAvailableIcon, path: '/pos/shift' },
   { text: 'Reports', icon: AssessmentOutlinedIcon, path: '/pos/reports' },
 ];
 

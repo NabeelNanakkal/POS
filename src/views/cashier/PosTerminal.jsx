@@ -79,73 +79,78 @@ const ProductCard = ({ product, onAdd }) => (
   <Paper
     elevation={0}
     sx={{
-      borderRadius: 3,
+      borderRadius: 4,
       overflow: 'hidden',
       bgcolor: 'white',
       border: '1px solid',
       borderColor: '#eee',
-      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       position: 'relative',
       '&:hover': {
         borderColor: 'primary.main',
-        transform: 'translateY(-3px)',
-        boxShadow: '0 8px 16px rgba(0,0,0,0.06)'
+        transform: 'translateY(-4px)',
+        boxShadow: '0 12px 24px -4px rgba(0,0,0,0.12)'
       }
     }}
   >
-    <Box sx={{ position: 'relative' }}>
-        <Box sx={{ height: 120, overflow: 'hidden', bgcolor: 'grey.50' }}>
-            <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </Box>
-        <Chip 
-            label={product.stock} 
-            size="small" 
-            color={product.stockType}
-            sx={{ 
-                position: 'absolute', 
-                top: 8, 
-                right: 8, 
-                fontWeight: 800, 
-                height: 18, 
-                fontSize: '0.6rem',
-                backdropFilter: 'blur(4px)',
-                bgcolor: (theme) => alpha(theme.palette[product.stockType].main, 0.9),
-                color: 'white'
-            }} 
-        />
-    </Box>
-    <Box sx={{ p: 1.5 }}>
-        <Typography 
-            variant="subtitle2" 
-            fontWeight={700} 
-            noWrap 
-            sx={{ 
-                mb: 0.2, 
-                fontSize: '0.85rem' 
-            }}
-        >
-            {product.name}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1, fontSize: '0.65rem' }}>#{product.sku}</Typography>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography variant="subtitle1" fontWeight={800} color="primary.main">
-                ${product.price.toFixed(2)}
-            </Typography>
-            <IconButton 
-                onClick={() => onAdd(product)}
-                size="small" 
-                sx={{ 
-                    bgcolor: 'primary.lighter', 
-                    color: 'primary.main',
-                    width: 28,
-                    height: 28,
-                    '&:hover': { bgcolor: 'primary.main', color: 'white' } 
-                }}
-            >
-                <ShoppingCartOutlinedIcon sx={{ fontSize: '1.1rem' }} />
-            </IconButton>
-        </Stack>
-    </Box>
+    <CardActionArea onClick={() => onAdd(product)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+      <Box sx={{ position: 'relative', width: '100%' }}>
+          <Box sx={{ height: 180, overflow: 'hidden', bgcolor: 'grey.50' }}>
+              <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </Box>
+          <Chip
+              label={product.stock}
+              size="small"
+              color={product.stockType}
+              sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  fontWeight: 800,
+                  height: 18,
+                  fontSize: '0.6rem',
+                  backdropFilter: 'blur(4px)',
+                  bgcolor: (theme) => alpha(theme.palette[product.stockType].main, 0.9),
+                  color: 'white'
+              }}
+          />
+      </Box>
+      <Box sx={{ p: 2, flexGrow: 1, width: '100%' }}>
+          <Typography
+              variant="subtitle2"
+              fontWeight={700}
+              noWrap
+              sx={{
+                  mb: 0.2,
+                  fontSize: '0.85rem'
+              }}
+          >
+              {product.name}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1, fontSize: '0.65rem' }}>#{product.sku}</Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="subtitle1" fontWeight={800} color="primary.main">
+                  ${product.price.toFixed(2)}
+              </Typography>
+              <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAdd(product);
+                  }}
+                  size="small"
+                  sx={{
+                      bgcolor: 'primary.lighter',
+                      color: 'primary.main',
+                      width: 28,
+                      height: 28,
+                      '&:hover': { bgcolor: 'primary.main', color: 'white' }
+                  }}
+              >
+                  <ShoppingCartOutlinedIcon sx={{ fontSize: '1.1rem' }} />
+              </IconButton>
+          </Stack>
+      </Box>
+    </CardActionArea>
   </Paper>
 );
 
@@ -259,7 +264,7 @@ const PosTerminal = () => {
         <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: 6 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'grey.300', borderRadius: 3 } }}>
             <Grid container spacing={2}>
                 {filteredProducts.map(product => (
-                    <Grid size={{ xs: 12, sm: 4, md: 3, lg: 2.4, xl: 2 }} key={product.id}>
+                    <Grid size={{ xs: 12, sm: 6, md: 6, lg: 4, xl: 3 }} key={product.id}>
                         <ProductCard product={product} onAdd={addToCart} />
                     </Grid>
                 ))}

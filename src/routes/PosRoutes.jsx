@@ -8,6 +8,7 @@ import PosLayout from 'layout/PosLayout';
 const MainDashboard = Loadable(lazy(() => import('views/cashier/MainDashboard')));
 const PosTerminal = Loadable(lazy(() => import('views/cashier/PosTerminal')));
 const ProductManagement = Loadable(lazy(() => import('views/cashier/ProductManagement')));
+const ShiftManagement = Loadable(lazy(() => import('views/cashier/ShiftManagement')));
 const Reports = Loadable(lazy(() => import('views/cashier/Reports')));
 
 // ==============================|| POS ROUTING ||============================== //
@@ -37,6 +38,10 @@ const PosRoutes = {
             {
               path: 'products',
               element: <ProductManagement />
+            },
+            {
+              path: 'shift',
+              element: <ShiftManagement />
             },
             {
               path: 'reports',

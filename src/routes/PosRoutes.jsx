@@ -22,7 +22,7 @@ const PosRoutes = {
       children: [
         {
           index: true,
-          element: <MainDashboard />
+          element: <Navigate to="/pos/dashboard" replace />
         },
         {
           path: 'pos',

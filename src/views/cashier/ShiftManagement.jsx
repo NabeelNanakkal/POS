@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -48,8 +48,19 @@ const ShiftManagement = () => {
   const theme = useTheme();
   
   // State
-  const [isShiftOpen, setIsShiftOpen] = useState(false);
-  const [shiftData, setShiftData] = useState(null);
+  const [isShiftOpen, setIsShiftOpen] = useState(() => {
+    return localStorage.getItem('isShiftOpen') === 'true';
+  });
+  const [shiftData, setShiftData] = useState(() => {
+    const saved = localStorage.getItem('shiftData');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  // Persist state to localStorage
+  useEffect(() => {
+    localStorage.setItem('isShiftOpen', isShiftOpen);
+    localStorage.setItem('shiftData', JSON.stringify(shiftData));
+  }, [isShiftOpen, shiftData]);
   const [openingBalance, setOpeningBalance] = useState('');
   const [openEndShiftDialog, setOpenEndShiftDialog] = useState(false);
   
@@ -60,8 +71,13 @@ const ShiftManagement = () => {
 
   // Pagination State
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(4);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [viewHistory, setViewHistory] = useState(false);
+
+  // Pay In / Pay Out State
+  const [payIns, setPayIns] = useState(0);
+  const [payOuts, setPayOuts] = useState(0);
+  const [payDialog, setPayDialog] = useState({ open: false, type: 'IN', amount: '', reason: '' });
 
   // Mock System Totals
   const systemTotals = {
@@ -72,8 +88,7 @@ const ShiftManagement = () => {
 
   const calculateExpectedCash = () => {
     if (!shiftData) return 0;
-    // Opening + Cash Sales + PayIns - PayOuts (Mock: 0 PayIns/Outs for now)
-    return shiftData.openingBalance + systemTotals.cash; 
+    return shiftData.openingBalance + systemTotals.cash + payIns - payOuts; 
   };
 
   const handleStartShift = () => {
@@ -84,7 +99,8 @@ const ShiftManagement = () => {
       startDate: now.toLocaleDateString(),
       openingBalance: parseFloat(openingBalance),
       user: 'Jane Doe',
-      shiftId: '#SH-2024-001'
+      shiftId: '#SH-2024-001',
+      itemsSold: 24 // Mocking some sales for the active shift demo
     });
     setIsShiftOpen(true);
   };
@@ -106,6 +122,24 @@ const ShiftManagement = () => {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const handleOpenPayDialog = (type) => {
+    setPayDialog({ open: true, type, amount: '', reason: '' });
+  };
+
+  const handleProcessPayTransaction = () => {
+    const amount = parseFloat(payDialog.amount);
+    if (!amount || amount <= 0) return;
+
+    if (payDialog.type === 'IN') {
+        setPayIns(prev => prev + amount);
+    } else {
+        setPayOuts(prev => prev + amount);
+    }
+
+    // Optional: Add to transaction log logic here in future
+    setPayDialog({ ...payDialog, open: false });
   };
 
   // Mock Transaction Log Data
@@ -281,18 +315,18 @@ const ShiftManagement = () => {
                 <Stack spacing={2} sx={{ mt: 4 }}>
                     <CalculationRow label="Opening Balance" value={shiftData.openingBalance} />
                     <CalculationRow label="Cash Sales" value={systemTotals.cash} icon={<AddCircleOutlineIcon fontSize="small" color="success" />} />
-                    <CalculationRow label="Pay Ins" value={0.00} icon={<AddCircleOutlineIcon fontSize="small"  />} />
-                    <CalculationRow label="Pay Outs" value={0.00} icon={<RemoveCircleOutlineIcon fontSize="small" />} color="error.main" />
+                    <CalculationRow label="Pay Ins" value={payIns} icon={<AddCircleOutlineIcon fontSize="small"  />} />
+                    <CalculationRow label="Pay Outs" value={payOuts} icon={<RemoveCircleOutlineIcon fontSize="small" />} color="error.main" />
                 </Stack>
 
                 <Grid container spacing={2} sx={{ mt: 4 }}>
                     <Grid item xs={6}>
-                        <Button fullWidth variant="outlined" startIcon={<AddCircleOutlineIcon />} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
+                        <Button fullWidth variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => handleOpenPayDialog('IN')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
                             Pay In
                         </Button>
                     </Grid>
                     <Grid item xs={6}>
-                         <Button fullWidth variant="outlined" color="error" startIcon={<RemoveCircleOutlineIcon />} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
+                         <Button fullWidth variant="outlined" color="error" startIcon={<RemoveCircleOutlineIcon />} onClick={() => handleOpenPayDialog('OUT')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
                             Pay Out
                         </Button>
                     </Grid>
@@ -425,6 +459,56 @@ const ShiftManagement = () => {
         <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenEndShiftDialog(false)} sx={{ fontWeight: 700 }}>Cancel</Button>
             <Button onClick={handleEndShift} variant="contained" sx={{ fontWeight: 700, px: 3 }}>Finalize Shift</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Pay In / Out Dialog */}
+       <Dialog 
+        open={payDialog.open} 
+        onClose={() => setPayDialog({ ...payDialog, open: false })}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ p: 3, bgcolor: payDialog.type === 'IN' ? 'success.lighter' : 'error.lighter', color: payDialog.type === 'IN' ? 'success.dark' : 'error.dark' }}>
+            <Typography variant="h6" fontWeight={800}>{payDialog.type === 'IN' ? 'Pay In (Add Cash)' : 'Pay Out (Remove Cash)'}</Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, pt: 3 }}>
+            <Stack spacing={3} sx={{ mt: 1 }}>
+                <TextField 
+                    label="Amount" 
+                    fullWidth 
+                    type="number" 
+                    value={payDialog.amount}
+                    onChange={(e) => setPayDialog({ ...payDialog, amount: e.target.value })}
+                    InputProps={{ 
+                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                        style: { fontSize: '1.5rem', fontWeight: 700 }
+                    }}
+                    autoFocus
+                />
+                <TextField 
+                    label="Reason / Description" 
+                    fullWidth 
+                    multiline 
+                    rows={2}
+                    value={payDialog.reason}
+                    onChange={(e) => setPayDialog({ ...payDialog, reason: e.target.value })}
+                    placeholder={payDialog.type === 'IN' ? "e.g. Added change" : "e.g. Vendor payment"}
+                />
+            </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setPayDialog({ ...payDialog, open: false })} sx={{ fontWeight: 700 }}>Cancel</Button>
+            <Button 
+                onClick={handleProcessPayTransaction} 
+                variant="contained" 
+                color={payDialog.type === 'IN' ? 'success' : 'error'}
+                disabled={!payDialog.amount}
+                sx={{ fontWeight: 700, px: 3 }}
+            >
+                Confirm {payDialog.type === 'IN' ? 'Pay In' : 'Pay Out'}
+            </Button>
         </DialogActions>
       </Dialog>
     </Box>

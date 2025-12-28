@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react';
+import IconButton from '@mui/material/IconButton';
 
 import useMediaQuery from '@mui/material/useMediaQuery';
 // import Chip from '@mui/material/Chip';
@@ -19,14 +20,15 @@ import useConfig from 'hooks/useConfig';
 import { drawerWidth } from 'store/constant';
 
 // assets
-import { IconChevronLeft, IconChevronRight, IconMenu2, IconSettingsFilled } from '@tabler/icons-react';
+import { IconChevronLeft, IconChevronRight, IconMenu2, IconSettingsFilled, IconX } from '@tabler/icons-react';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 import { useTheme } from '@emotion/react';
 import Typography from '@mui/material/Typography'
 
 // ==============================|| SIDEBAR DRAWER ||============================== //
 
-function Sidebar() {
+function Sidebar({ sidebarHidden, setSidebarHidden }) {
+  if (sidebarHidden) return null;
 
   const downMD = useMediaQuery((theme) => theme.breakpoints.down('md'));
   const { menuMaster } = useGetMenuMaster();
@@ -38,7 +40,7 @@ function Sidebar() {
     () => (
       <Box sx={{
         display: 'flex',
-        px: 2,
+        px: drawerOpen ? 2 : 1,
         py: 0,
         columnGap: 1,
         alignItems: "center",
@@ -49,17 +51,43 @@ function Sidebar() {
         zIndex: 10,
         justifyContent: "space-between"
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, overflow: 'hidden' }}>
           {drawerOpen && <LogoSection />}
         </Box>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}>
+          <Avatar
+            variant="rounded"
+            sx={{
+              height: "24px",
+              width: "24px",
+              ...theme.typography.commonAvatar,
+              ...theme.typography.mediumAvatar,
+              overflow: 'hidden',
+              transition: 'all .2s ease-in-out',
+              bgcolor: 'background.paper',
+              color: 'error.main',
+              borderRadius: 1.5,
+              '&:hover': {
+                bgcolor: 'error.lighter',
+                color: 'error.dark'
+              },
+              boxShadow: `1px 3px 5px ${theme.palette.grey[100]}`
+            }}
+            onClick={() => setSidebarHidden(true)}
+            color="inherit"
+          >
+             <IconX stroke={2} size={16} />
+          </Avatar>
+
         <Avatar
           variant="rounded"
           sx={{
-            height: "20px",
-            width: "20px",
+            height: "24px",
+            width: "24px",
             ...theme.typography.commonAvatar,
             ...theme.typography.mediumAvatar,
             overflow: 'hidden',
+    
             transition: 'all .2s ease-in-out',
             bgcolor: 'background.paper',
             color: 'secondary.dark',
@@ -80,9 +108,10 @@ function Sidebar() {
 
 
         </Avatar>
+        </Box>
       </Box>
     ),
-    [drawerOpen, theme]
+    [drawerOpen, theme, setSidebarHidden]
   );
 
   const footer = useMemo(
@@ -103,6 +132,7 @@ function Sidebar() {
       }}>
         {/* Replace this with your UserProfile section */}
         {drawerOpen && <Box sx={{ flex: 1 }}> <Typography variant="button" color={theme.palette.grey[500]}>User Profile</Typography> </Box>}
+
         <Avatar
           variant="rounded"
           sx={{

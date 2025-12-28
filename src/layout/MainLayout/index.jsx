@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 
 // material-ui
@@ -7,6 +7,9 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Box from '@mui/material/Box';
+import Fab from '@mui/material/Fab';
+import SvgIcon from '@mui/material/SvgIcon';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 // project imports
 import Footer from './Footer';
@@ -23,6 +26,7 @@ import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 // ==============================|| MAIN LAYOUT ||============================== //
 
 export default function MainLayout() {
+  const [sidebarHidden, setSidebarHidden] = useState(false);
   const theme = useTheme();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const { state: { borderRadius }, miniDrawer } = useConfig();
@@ -53,7 +57,28 @@ export default function MainLayout() {
         </AppBar>}
 
       {/* menu / drawer */}
-      <Sidebar />
+      <Sidebar sidebarHidden={sidebarHidden} setSidebarHidden={setSidebarHidden} />
+      
+      {/* Floating Sidebar Toggle (Only when hidden) */}
+      {sidebarHidden && (
+        <Fab 
+          color="secondary" 
+          aria-label="show sidebar" 
+          onClick={() => setSidebarHidden(false)}
+          sx={{ 
+            position: 'fixed', 
+            bottom: 30, 
+            left: 30, 
+            zIndex: 1300,
+            transition: 'all 0.3s ease',
+            bgcolor: 'secondary.main',
+            color: 'white',
+            '&:hover': { bgcolor: 'secondary.dark' }
+          }}
+        >
+          <ChevronRightIcon />
+        </Fab>
+      )}
 
       {/* main content */}
       <MainContentStyled {...{ borderRadius, open: drawerOpen }}>

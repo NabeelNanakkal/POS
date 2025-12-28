@@ -11,9 +11,12 @@ import {
   Avatar,
   IconButton,
   Stack,
-  Divider
+  Divider,
+  Fab
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
+import { useState, useMemo } from 'react';
+import { useGetMenuMaster, handlerDrawerOpen } from 'api/menu';
 
 // Icons
 import GridViewIcon from '@mui/icons-material/GridView';
@@ -23,8 +26,11 @@ import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import LogoutIcon from '@mui/icons-material/Logout';
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import CloseIcon from '@mui/icons-material/Close';
+import MenuIcon from '@mui/icons-material/Menu';
 
 const drawerWidth = 260;
+const miniDrawerWidth = 80;
 
 const MENU_ITEMS = [
   { text: 'Dashboard', icon: GridViewIcon, path: '/pos/dashboard' },
@@ -37,6 +43,13 @@ const MENU_ITEMS = [
 const PosLayout = () => {
   const theme = useTheme();
   const location = useLocation();
+  const { menuMaster } = useGetMenuMaster();
+  
+  // drawerOpen is true when expanded, false when collapsed/closed
+  const drawerOpen = menuMaster?.isDashboardDrawerOpened ?? false;
+  const sidebarCollapsed = !drawerOpen;
+  
+  const currentWidth = sidebarCollapsed ? miniDrawerWidth : drawerWidth;
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f3f4f6' }}>
@@ -44,40 +57,81 @@ const PosLayout = () => {
       {/* Sidebar */}
       <Drawer
         sx={{
-          width: drawerWidth,
+          width: currentWidth,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
-            width: drawerWidth,
+            width: currentWidth,
             boxSizing: 'border-box',
             borderRight: '1px solid rgba(0, 0, 0, 0.05)',
             bgcolor: 'rgba(255, 255, 255, 0.9)',
             backdropFilter: 'blur(20px)',
-            boxShadow: '4px 0 24px rgba(0, 0, 0, 0.02)'
+            boxShadow: '4px 0 24px rgba(0, 0, 0, 0.02)',
+            transition: theme.transitions.create('width', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.shorter,
+            }),
+            overflowX: 'hidden'
           },
         }}
         variant="permanent"
         anchor="left"
       >
-        {/* Logo Area */}
-        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              bgcolor: 'primary.main',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white'
+        {/* Unified Sidebar Header */}
+        <Box
+          sx={{
+            height: 80,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: sidebarCollapsed ? 'center' : 'space-between',
+            px: sidebarCollapsed ? 0 : 2,
+            bgcolor: sidebarCollapsed ? 'primary.main' : 'transparent',
+            color: sidebarCollapsed ? 'white' : 'primary.main',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            borderBottom: sidebarCollapsed ? 'none' : '1px solid rgba(0, 0, 0, 0.05)',
+            '&:hover': {
+              bgcolor: sidebarCollapsed ? 'primary.dark' : alpha(theme.palette.primary.main, 0.02)
+            }
+          }}
+          onClick={() => !sidebarCollapsed && handlerDrawerOpen(false)}
+        >
+          {/* Logo Section (Only visible when expanded) */}
+          {!sidebarCollapsed && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  bgcolor: 'primary.main',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}
+              >
+                <StorefrontIcon sx={{ fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>Retail POS</Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mt: -0.2 }}>Downtown Branch</Typography>
+              </Box>
+            </Box>
+          )}
+
+          {/* Toggle Icon */}
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation();
+              handlerDrawerOpen(!drawerOpen);
+            }}
+            sx={{ 
+                color: 'inherit',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.05)' }
             }}
           >
-            <StorefrontIcon />
-          </Box>
-          <Box>
-            <Typography variant="h4" fontWeight={800} color="text.primary">Retail POS</Typography>
-            <Typography variant="caption" color="text.secondary">Downtown Branch</Typography>
-          </Box>
+            <MenuIcon />
+          </IconButton>
         </Box>
 
         {/* Menu Items */}
@@ -124,20 +178,23 @@ const PosLayout = () => {
                   <ListItemIcon 
                     sx={{ 
                       color: isActive ? 'primary.main' : 'inherit', 
-                      minWidth: 42,
+                      minWidth: sidebarCollapsed ? 0 : 42,
+                      justifyContent: 'center',
                       transition: 'all 0.3s ease'
                     }}
                   >
                     <item.icon sx={{ fontSize: 22 }} />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary={item.text} 
-                    primaryTypographyProps={{ 
-                      fontWeight: isActive ? 800 : 600,
-                      fontSize: '0.9rem',
-                      letterSpacing: 0.2
-                    }} 
-                  />
+                  {!sidebarCollapsed && (
+                    <ListItemText 
+                      primary={item.text} 
+                      primaryTypographyProps={{ 
+                        fontWeight: isActive ? 800 : 600,
+                        fontSize: '0.9rem',
+                        letterSpacing: 0.2
+                      }} 
+                    />
+                  )}
                   {isActive && (
                     <Box 
                       sx={{ 
@@ -173,6 +230,7 @@ const PosLayout = () => {
                   width: 40, 
                   height: 40, 
                   bgcolor: 'primary.main',
+                  color: 'white',
                   fontWeight: 800,
                   fontSize: '0.9rem',
                   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
@@ -180,30 +238,42 @@ const PosLayout = () => {
             >
               JD
             </Avatar>
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={800} noWrap sx={{ color: 'text.primary' }}>Jane Doe</Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap sx={{ display: 'block', opacity: 0.8 }}>Store Manager</Typography>
-            </Box>
-            <IconButton 
-              size="small" 
-              sx={{ 
-                  color: 'error.main', 
-                  bgcolor: alpha(theme.palette.error.main, 0.08),
-                  '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.15) },
-                  transition: 'all 0.2s ease'
-              }}
-            >
-              <LogoutIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            {!sidebarCollapsed && (
+              <>
+                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={800} noWrap sx={{ color: 'text.primary' }}>Jane Doe</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap sx={{ display: 'block', opacity: 0.8 }}>Store Manager</Typography>
+                </Box>
+                <IconButton 
+                  size="small" 
+                  sx={{ 
+                      color: 'error.main', 
+                      bgcolor: alpha(theme.palette.error.main, 0.08),
+                      '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.15) },
+                      transition: 'all 0.2s ease'
+                  }}
+                >
+                  <LogoutIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </>
+            )}
           </Box>
         </Box>
       </Drawer>
 
       {/* Main Content Area */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: `calc(100% - ${drawerWidth}px)` }}>
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1, 
+          p: 3, 
+          width: `calc(100% - ${currentWidth}px)`,
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
+      >
         
         {/* Page Content */}
-        <Outlet />
+        <Outlet context={{ handlerDrawerOpen, drawerOpen }} />
 
       </Box>
     </Box>

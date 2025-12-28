@@ -82,19 +82,26 @@ const RevenueChart = () => {
 
   return (
     <Paper elevation={0} sx={{ p: 3, borderRadius: 4, height: '100%', width: '100%' }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+      <Stack 
+        direction={{ xs: 'column', sm: 'row' }} 
+        alignItems={{ xs: 'flex-start', sm: 'center' }} 
+        justifyContent="space-between" 
+        spacing={2}
+        mb={3}
+      >
         <Box>
             <Typography variant="h4" fontWeight={700}>Revenue Analytics</Typography>
             <Typography variant="caption" color="text.secondary">Sales performance over time</Typography>
         </Box>
-        <Stack direction="row" spacing={1} bgcolor="grey.100" p={0.5} borderRadius={2}>
+        <Stack direction="row" spacing={1} bgcolor="grey.100" p={0.5} borderRadius={2} alignSelf={{ xs: 'stretch', sm: 'auto' }}>
             {['week', 'month', 'year'].map(range => (
                 <Button 
                     key={range}
                     size="small"
+                    fullWidth
                     onClick={() => setTimeRange(range)}
                     sx={{ 
-                        minWidth: 50,
+                        minWidth: { xs: 'auto', sm: 50 },
                         borderRadius: 1.5,
                         textTransform: 'capitalize',
                         bgcolor: timeRange === range ? 'white' : 'transparent',
@@ -109,12 +116,12 @@ const RevenueChart = () => {
         </Stack>
       </Stack>
       
-      <Box sx={{ minHeight: 350, width: '100%' }}>
+      <Box sx={{ minHeight: { xs: 300, sm: 350 }, width: '100%' }}>
         <ReactApexChart 
             options={chartData.options} 
             series={chartData.series} 
             type="area" 
-            height={450} 
+            height={theme.breakpoints.down('sm') ? 300 : 380} 
         />
       </Box>
     </Paper>

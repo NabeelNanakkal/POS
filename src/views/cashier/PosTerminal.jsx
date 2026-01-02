@@ -18,7 +18,11 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 import { useOutletContext } from 'react-router-dom';
@@ -44,10 +48,16 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import RedeemIcon from '@mui/icons-material/Redeem';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import CancelIcon from '@mui/icons-material/Cancel';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
-import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 
 // Mock Data
 const CATEGORIES = [
@@ -357,6 +367,121 @@ const HeldBillsDialog = ({ open, onClose, heldBills, onResume, onDelete }) => {
     );
 };
 
+// Discount Dialog
+const DiscountDialog = ({ open, onClose, discount, onApply }) => {
+    const [value, setValue] = useState(discount || 0);
+    const QUICK_DISCOUNTS = [0, 5, 10, 15, 20, 25, 50];
+
+    return (
+        <Dialog 
+            open={open} 
+            onClose={onClose}
+            PaperProps={{
+                sx: { borderRadius: 4, width: '100%', maxWidth: 400, p: 1 }
+            }}
+        >
+            <DialogTitle sx={{ fontWeight: 800, pb: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <LocalOfferOutlinedIcon color="primary" />
+                Apply Discount
+            </DialogTitle>
+            <DialogContent>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Enter a percentage-based discount to apply to the subtotal.
+                </Typography>
+                
+                <Stack spacing={3}>
+                    <Box>
+                        <Typography variant="caption" fontWeight={700} color="primary" gutterBottom>
+                            DISCOUNT PERCENTAGE: {value}%
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            type="number"
+                            value={value}
+                            onChange={(e) => setValue(Math.min(100, Math.max(0, Number(e.target.value))))}
+                            InputProps={{
+                                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                                sx: { borderRadius: 2.5, fontWeight: 800, fontSize: '1.2rem' }
+                            }}
+                        />
+                    </Box>
+
+                    <Grid container spacing={1}>
+                        {QUICK_DISCOUNTS.map((d) => (
+                            <Grid size={{ xs: 4, sm: 3 }} key={d}>
+                                <Button
+                                    fullWidth
+                                    variant={value === d ? 'contained' : 'outlined'}
+                                    onClick={() => setValue(d)}
+                                    sx={{ borderRadius: 2, fontWeight: 700 }}
+                                >
+                                    {d === 0 ? 'None' : `${d}%`}
+                                </Button>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Stack>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button onClick={onClose} sx={{ fontWeight: 700 }}>Cancel</Button>
+                <Button 
+                    variant="contained" 
+                    onClick={() => { onApply(value); onClose(); }} 
+                    sx={{ borderRadius: 2, px: 4, fontWeight: 800 }}
+                >
+                    Apply
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+// Note Dialog
+const NoteDialog = ({ open, onClose, note, onSave }) => {
+    const [value, setValue] = useState(note || '');
+
+    return (
+        <Dialog 
+            open={open} 
+            onClose={onClose}
+            PaperProps={{
+                sx: { borderRadius: 4, width: '100%', maxWidth: 450, p: 1 }
+            }}
+        >
+            <DialogTitle sx={{ fontWeight: 800, pb: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <NoteAltOutlinedIcon color="primary" />
+                Transaction Note
+            </DialogTitle>
+            <DialogContent>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Add special instructions or internal notes for this transaction.
+                </Typography>
+                <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    placeholder="Type your note here..."
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    sx={{
+                        '& .MuiOutlinedInput-root': { borderRadius: 3 }
+                    }}
+                />
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button onClick={onClose} sx={{ fontWeight: 700 }}>Cancel</Button>
+                <Button 
+                    variant="contained" 
+                    onClick={() => { onSave(value); onClose(); }} 
+                    sx={{ borderRadius: 2, px: 4, fontWeight: 800 }}
+                >
+                    Save Note
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
 const PosTerminal = () => {
   const theme = useTheme();
   const { handlerDrawerOpen: setDrawerOpen } = useOutletContext() || {};
@@ -372,6 +497,14 @@ const PosTerminal = () => {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [heldBills, setHeldBills] = useState([]);
   const [isHeldBillsDialogOpen, setIsHeldBillsDialogOpen] = useState(false);
+  
+  // New State for Discount and Note
+  const [discount, setDiscount] = useState(0);
+  const [note, setNote] = useState('');
+  const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const isMenuOpen = Boolean(anchorEl);
 
   useEffect(() => {
     const savedLayout = localStorage.getItem('posLayoutPosition');
@@ -433,6 +566,8 @@ const PosTerminal = () => {
         id: Date.now(),
         items: [...cart],
         customer: customer,
+        discount: discount,
+        note: note,
         subtotal: subtotal,
         tax: tax,
         total: total,
@@ -442,18 +577,15 @@ const PosTerminal = () => {
     setHeldBills(prev => [newHeldBill, ...prev]);
     setCart([]);
     setCustomer(null);
+    setDiscount(0);
+    setNote('');
   };
 
   const handleResumeBill = (heldBill) => {
-    // If current cart has items, we could ask to merge or replace. 
-    // To keep it simple as per request, we'll replace or just add them.
-    // Usually "Resume" means loading that specific transaction.
-    
-    // For now, let's just replace the current state if it's empty, or add to it.
-    // If the user wants to "move to next customer", holding current and starting new is the key.
-    
     setCart(heldBill.items);
     setCustomer(heldBill.customer);
+    setDiscount(heldBill.discount || 0);
+    setNote(heldBill.note || '');
     setHeldBills(prev => prev.filter(b => b.id !== heldBill.id));
     setIsHeldBillsDialogOpen(false);
   };
@@ -462,9 +594,26 @@ const PosTerminal = () => {
     setHeldBills(prev => prev.filter(b => b.id !== id));
   };
 
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleCancelOrder = () => {
+    setCart([]);
+    setCustomer(null);
+    setDiscount(0);
+    setNote('');
+    handleMenuClose();
+  };
+
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const tax = subtotal * 0.08;
-  const total = subtotal + tax;
+  const discountAmount = subtotal * (discount / 100);
+  const tax = (subtotal - discountAmount) * 0.08;
+  const total = (subtotal - discountAmount) + tax;
 
   return (
     <Box sx={{ 
@@ -652,14 +801,41 @@ const PosTerminal = () => {
                     <Avatar sx={{ bgcolor: 'success.main', width: 32, height: 32 }}>
                         <PersonOutlineOutlinedIcon sx={{ fontSize: '1.2rem' }} />
                     </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                        <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'success.dark', lineHeight: 1.2 }}>{customer.name}</Typography>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography variant="caption" color="text.secondary" fontWeight={600}>{customer.phone || 'No Phone'}</Typography>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography 
+                            variant="subtitle2" 
+                            fontWeight={800} 
+                            noWrap 
+                            sx={{ 
+                                color: 'success.dark', 
+                                lineHeight: 1.2,
+                                textOverflow: 'ellipsis',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            {customer.name}
+                        </Typography>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ whiteSpace: 'nowrap' }}>
+                                {customer.phone || 'No Phone'}
+                            </Typography>
                             {customer.email && (
                                 <>
                                     <Typography variant="caption" color="divider">|</Typography>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>{customer.email}</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        color="text.secondary" 
+                                        fontWeight={600}
+                                        sx={{ 
+                                            maxWidth: '100%',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        title={customer.email}
+                                    >
+                                        {customer.email}
+                                    </Typography>
                                 </>
                             )}
                         </Stack>
@@ -716,21 +892,114 @@ const PosTerminal = () => {
 
         {/* Actions */}
         <Grid container spacing={1} sx={{ mt: 2, mb: 2.5 }}>
-            <Grid size={{ xs: 4 }}><Button fullWidth variant="outlined" startIcon={<LocalOfferOutlinedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' }, fontSize: '0.9rem !important' }} />} sx={{ borderRadius: 1.5, py: 0.8, fontSize: '0.65rem', fontWeight: 800 }}>% Disc.</Button></Grid>
-            <Grid size={{ xs: 4 }}><Button fullWidth variant="outlined" startIcon={<NoteAltOutlinedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' }, fontSize: '0.9rem !important' }} />} sx={{ borderRadius: 1.5, py: 0.8, fontSize: '0.65rem', fontWeight: 800 }}>Note</Button></Grid>
-            <Grid size={{ xs: 4 }}>
+            <Grid size={{ xs: 3.5 }}>
+                <Button 
+                    fullWidth 
+                    variant={discount > 0 ? "contained" : "outlined"} 
+                    onClick={() => setIsDiscountDialogOpen(true)}
+                    startIcon={<LocalOfferOutlinedIcon sx={{ display: { xs: 'none', lg: 'inline-flex' }, fontSize: '0.9rem !important' }} />} 
+                    sx={{ 
+                        borderRadius: 1.5, 
+                        py: 0.8, 
+                        fontSize: '0.65rem', 
+                        fontWeight: 800,
+                        bgcolor: discount > 0 ? alpha(theme.palette.primary.main, 1) : 'transparent',
+                        color: discount > 0 ? 'white' : 'primary.main'
+                    }}
+                >
+                    {discount > 0 ? `${discount}%` : '% Disc.'}
+                </Button>
+            </Grid>
+            <Grid size={{ xs: 3.5 }}>
+                <Button 
+                    fullWidth 
+                    variant={note ? "contained" : "outlined"} 
+                    onClick={() => setIsNoteDialogOpen(true)}
+                    startIcon={<NoteAltOutlinedIcon sx={{ display: { xs: 'none', lg: 'inline-flex' }, fontSize: '0.9rem !important' }} />} 
+                    sx={{ 
+                        borderRadius: 1.5, 
+                        py: 0.8, 
+                        fontSize: '0.65rem', 
+                        fontWeight: 800,
+                        bgcolor: note ? alpha(theme.palette.primary.main, 1) : 'transparent',
+                        color: note ? 'white' : 'primary.main'
+                    }}
+                >
+                    {note ? 'Edit Note' : 'Note'}
+                </Button>
+            </Grid>
+            <Grid size={{ xs: 3.5 }}>
                 <Button 
                     fullWidth 
                     variant="outlined" 
                     onClick={handleHoldBill}
                     disabled={cart.length === 0}
-                    startIcon={<PauseCircleOutlineIcon sx={{ display: { xs: 'none', sm: 'inline-flex' }, fontSize: '0.9rem !important' }} />} 
+                    startIcon={<PauseCircleOutlineIcon sx={{ display: { xs: 'none', lg: 'inline-flex' }, fontSize: '0.9rem !important' }} />} 
                     sx={{ borderRadius: 1.5, py: 0.8, fontSize: '0.65rem', fontWeight: 800 }}
                 >
                     Hold
                 </Button>
             </Grid>
+            <Grid size={{ xs: 1.5 }}>
+                <IconButton 
+                    onClick={handleMenuOpen}
+                    sx={{ 
+                        borderRadius: 1.5, 
+                        border: '1px solid', 
+                        borderColor: 'divider',
+                        bgcolor: isMenuOpen ? alpha(theme.palette.primary.main, 0.05) : 'transparent',
+                        height: '100%',
+                        width: '100%'
+                    }}
+                >
+                    <MoreVertIcon sx={{ fontSize: '1.2rem' }} />
+                </IconButton>
+            </Grid>
         </Grid>
+
+        <Menu
+            anchorEl={anchorEl}
+            open={isMenuOpen}
+            onClose={handleMenuClose}
+            onClick={handleMenuClose}
+            PaperProps={{
+                elevation: 3,
+                sx: { 
+                    borderRadius: 3, 
+                    minWidth: 200, 
+                    mt: 1,
+                    '& .MuiMenuItem-root': { py: 1.2, px: 2 }
+                }
+            }}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        >
+            <MenuItem onClick={handleMenuClose}>
+                <ListItemIcon><QrCodeScannerIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Enter Barcode" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose}>
+                <ListItemIcon><RedeemIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Reward" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose}>
+                <ListItemIcon><ListAltIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Pricelist" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose}>
+                <ListItemIcon><AssignmentReturnIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Refund" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose}>
+                <ListItemIcon><InfoOutlinedIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Info" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
+            </MenuItem>
+            <Divider sx={{ my: 0.5 }} />
+            <MenuItem onClick={handleCancelOrder} sx={{ color: 'error.main' }}>
+                <ListItemIcon><CancelIcon fontSize="small" color="error" /></ListItemIcon>
+                <ListItemText primary="Cancel Order" primaryTypographyProps={{ variant: 'body2', fontWeight: 700 }} />
+            </MenuItem>
+        </Menu>
 
         {/* Totals */}
         <Stack spacing={1} sx={{ mb: 2.5 }}>
@@ -738,10 +1007,26 @@ const PosTerminal = () => {
                 <Typography color="text.secondary" variant="body2">Subtotal</Typography>
                 <Typography fontWeight={700} variant="body2">${subtotal.toFixed(2)}</Typography>
             </Stack>
+            {discount > 0 && (
+                <Stack direction="row" justifyContent="space-between">
+                    <Typography color="error.main" variant="body2" fontWeight={600}>Discount ({discount}%)</Typography>
+                    <Typography fontWeight={700} variant="body2" color="error.main">-${discountAmount.toFixed(2)}</Typography>
+                </Stack>
+            )}
             <Stack direction="row" justifyContent="space-between">
                 <Typography color="text.secondary" variant="body2">Tax (8%)</Typography>
                 <Typography fontWeight={700} variant="body2">${tax.toFixed(2)}</Typography>
             </Stack>
+            {note && (
+                <Paper elevation={0} sx={{ p: 1, borderRadius: 2, bgcolor: alpha(theme.palette.warning.main, 0.05), border: '1px dashed', borderColor: alpha(theme.palette.warning.main, 0.2) }}>
+                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                        <NoteAltOutlinedIcon sx={{ fontSize: '1rem', color: 'warning.main', mt: 0.2 }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', flex: 1 }}>
+                            {note}
+                        </Typography>
+                    </Stack>
+                </Paper>
+            )}
             <Divider sx={{ my: 0.5 }} />
             <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5" fontWeight={800}>Total</Typography>
@@ -785,6 +1070,20 @@ const PosTerminal = () => {
             heldBills={heldBills}
             onResume={handleResumeBill}
             onDelete={handleDeleteHeldBill}
+        />
+
+        <DiscountDialog 
+            open={isDiscountDialogOpen}
+            onClose={() => setIsDiscountDialogOpen(false)}
+            discount={discount}
+            onApply={(v) => setDiscount(v)}
+        />
+
+        <NoteDialog 
+            open={isNoteDialogOpen}
+            onClose={() => setIsNoteDialogOpen(false)}
+            note={note}
+            onSave={(v) => setNote(v)}
         />
       </Box>
     </Box>

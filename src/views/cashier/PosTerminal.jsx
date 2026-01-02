@@ -37,11 +37,13 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import NoteAltOutlinedIcon from '@mui/icons-material/NoteAltOutlined';
-import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import HistoryIcon from '@mui/icons-material/History';
 import GridViewIcon from '@mui/icons-material/GridView';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
@@ -279,6 +281,82 @@ const CustomerDialog = ({ open, onClose, onSave, initialData }) => {
     );
 };
 
+// Held Bills Dialog
+const HeldBillsDialog = ({ open, onClose, heldBills, onResume, onDelete }) => {
+    const theme = useTheme();
+
+    return (
+        <Dialog 
+            open={open} 
+            onClose={onClose}
+            PaperProps={{
+                sx: { borderRadius: 4, width: '100%', maxWidth: 500, p: 1 }
+            }}
+        >
+            <DialogTitle sx={{ fontWeight: 800, pb: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <HistoryIcon color="primary" />
+                Held Bills ({heldBills.length})
+            </DialogTitle>
+            <DialogContent>
+                {heldBills.length === 0 ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}>
+                        <Typography color="text.secondary">No bills currently on hold.</Typography>
+                    </Box>
+                ) : (
+                    <Stack spacing={1.5} sx={{ mt: 1 }}>
+                        {heldBills.map((bill) => (
+                            <Paper 
+                                key={bill.id}
+                                variant="outlined" 
+                                sx={{ 
+                                    p: 2, 
+                                    borderRadius: 3, 
+                                    '&:hover': { borderColor: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.02) }
+                                }}
+                            >
+                                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight={800}>
+                                            {bill.customer ? bill.customer.name : 'Guest'}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" display="block">
+                                            {bill.items.length} items • ${bill.total.toFixed(2)}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                                            {new Date(bill.timestamp).toLocaleTimeString()}
+                                        </Typography>
+                                    </Box>
+                                    <Stack direction="row" spacing={1}>
+                                        <Button 
+                                            size="small" 
+                                            color="error"
+                                            onClick={() => onDelete(bill.id)}
+                                            sx={{ minWidth: 'auto', px: 1 }}
+                                        >
+                                            <DeleteOutlineIcon fontSize="small" />
+                                        </Button>
+                                        <Button 
+                                            variant="contained" 
+                                            size="small"
+                                            onClick={() => onResume(bill)}
+                                            sx={{ borderRadius: 2, fontWeight: 700 }}
+                                        >
+                                            Resume
+                                        </Button>
+                                    </Stack>
+                                </Stack>
+                            </Paper>
+                        ))}
+                    </Stack>
+                )}
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button onClick={onClose} sx={{ fontWeight: 700 }}>Close</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
 const PosTerminal = () => {
   const theme = useTheme();
   const { handlerDrawerOpen: setDrawerOpen } = useOutletContext() || {};
@@ -292,6 +370,8 @@ const PosTerminal = () => {
   ]);
   const [customer, setCustomer] = useState(null);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [heldBills, setHeldBills] = useState([]);
+  const [isHeldBillsDialogOpen, setIsHeldBillsDialogOpen] = useState(false);
 
   useEffect(() => {
     const savedLayout = localStorage.getItem('posLayoutPosition');
@@ -344,6 +424,42 @@ const PosTerminal = () => {
 
   const removeFromCart = (id) => {
     setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleHoldBill = () => {
+    if (cart.length === 0) return;
+    
+    const newHeldBill = {
+        id: Date.now(),
+        items: [...cart],
+        customer: customer,
+        subtotal: subtotal,
+        tax: tax,
+        total: total,
+        timestamp: new Date().toISOString()
+    };
+    
+    setHeldBills(prev => [newHeldBill, ...prev]);
+    setCart([]);
+    setCustomer(null);
+  };
+
+  const handleResumeBill = (heldBill) => {
+    // If current cart has items, we could ask to merge or replace. 
+    // To keep it simple as per request, we'll replace or just add them.
+    // Usually "Resume" means loading that specific transaction.
+    
+    // For now, let's just replace the current state if it's empty, or add to it.
+    // If the user wants to "move to next customer", holding current and starting new is the key.
+    
+    setCart(heldBill.items);
+    setCustomer(heldBill.customer);
+    setHeldBills(prev => prev.filter(b => b.id !== heldBill.id));
+    setIsHeldBillsDialogOpen(false);
+  };
+
+  const handleDeleteHeldBill = (id) => {
+    setHeldBills(prev => prev.filter(b => b.id !== id));
   };
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -484,7 +600,20 @@ const PosTerminal = () => {
         }}
       >
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-            <Typography variant="h5" fontWeight={800}>Cart Items ({cart.length})</Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="h5" fontWeight={800}>Cart Items ({cart.length})</Typography>
+                {heldBills.length > 0 && (
+                    <Badge badgeContent={heldBills.length} color="error" sx={{ '& .MuiBadge-badge': { fontWeight: 800 } }}>
+                        <IconButton 
+                            size="small" 
+                            onClick={() => setIsHeldBillsDialogOpen(true)}
+                            sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } }}
+                        >
+                            <HistoryIcon fontSize="small" color="primary" />
+                        </IconButton>
+                    </Badge>
+                )}
+            </Stack>
             <Button 
                 size="small" 
                 startIcon={<PersonAddAltOutlinedIcon />} 
@@ -589,7 +718,18 @@ const PosTerminal = () => {
         <Grid container spacing={1} sx={{ mt: 2, mb: 2.5 }}>
             <Grid size={{ xs: 4 }}><Button fullWidth variant="outlined" startIcon={<LocalOfferOutlinedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' }, fontSize: '0.9rem !important' }} />} sx={{ borderRadius: 1.5, py: 0.8, fontSize: '0.65rem', fontWeight: 800 }}>% Disc.</Button></Grid>
             <Grid size={{ xs: 4 }}><Button fullWidth variant="outlined" startIcon={<NoteAltOutlinedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' }, fontSize: '0.9rem !important' }} />} sx={{ borderRadius: 1.5, py: 0.8, fontSize: '0.65rem', fontWeight: 800 }}>Note</Button></Grid>
-            <Grid size={{ xs: 4 }}><Button fullWidth variant="outlined" startIcon={<LocalShippingOutlinedIcon sx={{ display: { xs: 'none', sm: 'inline-flex' }, fontSize: '0.9rem !important' }} />} sx={{ borderRadius: 1.5, py: 0.8, fontSize: '0.65rem', fontWeight: 800 }}>Ship</Button></Grid>
+            <Grid size={{ xs: 4 }}>
+                <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    onClick={handleHoldBill}
+                    disabled={cart.length === 0}
+                    startIcon={<PauseCircleOutlineIcon sx={{ display: { xs: 'none', sm: 'inline-flex' }, fontSize: '0.9rem !important' }} />} 
+                    sx={{ borderRadius: 1.5, py: 0.8, fontSize: '0.65rem', fontWeight: 800 }}
+                >
+                    Hold
+                </Button>
+            </Grid>
         </Grid>
 
         {/* Totals */}
@@ -637,6 +777,14 @@ const PosTerminal = () => {
             onClose={() => setIsCustomerDialogOpen(false)} 
             onSave={(data) => setCustomer(data)}
             initialData={customer}
+        />
+
+        <HeldBillsDialog 
+            open={isHeldBillsDialogOpen}
+            onClose={() => setIsHeldBillsDialogOpen(false)}
+            heldBills={heldBills}
+            onResume={handleResumeBill}
+            onDelete={handleDeleteHeldBill}
         />
       </Box>
     </Box>

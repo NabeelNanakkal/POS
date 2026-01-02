@@ -53,6 +53,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import RedeemIcon from '@mui/icons-material/Redeem';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
+import KeyboardOutlinedIcon from '@mui/icons-material/KeyboardOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
@@ -110,7 +111,7 @@ const ProductCard = ({ product, onAdd }) => (
     >
       <Box sx={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
           <Box sx={{ 
-              height: 180, 
+              height: 130, 
               overflow: 'hidden', 
               bgcolor: 'grey.50',
               position: 'relative'
@@ -157,24 +158,24 @@ const ProductCard = ({ product, onAdd }) => (
               }}
           />
       </Box>
-      <Box sx={{ p: 2.5, flexGrow: 1, width: '100%' }}>
+      <Box sx={{ p: 1.5, flexGrow: 1, width: '100%' }}>
           <Typography
               variant="subtitle2"
               fontWeight={800}
               noWrap
               sx={{
-                  mb: 0.5,
-                  fontSize: '0.95rem',
+                  mb: 0.3,
+                  fontSize: '0.85rem',
                   color: 'text.primary',
                   letterSpacing: -0.2
               }}
           >
               {product.name}
           </Typography>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.8 }}>#{product.sku}</Typography>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', fontWeight: 700, opacity: 0.8 }}>#{product.sku}</Typography>
             <Typography variant="caption" color="divider">|</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontWeight: 700, opacity: 0.8 }}>BC: {product.barcode}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', fontWeight: 700, opacity: 0.8 }}>BC: {product.barcode}</Typography>
           </Stack>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Box>
@@ -182,11 +183,11 @@ const ProductCard = ({ product, onAdd }) => (
                     variant="caption" 
                     color="text.secondary" 
                     display="block" 
-                    sx={{ mb: -0.5, fontWeight: 700 }}
+                    sx={{ mb: -0.8, fontWeight: 700, fontSize: '0.6rem' }}
                 >
                     Price
                 </Typography>
-                <Typography variant="h5" fontWeight={900} color="primary.main">
+                <Typography variant="subtitle1" fontWeight={900} color="primary.main" sx={{ fontSize: '1rem' }}>
                     ${product.price.toFixed(2)}
                 </Typography>
               </Box>
@@ -195,23 +196,23 @@ const ProductCard = ({ product, onAdd }) => (
                     e.stopPropagation();
                     onAdd(product);
                   }}
-                  size="medium"
+                  size="small"
                   sx={{
                       bgcolor: 'primary.main',
                       color: 'white',
-                      width: 42,
-                      height: 42,
-                      borderRadius: 3,
-                      boxShadow: (theme) => `0 6px 16px ${alpha(theme.palette.primary.main, 0.25)}`,
+                      width: 32,
+                      height: 32,
+                      borderRadius: 2,
+                      boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
                       transition: 'all 0.3s ease',
                       '&:hover': { 
                           bgcolor: 'primary.dark', 
                           transform: 'scale(1.1) rotate(10deg)',
-                          boxShadow: (theme) => `0 8px 20px ${alpha(theme.palette.primary.main, 0.35)}`
+                          boxShadow: (theme) => `0 8px 16px ${alpha(theme.palette.primary.main, 0.3)}`
                       }
                   }}
               >
-                  <ShoppingCartOutlinedIcon sx={{ fontSize: '1.2rem' }} />
+                  <ShoppingCartOutlinedIcon sx={{ fontSize: '1rem' }} />
               </IconButton>
           </Stack>
       </Box>
@@ -482,6 +483,204 @@ const NoteDialog = ({ open, onClose, note, onSave }) => {
     );
 };
 
+// Barcode Dialog
+const BarcodeDialog = ({ open, onClose, onAdd }) => {
+    const [barcode, setBarcode] = useState('');
+    const [error, setError] = useState('');
+
+    const handleSubmit = (e) => {
+        if (e) e.preventDefault();
+        const product = PRODUCTS.find(p => p.barcode === barcode);
+        if (product) {
+            onAdd(product);
+            setBarcode('');
+            setError('');
+            onClose();
+        } else {
+            setError('Product not found for this barcode');
+        }
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 400, p: 1 } }}>
+            <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <QrCodeScannerIcon color="primary" /> Enter Barcode
+            </DialogTitle>
+            <DialogContent>
+                <form onSubmit={handleSubmit}>
+                    <TextField
+                        fullWidth
+                        autoFocus
+                        label="Type Barcode"
+                        placeholder="e.g. 123456789012"
+                        value={barcode}
+                        onChange={(e) => { setBarcode(e.target.value); setError(''); }}
+                        error={!!error}
+                        helperText={error}
+                        sx={{ mt: 2, '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                    />
+                </form>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button onClick={onClose} sx={{ fontWeight: 700 }}>Cancel</Button>
+                <Button variant="contained" onClick={handleSubmit} sx={{ borderRadius: 2.5, px: 3, fontWeight: 800 }}>Add to Cart</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+// Reward Dialog
+const RewardDialog = ({ open, onClose, customer }) => {
+    return (
+        <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 400, p: 1 } }}>
+            <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <RedeemIcon color="primary" /> Customer Rewards
+            </DialogTitle>
+            <DialogContent>
+                {customer ? (
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        <Box sx={{ p: 2, bgcolor: alpha('#ff9800', 0.1), borderRadius: 3, border: '1px solid', borderColor: alpha('#ff9800', 0.2), textAlign: 'center' }}>
+                            <Typography variant="body2" color="text.secondary" fontWeight={600}>Available Points</Typography>
+                            <Typography variant="h2" fontWeight={900} color="#f57c00">1,250</Typography>
+                            <Typography variant="caption" color="text.secondary">Equivalent to <b>$12.50</b> credit</Typography>
+                        </Box>
+                        <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 1 }}>Recent Transactions</Typography>
+                        {[1, 2].map(i => (
+                            <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                                <Box>
+                                    <Typography variant="body2" fontWeight={700}>Earned Points</Typography>
+                                    <Typography variant="caption" color="text.secondary">Order #12{i}5 - 12 Dec 2025</Typography>
+                                </Box>
+                                <Typography color="success.main" fontWeight={800}>+45 pts</Typography>
+                            </Stack>
+                        ))}
+                    </Stack>
+                ) : (
+                    <Box sx={{ py: 4, textAlign: 'center' }}>
+                        <Typography color="text.secondary" variant="body2" sx={{ fontStyle: 'italic' }}>Please select a customer first to view rewards.</Typography>
+                    </Box>
+                )}
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button fullWidth onClick={onClose} variant="outlined" sx={{ borderRadius: 2.5, fontWeight: 700 }}>Close</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+// Pricelist Dialog
+const PricelistDialog = ({ open, onClose, pricelist, onSelect }) => {
+    const PRICELISTS = [
+        { id: 'standard', name: 'Standard Pricing', desc: 'Default retail prices' },
+        { id: 'wholesale', name: 'Wholesale Pricing', desc: '5% discount on all items' },
+        { id: 'vip', name: 'VIP Pricing', desc: '10% discount on all items' }
+    ];
+
+    return (
+        <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 450, p: 1 } }}>
+            <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <ListAltIcon color="primary" /> Select Pricelist
+            </DialogTitle>
+            <DialogContent>
+                <Stack spacing={1.5} sx={{ mt: 1 }}>
+                    {PRICELISTS.map(list => (
+                        <Paper
+                            key={list.id}
+                            component={CardActionArea}
+                            onClick={() => { onSelect(list.id); onClose(); }}
+                            elevation={0}
+                            sx={{
+                                p: 2,
+                                borderRadius: 3,
+                                border: '2px solid',
+                                borderColor: pricelist === list.id ? 'primary.main' : 'divider',
+                                bgcolor: pricelist === list.id ? alpha('#2196f3', 0.05) : 'white',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Box>
+                                    <Typography variant="subtitle1" fontWeight={800} color={pricelist === list.id ? 'primary.main' : 'text.primary'}>{list.name}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{list.desc}</Typography>
+                                </Box>
+                                {pricelist === list.id && <Chip label="Active" size="small" color="primary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
+                            </Stack>
+                        </Paper>
+                    ))}
+                </Stack>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button fullWidth onClick={onClose} sx={{ fontWeight: 700 }}>Cancel</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+// Refund Dialog
+const RefundDialog = ({ open, onClose }) => {
+    return (
+        <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 500, p: 1 } }}>
+            <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <AssignmentReturnIcon color="primary" /> Process Refund
+            </DialogTitle>
+            <DialogContent>
+                <Stack spacing={3} sx={{ mt: 1 }}>
+                    <TextField fullWidth placeholder="Search Order ID or Receipt Number" InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.disabled' }} />, sx: { borderRadius: 3 } }} />
+                    <Box sx={{ py: 6, textAlign: 'center', border: '2px dashed', borderColor: 'divider', borderRadius: 4, bgcolor: alpha('#f5f5f5', 0.5) }}>
+                        <Typography color="text.disabled" variant="body2" fontWeight={600}>Scan a receipt to start refund or enter order ID above.</Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <InfoOutlinedIcon sx={{ fontSize: '1rem' }} /> Refund policy: items must be returned within 30 days.
+                    </Typography>
+                </Stack>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button onClick={onClose} sx={{ fontWeight: 700 }}>Cancel</Button>
+                <Button variant="contained" disabled sx={{ borderRadius: 2.5, px: 3, fontWeight: 800 }}>Search Order</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+// Command Info Dialog
+const InfoDialog = ({ open, onClose }) => {
+    return (
+        <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 450, p: 1 } }}>
+            <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <KeyboardOutlinedIcon color="primary" /> Command Info
+            </DialogTitle>
+            <DialogContent>
+                <Stack spacing={2.5} sx={{ mt: 1 }}>
+                    <Box sx={{ p: 2, bgcolor: alpha('#2196f3', 0.05), borderRadius: 3, border: '1px solid', borderColor: alpha('#2196f3', 0.1) }}>
+                        <Typography variant="body2" fontWeight={800} color="primary.main" gutterBottom>SYSTEM STATUS</Typography>
+                        <Stack spacing={1}>
+                            <Stack direction="row" justifyContent="space-between"><Typography variant="caption" color="text.secondary">Version</Typography><Typography variant="caption" fontWeight={700}>2.4.1-stable</Typography></Stack>
+                            <Stack direction="row" justifyContent="space-between"><Typography variant="caption" color="text.secondary">Database</Typography><Typography variant="caption" fontWeight={700} color="success.main">Connected</Typography></Stack>
+                            <Stack direction="row" justifyContent="space-between"><Typography variant="caption" color="text.secondary">Terminal ID</Typography><Typography variant="caption" fontWeight={700}>TERM-0042</Typography></Stack>
+                        </Stack>
+                    </Box>
+                    <Box>
+                        <Typography variant="subtitle2" fontWeight={800} gutterBottom>KEYBOARD SHORTCUTS</Typography>
+                        <Grid container spacing={1}>
+                            {[ {k: 'F1', d: 'Search Product'}, {k: 'F2', d: 'Add Customer'}, {k: 'F8', d: 'Hold Bill'}, {k: 'F12', d: 'Pay Now'}, {k: 'ESC', d: 'Cancel Action'} ].map(s => (
+                                <Grid size={{ xs: 6 }} key={s.k}>
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <Typography sx={{ px: 0.8, py: 0.2, bgcolor: alpha('#eee', 0.8), borderRadius: 1, border: '1px solid', borderColor: 'divider', fontSize: '0.65rem', fontWeight: 900 }}>{s.k}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{s.d}</Typography>
+                                    </Stack>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Box>
+                </Stack>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button fullWidth onClick={onClose} variant="contained" sx={{ borderRadius: 2.5, fontWeight: 700 }}>Great, thanks!</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
 const PosTerminal = () => {
   const theme = useTheme();
   const { handlerDrawerOpen: setDrawerOpen } = useOutletContext() || {};
@@ -505,6 +704,14 @@ const PosTerminal = () => {
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const isMenuOpen = Boolean(anchorEl);
+
+  // New features dialog states
+  const [isBarcodeDialogOpen, setIsBarcodeDialogOpen] = useState(false);
+  const [isRewardDialogOpen, setIsRewardDialogOpen] = useState(false);
+  const [isPricelistDialogOpen, setIsPricelistDialogOpen] = useState(false);
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
+  const [pricelist, setPricelist] = useState('standard');
 
   useEffect(() => {
     const savedLayout = localStorage.getItem('posLayoutPosition');
@@ -611,9 +818,15 @@ const PosTerminal = () => {
   };
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const discountAmount = subtotal * (discount / 100);
-  const tax = (subtotal - discountAmount) * 0.08;
-  const total = (subtotal - discountAmount) + tax;
+  
+  // Pricelist Logic: applying special discounts based on pricelist
+  const pricelistDiscountFactor = pricelist === 'wholesale' ? 0.05 : (pricelist === 'vip' ? 0.10 : 0);
+  const pricelistDiscountAmount = subtotal * pricelistDiscountFactor;
+  
+  const discountAmount = (subtotal - pricelistDiscountAmount) * (discount / 100);
+  const currentSubtotal = subtotal - pricelistDiscountAmount - discountAmount;
+  const tax = currentSubtotal * 0.08;
+  const total = currentSubtotal + tax;
 
   return (
     <Box sx={{ 
@@ -720,9 +933,9 @@ const PosTerminal = () => {
             '&::-webkit-scrollbar': { width: 6 },
             '&::-webkit-scrollbar-thumb': { bgcolor: 'grey.300', borderRadius: 3 }
         }}>
-            <Grid container spacing={2}>
+            <Grid container spacing={1.5}>
                 {filteredProducts.map(product => (
-                    <Grid size={{ xs: 12, sm: 6, md: 6, lg: 4, xl: 3, xxl: 2 }} key={product.id}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }} key={product.id}>
                         <ProductCard product={product} onAdd={addToCart} />
                     </Grid>
                 ))}
@@ -974,25 +1187,25 @@ const PosTerminal = () => {
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         >
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={() => { handleMenuClose(); setIsBarcodeDialogOpen(true); }}>
                 <ListItemIcon><QrCodeScannerIcon fontSize="small" /></ListItemIcon>
                 <ListItemText primary="Enter Barcode" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
             </MenuItem>
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={() => { handleMenuClose(); setIsRewardDialogOpen(true); }}>
                 <ListItemIcon><RedeemIcon fontSize="small" /></ListItemIcon>
                 <ListItemText primary="Reward" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
             </MenuItem>
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={() => { handleMenuClose(); setIsPricelistDialogOpen(true); }}>
                 <ListItemIcon><ListAltIcon fontSize="small" /></ListItemIcon>
                 <ListItemText primary="Pricelist" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
             </MenuItem>
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={() => { handleMenuClose(); setIsRefundDialogOpen(true); }}>
                 <ListItemIcon><AssignmentReturnIcon fontSize="small" /></ListItemIcon>
                 <ListItemText primary="Refund" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
             </MenuItem>
-            <MenuItem onClick={handleMenuClose}>
-                <ListItemIcon><InfoOutlinedIcon fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Info" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
+            <MenuItem onClick={() => { handleMenuClose(); setIsInfoDialogOpen(true); }}>
+                <ListItemIcon><KeyboardOutlinedIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Command Info" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
             </MenuItem>
             <Divider sx={{ my: 0.5 }} />
             <MenuItem onClick={handleCancelOrder} sx={{ color: 'error.main' }}>
@@ -1007,6 +1220,14 @@ const PosTerminal = () => {
                 <Typography color="text.secondary" variant="body2">Subtotal</Typography>
                 <Typography fontWeight={700} variant="body2">${subtotal.toFixed(2)}</Typography>
             </Stack>
+            {pricelist !== 'standard' && (
+                <Stack direction="row" justifyContent="space-between">
+                    <Typography color="primary.main" variant="body2" fontWeight={600}>
+                        {pricelist === 'wholesale' ? 'Wholesale Disc (5%)' : 'VIP Discount (10%)'}
+                    </Typography>
+                    <Typography fontWeight={700} variant="body2" color="primary.main">-${pricelistDiscountAmount.toFixed(2)}</Typography>
+                </Stack>
+            )}
             {discount > 0 && (
                 <Stack direction="row" justifyContent="space-between">
                     <Typography color="error.main" variant="body2" fontWeight={600}>Discount ({discount}%)</Typography>
@@ -1084,6 +1305,35 @@ const PosTerminal = () => {
             onClose={() => setIsNoteDialogOpen(false)}
             note={note}
             onSave={(v) => setNote(v)}
+        />
+
+        <BarcodeDialog 
+            open={isBarcodeDialogOpen}
+            onClose={() => setIsBarcodeDialogOpen(false)}
+            onAdd={addToCart}
+        />
+
+        <RewardDialog 
+            open={isRewardDialogOpen}
+            onClose={() => setIsRewardDialogOpen(false)}
+            customer={customer}
+        />
+
+        <PricelistDialog 
+            open={isPricelistDialogOpen}
+            onClose={() => setIsPricelistDialogOpen(false)}
+            pricelist={pricelist}
+            onSelect={(v) => setPricelist(v)}
+        />
+
+        <RefundDialog 
+            open={isRefundDialogOpen}
+            onClose={() => setIsRefundDialogOpen(false)}
+        />
+
+        <InfoDialog 
+            open={isInfoDialogOpen}
+            onClose={() => setIsInfoDialogOpen(false)}
         />
       </Box>
     </Box>

@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import Loadable from 'ui-component/Loadable';
 import MinimalLayout from 'layout/MinimalLayout';
 import PosLayout from 'layout/PosLayout';
+import ErrorFallback from 'ui-component/ErrorFallback';
 
 // render - POS Dashboard & Terminal
 const MainDashboard = Loadable(lazy(() => import('views/cashier/MainDashboard')));
@@ -15,6 +16,7 @@ const Reports = Loadable(lazy(() => import('views/cashier/Reports')));
 
 const PosRoutes = {
   path: '/',
+  errorElement: <ErrorFallback />,
   children: [
     {
       path: '/',

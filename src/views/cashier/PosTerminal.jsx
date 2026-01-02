@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { useBarcodeScanner } from 'hooks/useBarcodeScanner';
 import {
   Box,
   Grid,
@@ -642,6 +644,89 @@ const RefundDialog = ({ open, onClose }) => {
     );
 };
 
+// Camera Scanner Dialog
+const CameraScannerDialog = ({ open, onClose, onScan }) => {
+    const scannerRef = useRef(null);
+    const [scanError, setScanError] = useState(null);
+
+    useEffect(() => {
+        let html5QrCode;
+        let isMounted = true;
+
+        if (open) {
+            const initScanner = async () => {
+                // Give the Dialog some time to finish its opening animation/mounting
+                await new Promise(resolve => setTimeout(resolve, 350));
+                
+                if (!isMounted) return;
+                
+                const element = document.getElementById("reader");
+                if (!element) {
+                    console.error("Scanner element not found");
+                    return;
+                }
+
+                try {
+                    html5QrCode = new Html5Qrcode("reader");
+                    const config = { fps: 15, qrbox: { width: 250, height: 150 } };
+                    
+                    await html5QrCode.start(
+                        { facingMode: "environment" }, 
+                        config, 
+                        (decodedText) => {
+                            onScan(decodedText);
+                            onClose();
+                        },
+                        (errorMessage) => {
+                            // ignore noise
+                        }
+                    );
+                } catch (err) {
+                    if (isMounted) {
+                        setScanError("Unable to start camera. Please ensure permissions are granted and no other app is using it.");
+                    }
+                }
+            };
+
+            initScanner();
+        }
+
+        return () => {
+            isMounted = false;
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.error("Error stopping scanner", err));
+            }
+        };
+    }, [open, onScan, onClose]);
+
+    return (
+        <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 450, p: 1 } }}>
+            <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <QrCodeScannerIcon color="primary" /> Scan Barcode
+                </Box>
+                <IconButton onClick={onClose} size="small"><CancelIcon /></IconButton>
+            </DialogTitle>
+            <DialogContent>
+                <Box sx={{ position: 'relative', borderRadius: 3, overflow: 'hidden', bgcolor: 'black', minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div id="reader" style={{ width: '100%' }}></div>
+                    {scanError && (
+                        <Typography color="error" variant="caption" sx={{ position: 'absolute', bottom: 10, bgcolor: 'rgba(255,255,255,0.9)', px: 2, py: 0.5, borderRadius: 1 }}>
+                            {scanError}
+                        </Typography>
+                    )}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
+                    Position the barcode within the frame to scan.
+                </Typography>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button fullWidth onClick={onClose} variant="outlined" sx={{ borderRadius: 2.5, fontWeight: 700 }}>Close Camera</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
 // Command Info Dialog
 const InfoDialog = ({ open, onClose }) => {
     return (
@@ -707,11 +792,23 @@ const PosTerminal = () => {
 
   // New features dialog states
   const [isBarcodeDialogOpen, setIsBarcodeDialogOpen] = useState(false);
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
   const [isRewardDialogOpen, setIsRewardDialogOpen] = useState(false);
   const [isPricelistDialogOpen, setIsPricelistDialogOpen] = useState(false);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [pricelist, setPricelist] = useState('standard');
+
+  // Hardware Scanner Hook
+  useBarcodeScanner((code) => {
+    const product = PRODUCTS.find(p => p.barcode === code);
+    if (product) {
+        addToCart(product);
+        // Optional: play a success sound or show a mini toast
+    } else {
+        // Optional: alert product not found
+    }
+  });
 
   useEffect(() => {
     const savedLayout = localStorage.getItem('posLayoutPosition');
@@ -869,6 +966,7 @@ const PosTerminal = () => {
                 <Button 
                     variant="outlined" 
                     size="small"
+                    onClick={() => setIsCameraScannerOpen(true)}
                     startIcon={<QrCodeScannerIcon />}
                     sx={{ flex: 1, borderRadius: 2, px: 3, whiteSpace: 'nowrap', bgcolor: 'white', border: '1px solid #ddd', color: 'text.primary', textTransform: 'none' }}
                 >
@@ -1311,6 +1409,15 @@ const PosTerminal = () => {
             open={isBarcodeDialogOpen}
             onClose={() => setIsBarcodeDialogOpen(false)}
             onAdd={addToCart}
+        />
+
+        <CameraScannerDialog
+            open={isCameraScannerOpen}
+            onClose={() => setIsCameraScannerOpen(false)}
+            onScan={(code) => {
+                const product = PRODUCTS.find(p => p.barcode === code);
+                if (product) addToCart(product);
+            }}
         />
 
         <RewardDialog 

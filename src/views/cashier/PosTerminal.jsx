@@ -533,6 +533,7 @@ const BarcodeDialog = ({ open, onClose, onAdd }) => {
 
 // Reward Dialog
 const RewardDialog = ({ open, onClose, customer }) => {
+    const theme = useTheme();
     return (
         <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 400, p: 1 } }}>
             <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -541,9 +542,9 @@ const RewardDialog = ({ open, onClose, customer }) => {
             <DialogContent>
                 {customer ? (
                     <Stack spacing={2} sx={{ mt: 1 }}>
-                        <Box sx={{ p: 2, bgcolor: alpha('#ff9800', 0.1), borderRadius: 3, border: '1px solid', borderColor: alpha('#ff9800', 0.2), textAlign: 'center' }}>
+                        <Box sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 3, border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.2), textAlign: 'center' }}>
                             <Typography variant="body2" color="text.secondary" fontWeight={600}>Available Points</Typography>
-                            <Typography variant="h2" fontWeight={900} color="#f57c00">1,250</Typography>
+                            <Typography variant="h2" fontWeight={900} color="primary.main">1,250</Typography>
                             <Typography variant="caption" color="text.secondary">Equivalent to <b>$12.50</b> credit</Typography>
                         </Box>
                         <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 1 }}>Recent Transactions</Typography>
@@ -572,6 +573,7 @@ const RewardDialog = ({ open, onClose, customer }) => {
 
 // Pricelist Dialog
 const PricelistDialog = ({ open, onClose, pricelist, onSelect }) => {
+    const theme = useTheme();
     const PRICELISTS = [
         { id: 'standard', name: 'Standard Pricing', desc: 'Default retail prices' },
         { id: 'wholesale', name: 'Wholesale Pricing', desc: '5% discount on all items' },
@@ -596,7 +598,7 @@ const PricelistDialog = ({ open, onClose, pricelist, onSelect }) => {
                                 borderRadius: 3,
                                 border: '2px solid',
                                 borderColor: pricelist === list.id ? 'primary.main' : 'divider',
-                                bgcolor: pricelist === list.id ? alpha('#2196f3', 0.05) : 'white',
+                                bgcolor: pricelist === list.id ? alpha(theme.palette.primary.main, 0.05) : 'white',
                                 transition: 'all 0.2s'
                             }}
                         >
@@ -620,6 +622,7 @@ const PricelistDialog = ({ open, onClose, pricelist, onSelect }) => {
 
 // Refund Dialog
 const RefundDialog = ({ open, onClose }) => {
+    const theme = useTheme();
     return (
         <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 500, p: 1 } }}>
             <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -628,7 +631,7 @@ const RefundDialog = ({ open, onClose }) => {
             <DialogContent>
                 <Stack spacing={3} sx={{ mt: 1 }}>
                     <TextField fullWidth placeholder="Search Order ID or Receipt Number" InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.disabled' }} />, sx: { borderRadius: 3 } }} />
-                    <Box sx={{ py: 6, textAlign: 'center', border: '2px dashed', borderColor: 'divider', borderRadius: 4, bgcolor: alpha('#f5f5f5', 0.5) }}>
+                    <Box sx={{ py: 6, textAlign: 'center', border: '2px dashed', borderColor: 'divider', borderRadius: 4, bgcolor: alpha(theme.palette.grey[100], 0.5) }}>
                         <Typography color="text.disabled" variant="body2" fontWeight={600}>Scan a receipt to start refund or enter order ID above.</Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -729,6 +732,7 @@ const CameraScannerDialog = ({ open, onClose, onScan }) => {
 
 // Command Info Dialog
 const InfoDialog = ({ open, onClose }) => {
+    const theme = useTheme();
     return (
         <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 450, p: 1 } }}>
             <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -736,7 +740,7 @@ const InfoDialog = ({ open, onClose }) => {
             </DialogTitle>
             <DialogContent>
                 <Stack spacing={2.5} sx={{ mt: 1 }}>
-                    <Box sx={{ p: 2, bgcolor: alpha('#2196f3', 0.05), borderRadius: 3, border: '1px solid', borderColor: alpha('#2196f3', 0.1) }}>
+                    <Box sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: 3, border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.1) }}>
                         <Typography variant="body2" fontWeight={800} color="primary.main" gutterBottom>SYSTEM STATUS</Typography>
                         <Stack spacing={1}>
                             <Stack direction="row" justifyContent="space-between"><Typography variant="caption" color="text.secondary">Version</Typography><Typography variant="caption" fontWeight={700}>2.4.1-stable</Typography></Stack>
@@ -750,7 +754,7 @@ const InfoDialog = ({ open, onClose }) => {
                             {[ {k: 'F1', d: 'Search Product'}, {k: 'F2', d: 'Add Customer'}, {k: 'F8', d: 'Hold Bill'}, {k: 'F12', d: 'Pay Now'}, {k: 'ESC', d: 'Cancel Action'} ].map(s => (
                                 <Grid size={{ xs: 6 }} key={s.k}>
                                     <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography sx={{ px: 0.8, py: 0.2, bgcolor: alpha('#eee', 0.8), borderRadius: 1, border: '1px solid', borderColor: 'divider', fontSize: '0.65rem', fontWeight: 900 }}>{s.k}</Typography>
+                                        <Typography sx={{ px: 0.8, py: 0.2, bgcolor: alpha(theme.palette.grey[200], 0.8), borderRadius: 1, border: '1px solid', borderColor: 'divider', fontSize: '0.65rem', fontWeight: 900 }}>{s.k}</Typography>
                                         <Typography variant="caption" color="text.secondary">{s.d}</Typography>
                                     </Stack>
                                 </Grid>

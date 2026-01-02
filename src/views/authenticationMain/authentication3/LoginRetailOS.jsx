@@ -127,7 +127,7 @@ const LoginRetailOS = () => {
         size={{ xs: 12, md: 6 }}
         sx={{
           position: 'relative',
-          backgroundColor: '#1a2035', // Fallback color
+          backgroundColor: 'dark.900', // Use theme dark paper
           backgroundImage: 'url(https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop)', // Retail store background
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -180,7 +180,7 @@ const LoginRetailOS = () => {
       <Grid
         size={{ xs: 12, md: 6 }}
         sx={{
-          bgcolor: '#F8FAFC',
+          bgcolor: 'grey.50',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -191,7 +191,7 @@ const LoginRetailOS = () => {
         <Box sx={{ width: '100%', maxWidth: 420 }}>
           {/* Header */}
           <Box sx={{ mb: 5 }}>
-            <Typography variant="h2" fontWeight={800} gutterBottom sx={{ color: '#0f172a' }}>
+            <Typography variant="h2" fontWeight={800} gutterBottom sx={{ color: 'text.primary' }}>
               Welcome back
             </Typography>
             <Typography variant="body1" color="text.secondary">

@@ -373,7 +373,7 @@ const HeldBillsDialog = ({ open, onClose, heldBills, onResume, onDelete }) => {
 // Discount Dialog
 const DiscountDialog = ({ open, onClose, discount, onApply }) => {
     const [value, setValue] = useState(discount || 0);
-    const QUICK_DISCOUNTS = [0, 5, 10, 15, 20, 25, 50];
+    const QUICK_DISCOUNTS = [0, 5, 10, 15, 18, 20, 25, 50];
 
     return (
         <Dialog 
@@ -621,8 +621,75 @@ const PricelistDialog = ({ open, onClose, pricelist, onSelect }) => {
 };
 
 // Refund Dialog
-const RefundDialog = ({ open, onClose }) => {
+const RefundDialog = ({ open, onClose, externalScannedCode }) => {
     const theme = useTheme();
+    const [orderId, setOrderId] = useState('');
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanError, setScanError] = useState(null);
+
+    useEffect(() => {
+        if (externalScannedCode && open) {
+            setOrderId(externalScannedCode);
+        }
+    }, [externalScannedCode, open]);
+
+    useEffect(() => {
+        if (!open) {
+            setOrderId('');
+            setIsScanning(false);
+            setScanError(null);
+        }
+    }, [open]);
+
+    useEffect(() => {
+        let html5QrCode;
+        let isMounted = true;
+
+        if (isScanning && open) {
+            const initScanner = async () => {
+                await new Promise(resolve => setTimeout(resolve, 350));
+                if (!isMounted) return;
+                
+                const element = document.getElementById("refund-reader");
+                if (!element) return;
+
+                try {
+                    html5QrCode = new Html5Qrcode("refund-reader");
+                    const config = { fps: 15, qrbox: { width: 250, height: 150 } };
+                    
+                    await html5QrCode.start(
+                        { facingMode: "environment" }, 
+                        config, 
+                        (decodedText) => {
+                            setOrderId(decodedText);
+                            setIsScanning(false);
+                        },
+                        () => {}
+                    );
+                } catch (err) {
+                    if (isMounted) {
+                        setScanError("Unable to start camera.");
+                        setIsScanning(false);
+                    }
+                }
+            };
+            initScanner();
+        }
+
+        return () => {
+            isMounted = false;
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(() => {});
+            }
+        };
+    }, [isScanning, open]);
+
+    const handleSearch = () => {
+        if (orderId) {
+            alert(`Searching for Order: ${orderId}`);
+        }
+    };
+
     return (
         <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 4, width: '100%', maxWidth: 500, p: 1 } }}>
             <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -630,10 +697,59 @@ const RefundDialog = ({ open, onClose }) => {
             </DialogTitle>
             <DialogContent>
                 <Stack spacing={3} sx={{ mt: 1 }}>
-                    <TextField fullWidth placeholder="Search Order ID or Receipt Number" InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.disabled' }} />, sx: { borderRadius: 3 } }} />
-                    <Box sx={{ py: 6, textAlign: 'center', border: '2px dashed', borderColor: 'divider', borderRadius: 4, bgcolor: alpha(theme.palette.grey[100], 0.5) }}>
-                        <Typography color="text.disabled" variant="body2" fontWeight={600}>Scan a receipt to start refund or enter order ID above.</Typography>
+                    <TextField 
+                        fullWidth 
+                        placeholder="Search Order ID or Receipt Number" 
+                        value={orderId}
+                        onChange={(e) => setOrderId(e.target.value)}
+                        InputProps={{ 
+                            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.disabled' }} />, 
+                            sx: { borderRadius: 3 } 
+                        }} 
+                    />
+                    
+                    <Box 
+                        sx={{ 
+                            position: 'relative',
+                            py: isScanning ? 0 : 6, 
+                            textAlign: 'center', 
+                            border: '2px dashed', 
+                            borderColor: isScanning ? 'primary.main' : 'divider', 
+                            borderRadius: 4, 
+                            bgcolor: isScanning ? 'black' : alpha(theme.palette.grey[100], 0.5),
+                            overflow: 'hidden',
+                            minHeight: 180,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: !isScanning ? 'pointer' : 'default'
+                        }}
+                        onClick={() => !isScanning && setIsScanning(true)}
+                    >
+                        {isScanning ? (
+                            <div id="refund-reader" style={{ width: '100%' }}></div>
+                        ) : (
+                            <Stack spacing={1} alignItems="center">
+                                <QrCodeScannerIcon sx={{ fontSize: '2.5rem', color: 'text.disabled', opacity: 0.5 }} />
+                                <Typography color="text.disabled" variant="body2" fontWeight={600}>
+                                    {scanError ? scanError : "Click to scan a receipt or use camera"}
+                                </Typography>
+                            </Stack>
+                        )}
+                        
+                        {isScanning && (
+                            <Button 
+                                size="small" 
+                                variant="contained" 
+                                color="error"
+                                onClick={(e) => { e.stopPropagation(); setIsScanning(false); }}
+                                sx={{ position: 'absolute', bottom: 10, right: 10, borderRadius: 2 }}
+                            >
+                                Stop
+                            </Button>
+                        )}
                     </Box>
+
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <InfoOutlinedIcon sx={{ fontSize: '1rem' }} /> Refund policy: items must be returned within 30 days.
                     </Typography>
@@ -641,7 +757,14 @@ const RefundDialog = ({ open, onClose }) => {
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
                 <Button onClick={onClose} sx={{ fontWeight: 700 }}>Cancel</Button>
-                <Button variant="contained" disabled sx={{ borderRadius: 2.5, px: 3, fontWeight: 800 }}>Search Order</Button>
+                <Button 
+                    variant="contained" 
+                    onClick={handleSearch}
+                    disabled={!orderId} 
+                    sx={{ borderRadius: 2.5, px: 3, fontWeight: 800 }}
+                >
+                    Search Order
+                </Button>
             </DialogActions>
         </Dialog>
     );
@@ -804,13 +927,15 @@ const PosTerminal = () => {
   const [pricelist, setPricelist] = useState('standard');
 
   // Hardware Scanner Hook
+  const [lastScannedRefundCode, setLastScannedRefundCode] = useState('');
   useBarcodeScanner((code) => {
-    const product = PRODUCTS.find(p => p.barcode === code);
-    if (product) {
-        addToCart(product);
-        // Optional: play a success sound or show a mini toast
+    if (isRefundDialogOpen) {
+        setLastScannedRefundCode(code);
     } else {
-        // Optional: alert product not found
+        const product = PRODUCTS.find(p => p.barcode === code);
+        if (product) {
+            addToCart(product);
+        }
     }
   });
 
@@ -1440,6 +1565,7 @@ const PosTerminal = () => {
         <RefundDialog 
             open={isRefundDialogOpen}
             onClose={() => setIsRefundDialogOpen(false)}
+            externalScannedCode={lastScannedRefundCode}
         />
 
         <InfoDialog 

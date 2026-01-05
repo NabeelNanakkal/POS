@@ -26,7 +26,10 @@ import {
   Breadcrumbs,
   Link,
   Pagination,
-  Tooltip
+  Tooltip,
+  Dialog,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 
@@ -94,6 +97,103 @@ const StatCard = ({ title, value, icon, color, trend }) => {
     );
 };
 
+const DeleteConfirmationDialog = ({ open, onClose, onConfirm, productName }) => {
+    const theme = useTheme();
+    return (
+        <Dialog 
+            open={open} 
+            onClose={onClose}
+            PaperProps={{ 
+                sx: { 
+                    borderRadius: 5, 
+                    p: 1, 
+                    maxWidth: 400, 
+                    width: '100%',
+                    boxShadow: '0 24px 48px rgba(0,0,0,0.1)'
+                } 
+            }}
+        >
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
+                    <WarningAmberIcon sx={{ fontSize: 32 }} />
+                </Box>
+                <Typography variant="h5" fontWeight={800} sx={{ mb: 1 }}>Delete Product?</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3, px: 2 }}>
+                    Are you sure you want to delete <strong>{productName}</strong>? This action cannot be undone.
+                </Typography>
+                <Stack direction="row" spacing={2}>
+                    <Button 
+                        variant="outlined" 
+                        fullWidth 
+                        onClick={onClose}
+                        sx={{ borderRadius: 3, py: 1.2, fontWeight: 800, textTransform: 'none', border: '1px solid #e2e8f0', color: 'text.secondary' }}
+                    >
+                        Keep 
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        color="error"
+                        fullWidth 
+                        onClick={onConfirm}
+                        sx={{ borderRadius: 3, py: 1.2, fontWeight: 800, textTransform: 'none', boxShadow: `0 8px 16px ${alpha(theme.palette.error.main, 0.2)}` }}
+                    >
+                        Delete
+                    </Button>
+                </Stack>
+            </Box>
+        </Dialog>
+    );
+};
+
+const UpdateConfirmationDialog = ({ open, onClose, onConfirm, productName }) => {
+    const theme = useTheme();
+    return (
+        <Dialog 
+            open={open} 
+            onClose={onClose}
+            PaperProps={{ 
+                sx: { 
+                    borderRadius: 5, 
+                    p: 1, 
+                    maxWidth: 400, 
+                    width: '100%',
+                    boxShadow: '0 24px 48px rgba(0,0,0,0.1)'
+                } 
+            }}
+        >
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
+                    <EditOutlinedIcon sx={{ fontSize: 32 }} />
+                </Box>
+                <Typography variant="h5" fontWeight={800} sx={{ mb: 1 }}>Update Product?</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3, px: 2 }}>
+                    Are you sure you want to save the changes for <strong>{productName}</strong>? All modifications will be updated immediately.
+                </Typography>
+                <Stack direction="row" spacing={2}>
+                    <Button 
+                        variant="outlined" 
+                        fullWidth 
+                        onClick={onClose}
+                        sx={{ borderRadius: 3, py: 1.2, fontWeight: 800, textTransform: 'none', border: '1px solid #e2e8f0', color: 'text.secondary' }}
+                    >
+                        Review
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        color="success"
+                        fullWidth 
+                        onClick={onConfirm}
+                        sx={{ borderRadius: 3, py: 1.2, fontWeight: 800, textTransform: 'none', color: 'white', boxShadow: `0 8px 16px ${alpha(theme.palette.success.main, 0.2)}` }}
+                    >
+                        Update
+                    </Button>
+                </Stack>
+            </Box>
+        </Dialog>
+    );
+};
+
+
 const FileUploadDialog = ({ open, onClose, onImport }) => {
     const [file, setFile] = useState(null);
     const [previewData, setPreviewData] = useState([]);
@@ -117,13 +217,34 @@ const FileUploadDialog = ({ open, onClose, onImport }) => {
 
     const downloadSampleCSV = () => {
         const sampleData = [
-            { name: 'Product A', sku: 'SKU001', barcode: '123456789012', category: 'Electronics', retailPrice: 100, costPrice: 60, stock: 10 },
-            { name: 'Product B', sku: 'SKU002', barcode: '987654321098', category: 'Clothing', retailPrice: 50, costPrice: 20, stock: 25 },
+            { 
+                "Item Name": 'Product A', 
+                "Description": 'Noise cancelling wireless headphones', 
+                "Rate": 149.99, 
+                "Product Type": 'Goods', 
+                "Account": 'Sales', 
+                "Usage unit": 'pcs', 
+                "Purchase Description": 'Bulk purchase from vendor', 
+                "Purchase Rate": 85.00, 
+                "Item Type": 'Inventory', 
+                "Purchase Account": 'Cost of Goods Sold', 
+                "Inventory Account": 'Inventory Asset', 
+                "Reorder Point": 5, 
+                "Vendor": 'TechSupplies Inc', 
+                "Initial Stock": 10, 
+                "Initial Stock Rate": 85.00, 
+                "Warehouse Name": 'Main Warehouse', 
+                "Tax Name": 'VAT', 
+                "Tax Type": 'Percentage', 
+                "Tax Percentage": 15, 
+                "Exemption Reason": '', 
+                "Status": 'Active'
+            }
         ];
         const ws = XLSX.utils.json_to_sheet(sampleData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Products");
-        XLSX.writeFile(wb, "sample_products.csv");
+        XLSX.utils.book_append_sheet(wb, ws, "Inventory_Template");
+        XLSX.writeFile(wb, "Batch_Import_Template.xlsx");
     };
 
     return (
@@ -174,19 +295,21 @@ const FileUploadDialog = ({ open, onClose, onImport }) => {
                         <Table size="small">
                             <TableHead sx={{ bgcolor: '#f8fafc' }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontSize: '0.7rem' }}>Name</TableCell>
-                                    <TableCell sx={{ fontSize: '0.7rem' }}>SKU</TableCell>
-                                    <TableCell sx={{ fontSize: '0.7rem' }}>Barcode</TableCell>
-                                    <TableCell sx={{ fontSize: '0.7rem' }}>Stock</TableCell>
+                                    <TableCell sx={{ fontSize: '0.65rem', fontWeight: 800 }}>Item Name</TableCell>
+                                    <TableCell sx={{ fontSize: '0.65rem', fontWeight: 800 }}>Rate</TableCell>
+                                    <TableCell sx={{ fontSize: '0.65rem', fontWeight: 800 }}>Stock</TableCell>
+                                    <TableCell sx={{ fontSize: '0.65rem', fontWeight: 800 }}>Vendor</TableCell>
+                                    <TableCell sx={{ fontSize: '0.65rem', fontWeight: 800 }}>Tax %</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {previewData.map((row, idx) => (
                                     <TableRow key={idx}>
-                                        <TableCell sx={{ fontSize: '0.7rem' }}>{row.name}</TableCell>
-                                        <TableCell sx={{ fontSize: '0.7rem' }}>{row.sku}</TableCell>
-                                        <TableCell sx={{ fontSize: '0.7rem' }}>{row.barcode || 'N/A'}</TableCell>
-                                        <TableCell sx={{ fontSize: '0.7rem' }}>{row.stock}</TableCell>
+                                        <TableCell sx={{ fontSize: '0.65rem' }}>{row["Item Name"]}</TableCell>
+                                        <TableCell sx={{ fontSize: '0.65rem' }}>{row["Rate"]}</TableCell>
+                                        <TableCell sx={{ fontSize: '0.65rem' }}>{row["Initial Stock"] || row["stock"]}</TableCell>
+                                        <TableCell sx={{ fontSize: '0.65rem' }}>{row["Vendor"] || 'N/A'}</TableCell>
+                                        <TableCell sx={{ fontSize: '0.65rem' }}>{row["Tax Percentage"]}%</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -209,48 +332,169 @@ const FileUploadDialog = ({ open, onClose, onImport }) => {
 };
 
 const MOCK_PRODUCTS = [
-  { id: 1, name: 'Wireless Headphones', description: 'Noise cancelling', sku: 'WH-001', barcode: '123456789012', category: 'Electronics', retailPrice: 149.99, costPrice: 85.00, stock: 3, alertLimit: 5, status: 'In Stock', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=100&q=80' },
-  { id: 2, name: 'Mechanical Keyboard', description: 'RGB Backlit', sku: 'KB-RGB', barcode: '234567890123', category: 'Electronics', retailPrice: 89.99, costPrice: 45.00, stock: 12, alertLimit: 5, status: 'In Stock', image: 'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?auto=format&fit=crop&w=100&q=80' },
-  { id: 3, name: 'Basic Cotton Tee', description: 'Unisex, Size M', sku: 'AP-TS', barcode: '345678901234', category: 'Clothing', retailPrice: 25.00, costPrice: 10.00, stock: 45, alertLimit: 10, status: 'In Stock', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=100&q=80' },
-  { id: 4, name: 'Smart Watch Series 5', description: 'GPS + Cellular', sku: 'SM-S5', barcode: '456789012345', category: 'Electronics', retailPrice: 299.00, costPrice: 180.00, stock: 8, alertLimit: 3, status: 'In Stock', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=100&q=80' },
-  { id: 5, name: 'Artisan Coffee Mug', description: 'Handmade Ceramic', sku: 'HM-MUG', barcode: '567890123456', category: 'Home & Garden', retailPrice: 18.50, costPrice: 6.00, stock: 24, alertLimit: 5, status: 'In Stock', image: 'https://images.unsplash.com/photo-1514228742587-6b1558fbed20?auto=format&fit=crop&w=100&q=80' },
+  { 
+    id: 1, name: 'Wireless Headphones', description: 'Noise cancelling wireless headphones', retailPrice: 149.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Bulk purchase from vendor', purchaseRate: 85.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 5, vendor: 'Sony', stock: 3, initialStockRate: 85.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'WH-001', barcode: '123456789012', category: 'Electronics', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 2, name: 'Mechanical Keyboard', description: 'RGB Backlit Mechanical Keyboard', retailPrice: 89.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Bulk purchase', purchaseRate: 45.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 5, vendor: 'Corsair', stock: 12, initialStockRate: 45.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'KB-RGB', barcode: '234567890123', category: 'Electronics', image: 'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 3, name: 'Gaming Mouse', description: 'High precision wireless gaming mouse', retailPrice: 59.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Bulk purchase', purchaseRate: 25.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 10, vendor: 'Logitech', stock: 25, initialStockRate: 25.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'MS-GPRO', barcode: '345678901234', category: 'Electronics', image: 'https://images.unsplash.com/photo-1527443154391-507e9dc6c5cc?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 4, name: '4K Monitor', description: '27-inch 4K UHD IPS Monitor', retailPrice: 349.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Vendor Order', purchaseRate: 210.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 3, vendor: 'Dell', stock: 8, initialStockRate: 210.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'MN-4K27', barcode: '456789012345', category: 'Electronics', image: 'https://images.unsplash.com/photo-1527443210214-469bfb4b9b94?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 5, name: 'Smart Watch', description: 'Fitness tracker with heart rate monitor', retailPrice: 199.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Direct Supplier', purchaseRate: 120.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 15, vendor: 'Samsung', stock: 45, initialStockRate: 120.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'SW-G5', barcode: '567890123456', category: 'Accessories', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 6, name: 'Laptop Backpack', description: 'Waterproof laptop backpack with USB port', retailPrice: 49.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Importer X', purchaseRate: 15.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 20, vendor: 'Targus', stock: 50, initialStockRate: 15.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'BP-LT15', barcode: '678901234567', category: 'Bags', image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 7, name: 'Coffee Mug', description: 'Ceramic coffee mug 350ml', retailPrice: 12.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Local Pottery', purchaseRate: 4.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 30, vendor: 'HomeStyles', stock: 120, initialStockRate: 4.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'MG-CER35', barcode: '789012345678', category: 'Kitchen', image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcc3d1?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 8, name: 'Leather Wallet', description: 'Genuine leather bifold wallet', retailPrice: 35.00, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Leather Craft Co', purchaseRate: 12.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 10, vendor: 'Timberland', stock: 22, initialStockRate: 12.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'WL-LTR-BF', barcode: '890123456789', category: 'Accessories', image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 9, name: 'Desktop Speaker', description: 'Compact USB powered desktop speakers', retailPrice: 29.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Tech Hub', purchaseRate: 10.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 5, vendor: 'Creative', stock: 15, initialStockRate: 10.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'SP-DK20', barcode: '901234567890', category: 'Electronics', image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 10, name: 'Webcam HD', description: '1080p HD Webcam with microphone', retailPrice: 69.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Office Depot', purchaseRate: 35.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 8, vendor: 'Logitech', stock: 18, initialStockRate: 35.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'WC-HD10', barcode: '012345678901', category: 'Electronics', image: 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=100&q=80' 
+  },
+  { 
+    id: 11, name: 'Old Monitor', description: 'Legacy LCD Monitor', retailPrice: 49.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Legacy stock', purchaseRate: 20.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 0, vendor: 'Dell', stock: 0, initialStockRate: 20.00, warehouseName: 'Warehouse B', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Inactive', sku: 'MN-OLD', barcode: '00000000000', category: 'Electronics', image: 'https://images.unsplash.com/photo-1527443210214-469bfb4b9b94?auto=format&fit=crop&w=100&q=80' 
+  }
 ];
 
 const ProductManagement = () => {
   const theme = useTheme();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isUpdateConfirmOpen, setIsUpdateConfirmOpen] = useState(false);
+  const [showActive, setShowActive] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productToDelete, setProductToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState(MOCK_PRODUCTS);
+  
+  // Form State
+  const [formState, setFormState] = useState({});
 
   const handleEditClick = (product) => {
     setSelectedProduct(product);
+    setFormState(product || {});
     setIsDrawerOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setSelectedProduct(null);
+    setFormState({
+        name: '',
+        description: '',
+        retailPrice: '',
+        productType: 'Goods',
+        account: 'Sales',
+        usageUnit: 'pcs',
+        purchaseDescription: '',
+        purchaseRate: '',
+        itemType: 'Inventory',
+        purchaseAccount: 'Cost of Goods Sold',
+        inventoryAccount: 'Inventory Asset',
+        reorderPoint: '',
+        vendor: '',
+        stock: '',
+        initialStockRate: '',
+        warehouseName: 'Main Warehouse',
+        taxName: 'None',
+        taxType: 'Percentage',
+        taxPercentage: '',
+        exemptionReason: '',
+        status: 'Active'
+    });
+    setIsDrawerOpen(true);
+  };
+
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setProducts(products.filter(p => p.id !== productToDelete.id));
+    setIsDeleteDialogOpen(false);
+    setProductToDelete(null);
+  };
+
+  const handleConfirmUpdate = () => {
+    setProducts(products.map(p => p.id === selectedProduct.id ? { ...p, ...formState } : p));
+    setIsUpdateConfirmOpen(false);
+    setIsDrawerOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const handleSaveProduct = () => {
+    if (selectedProduct) {
+        // Show confirmation before update
+        setIsUpdateConfirmOpen(true);
+    } else {
+        // Add new product immediately
+        const newProduct = {
+            ...formState,
+            id: products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1,
+            sku: `SKU-${Math.floor(Math.random() * 10000)}`,
+            barcode: `BC-${Math.floor(Math.random() * 100000000)}`,
+            image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=100&q=80',
+            category: 'New'
+        };
+        setProducts([...products, newProduct]);
+        setIsDrawerOpen(false);
+    }
   };
 
   const handleImportData = (data) => {
     const newProducts = data.map((item, index) => ({
         id: products.length + index + 1,
-        name: item.name || 'Unknown Product',
-        sku: item.sku || 'N/A',
-        barcode: item.barcode || 'N/A',
-        category: item.category || 'Uncategorized',
-        retailPrice: parseFloat(item.retailPrice) || 0,
-        costPrice: parseFloat(item.costPrice) || 0,
-        stock: parseInt(item.stock) || 0,
-        description: 'Imported product',
-        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=100&q=80'
+        name: item["Item Name"] || 'Unknown Product',
+        description: item["Description"] || '',
+        retailPrice: parseFloat(item["Rate"]) || 0,
+        productType: item["Product Type"] || 'Goods',
+        account: item["Account"] || 'Sales',
+        usageUnit: item["Usage unit"] || 'pcs',
+        purchaseDescription: item["Purchase Description"] || '',
+        purchaseRate: parseFloat(item["Purchase Rate"]) || 0,
+        itemType: item["Item Type"] || 'Inventory',
+        purchaseAccount: item["Purchase Account"] || 'Cost of Goods Sold',
+        inventoryAccount: item["Inventory Account"] || 'Inventory Asset',
+        reorderPoint: parseInt(item["Reorder Point"]) || 0,
+        vendor: item["Vendor"] || 'N/A',
+        stock: parseInt(item["Initial Stock"]) || 0,
+        initialStockRate: parseFloat(item["Initial Stock Rate"]) || 0,
+        warehouseName: item["Warehouse Name"] || 'Default',
+        taxName: item["Tax Name"] || 'None',
+        taxType: item["Tax Type"] || 'None',
+        taxPercentage: parseFloat(item["Tax Percentage"]) || 0,
+        exemptionReason: item["Exemption Reason"] || '',
+        status: item["Status"] || 'Active',
+        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=100&q=80',
+        sku: `SKU-${Math.floor(Math.random() * 10000)}`,
+        barcode: `BC-${Math.floor(Math.random() * 100000000)}`,
+        category: 'Imported'
     }));
     setProducts([...products, ...newProducts]);
     setIsImportOpen(false);
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesStatus = showActive ? p.status === 'Active' : p.status === 'Inactive';
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <Box sx={{ 
@@ -407,7 +651,7 @@ const ProductManagement = () => {
             <Button 
               variant="contained" 
               startIcon={<AddIcon />}
-              onClick={() => setIsDrawerOpen(true)}
+              onClick={handleAddNew}
               sx={{ 
                   borderRadius: 3, 
                   textTransform: 'none', 
@@ -522,6 +766,7 @@ const ProductManagement = () => {
                             </IconButton>
                             <IconButton 
                               size="medium" 
+                              onClick={() => handleDeleteClick(product)}
                               sx={{ 
                                 color: 'error.main', 
                                 bgcolor: alpha(theme.palette.error.main, 0.05),
@@ -562,7 +807,23 @@ const ProductManagement = () => {
               <TableCell sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1, py: 2.5 }}>Category</TableCell>
               <TableCell sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1, py: 2.5 }}>Retail Price</TableCell>
               <TableCell sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1, py: 2.5 }}>Stock Status</TableCell>
-              <TableCell align="right" sx={{ py: 2.5, pr: 4 }}></TableCell>
+              <TableCell align="right" sx={{ py: 2.5, pr: 4 }}>
+                <FormControlLabel
+                  control={
+                    <Switch 
+                      checked={showActive} 
+                      onChange={(e) => setShowActive(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="caption" fontWeight={800} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+                      {showActive ? 'Active' : 'Inactive'}
+                    </Typography>
+                  }
+                  labelPlacement="start"
+                />
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -707,6 +968,7 @@ const ProductManagement = () => {
                     <Tooltip title="Delete Product">
                       <IconButton 
                         size="small" 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }}
                         sx={{ 
                           color: 'text.secondary',
                           bgcolor: 'white', 
@@ -752,8 +1014,8 @@ const ProductManagement = () => {
           </Box>
 
           <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
-            {/* Product Image Upload */}
-            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5, color: 'text.primary', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Product Discovery</Typography>
+            {/* Product Image Upload - AT TOP */}
+            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5, color: 'text.primary', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Product Image</Typography>
             <Box 
               sx={{ 
                 border: '2px dashed #e2e8f0', 
@@ -774,78 +1036,300 @@ const ProductManagement = () => {
               <Typography variant="caption" color="text.secondary" fontWeight={500}>Supports PNG, JPG, JPEG (Max 5MB)</Typography>
             </Box>
 
-            {/* Form Fields */}
+            {/* 21 Fields in Sequential Order */}
             <Stack spacing={3}>
+              {/* 1. Item Name */}
               <Box>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Product Name</Typography>
-                <TextField fullWidth size="small" placeholder="Enter product name" defaultValue={selectedProduct?.name || ''} InputProps={{ sx: { borderRadius: 2 } }} />
-              </Box>
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>SKU</Typography>
-                  <TextField fullWidth size="small" placeholder="Enter SKU" defaultValue={selectedProduct?.sku || ''} InputProps={{ sx: { borderRadius: 2 } }} />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Barcode</Typography>
-                  <TextField 
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Item Name</Typography>
+                <TextField 
                     fullWidth 
                     size="small" 
-                    placeholder="Scan Barcode" 
-                    defaultValue={selectedProduct?.barcode || ''}
-                    InputProps={{ 
-                      sx: { borderRadius: 2 },
-                      endAdornment: (
-                          <InputAdornment position="end">
-                              <QrCodeScannerIcon color="action" fontSize="small" />
-                          </InputAdornment>
-                      )
-                    }} 
-                  />
-                </Box>
-              </Stack>
+                    placeholder="Enter item name" 
+                    value={formState.name || ''} 
+                    onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
 
+              {/* 2. Description */}
               <Box>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Category</Typography>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Description</Typography>
+                <TextField 
+                    multiline 
+                    rows={3} 
+                    fullWidth 
+                    size="small" 
+                    placeholder="Enter product description" 
+                    value={formState.description || ''} 
+                    onChange={(e) => setFormState({ ...formState, description: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              {/* 3. Rate */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Rate (Retail Price)</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="0.00" 
+                    value={formState.retailPrice || ''} 
+                    onChange={(e) => setFormState({ ...formState, retailPrice: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                />
+              </Box>
+
+              {/* 4. Product Type */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Product Type</Typography>
                 <FormControl fullWidth size="small">
-                  <Select defaultValue={selectedProduct?.category.toLowerCase() || 'electronics'} sx={{ borderRadius: 2 }}>
-                    <MenuItem value="electronics">Electronics</MenuItem>
-                    <MenuItem value="clothing">Clothing</MenuItem>
-                    <MenuItem value="home">Home & Garden</MenuItem>
+                  <Select 
+                    value={formState.productType || 'Goods'} 
+                    onChange={(e) => setFormState({ ...formState, productType: e.target.value })}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <MenuItem value="Goods">Goods</MenuItem>
+                    <MenuItem value="Service">Service</MenuItem>
                   </Select>
                 </FormControl>
               </Box>
 
+              {/* 5. Account */}
               <Box>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Description</Typography>
-                <TextField multiline rows={3} fullWidth size="small" placeholder="Enter product description" defaultValue={selectedProduct?.description || ''} InputProps={{ sx: { borderRadius: 2 } }} />
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Account (Sales)</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="Sales" 
+                    value={formState.account || 'Sales'} 
+                    onChange={(e) => setFormState({ ...formState, account: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              {/* 6. Usage unit */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Usage Unit</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="pcs" 
+                    value={formState.usageUnit || 'pcs'} 
+                    onChange={(e) => setFormState({ ...formState, usageUnit: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
               </Box>
 
               <Divider />
 
-              <Typography variant="overline" color="text.secondary" fontWeight={800}>Pricing & Inventory</Typography>
+              {/* 7. Purchase Description */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Purchase Description</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="Description for purchase" 
+                    value={formState.purchaseDescription || ''} 
+                    onChange={(e) => setFormState({ ...formState, purchaseDescription: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Retail Price</Typography>
-                  <TextField fullWidth size="small" placeholder="$ 0.00" defaultValue={selectedProduct?.retailPrice || ''} InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Cost Price</Typography>
-                  <TextField fullWidth size="small" placeholder="$ 0.00" defaultValue={selectedProduct?.costPrice || ''} InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
-                </Box>
-              </Stack>
+              {/* 8. Purchase Rate */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Purchase Rate</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="0.00" 
+                    value={formState.purchaseRate || ''} 
+                    onChange={(e) => setFormState({ ...formState, purchaseRate: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                />
+              </Box>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Stock Qty</Typography>
-                  <TextField fullWidth size="small" placeholder="0" defaultValue={selectedProduct?.stock || ''} InputProps={{ sx: { borderRadius: 2 } }} />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Alert Limit</Typography>
-                  <TextField fullWidth size="small" placeholder="0" defaultValue={selectedProduct?.alertLimit || ''} InputProps={{ sx: { borderRadius: 2 } }} />
-                </Box>
-              </Stack>
+              {/* 9. Item Type */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Item Type</Typography>
+                <Select 
+                    fullWidth 
+                    size="small" 
+                    value={formState.itemType || 'Inventory'} 
+                    onChange={(e) => setFormState({ ...formState, itemType: e.target.value })}
+                    sx={{ borderRadius: 2 }}
+                >
+                    <MenuItem value="Inventory">Inventory</MenuItem>
+                    <MenuItem value="Non-Inventory">Non-Inventory</MenuItem>
+                </Select>
+              </Box>
+
+              {/* 10. Purchase Account */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Purchase Account</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="Cost of Goods Sold" 
+                    value={formState.purchaseAccount || 'Cost of Goods Sold'} 
+                    onChange={(e) => setFormState({ ...formState, purchaseAccount: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              {/* 11. Inventory Account */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Inventory Account</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="Inventory Asset" 
+                    value={formState.inventoryAccount || 'Inventory Asset'} 
+                    onChange={(e) => setFormState({ ...formState, inventoryAccount: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              <Divider />
+
+              {/* 12. Reorder Point */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Reorder Point</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    type="number" 
+                    placeholder="5" 
+                    value={formState.reorderPoint || ''} 
+                    onChange={(e) => setFormState({ ...formState, reorderPoint: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              {/* 13. Vendor */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Vendor</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="Vendor Name" 
+                    value={formState.vendor || ''} 
+                    onChange={(e) => setFormState({ ...formState, vendor: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              {/* 14. Initial Stock */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Initial Stock</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    type="number" 
+                    placeholder="0" 
+                    value={formState.stock || ''} 
+                    onChange={(e) => setFormState({ ...formState, stock: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              {/* 15. Initial Stock Rate */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Initial Stock Rate</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    type="number" 
+                    placeholder="0.00" 
+                    value={formState.initialStockRate || ''} 
+                    onChange={(e) => setFormState({ ...formState, initialStockRate: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                />
+              </Box>
+
+              {/* 16. Warehouse Name */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Warehouse Name</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    value={formState.warehouseName || 'Main Warehouse'} 
+                    onChange={(e) => setFormState({ ...formState, warehouseName: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              <Divider />
+
+              {/* 17. Tax Name */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Tax Name</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="VAT" 
+                    value={formState.taxName || 'None'} 
+                    onChange={(e) => setFormState({ ...formState, taxName: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              {/* 18. Tax Type */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Tax Type</Typography>
+                <Select 
+                    fullWidth 
+                    size="small" 
+                    value={formState.taxType || 'Percentage'} 
+                    onChange={(e) => setFormState({ ...formState, taxType: e.target.value })}
+                    sx={{ borderRadius: 2 }}
+                >
+                    <MenuItem value="Percentage">Percentage</MenuItem>
+                    <MenuItem value="Flat">Flat</MenuItem>
+                    <MenuItem value="None">None</MenuItem>
+                </Select>
+              </Box>
+
+              {/* 19. Tax Percentage */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Tax Percentage</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    type="number" 
+                    placeholder="15" 
+                    value={formState.taxPercentage || ''} 
+                    onChange={(e) => setFormState({ ...formState, taxPercentage: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 }, endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                />
+              </Box>
+
+              {/* 20. Exemption Reason */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Exemption Reason</Typography>
+                <TextField 
+                    fullWidth 
+                    size="small" 
+                    placeholder="Reason if exempt" 
+                    value={formState.exemptionReason || ''} 
+                    onChange={(e) => setFormState({ ...formState, exemptionReason: e.target.value })}
+                    InputProps={{ sx: { borderRadius: 2 } }} 
+                />
+              </Box>
+
+              {/* 21. Status */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Status</Typography>
+                <Select 
+                    fullWidth 
+                    size="small" 
+                    value={formState.status || 'Active'} 
+                    onChange={(e) => setFormState({ ...formState, status: e.target.value })}
+                    sx={{ borderRadius: 2 }}
+                >
+                    <MenuItem value="Active">Active</MenuItem>
+                    <MenuItem value="Inactive">Inactive</MenuItem>
+                </Select>
+              </Box>
             </Stack>
           </Box>
 
@@ -862,6 +1346,7 @@ const ProductManagement = () => {
             <Button 
                 variant="contained" 
                 fullWidth 
+                onClick={handleSaveProduct}
                 sx={{ 
                     borderRadius: 3, 
                     height: 52, 
@@ -877,6 +1362,18 @@ const ProductManagement = () => {
           </Box>
         </Box>
       </Drawer>
+      <UpdateConfirmationDialog 
+        open={isUpdateConfirmOpen} 
+        onClose={() => setIsUpdateConfirmOpen(false)} 
+        onConfirm={handleConfirmUpdate} 
+        productName={selectedProduct?.name} 
+      />
+      <DeleteConfirmationDialog 
+        open={isDeleteDialogOpen} 
+        onClose={() => setIsDeleteDialogOpen(false)} 
+        onConfirm={handleConfirmDelete} 
+        productName={productToDelete?.name} 
+      />
     </Box>
   );
 };

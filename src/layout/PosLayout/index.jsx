@@ -36,6 +36,7 @@ const MENU_ITEMS = [
   { text: 'Dashboard', icon: GridViewIcon, path: '/pos/dashboard' },
   { text: 'POS Terminal', icon: PointOfSaleIcon, path: '/pos/terminal' },
   { text: 'Products', icon: Inventory2OutlinedIcon, path: '/pos/products' },
+  { text: 'Inventory', icon: StorefrontIcon, path: '/pos/inventory' },
   { text: 'Shift Management', icon: EventAvailableIcon, path: '/pos/shift' },
   { text: 'Reports', icon: AssessmentOutlinedIcon, path: '/pos/reports' },
 ];

@@ -25,8 +25,9 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 
-import { useDispatch } from 'react-redux';
-import { userLogin } from 'container/LoginContainer/slice';
+import { useDispatch, useSelector } from 'react-redux';
+import { userLogin, selectError } from 'container/LoginContainer/slice';
+import { CircularProgress, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 // ==============================|| RETAIL OS LOGIN ||============================== //
@@ -92,6 +93,9 @@ const LoginRetailOS = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const { loading } = useSelector((state) => state.login);
+  const error = useSelector(selectError);
+
   const [role, setRole] = useState('Cashier');
   const [employeeId, setEmployeeId] = useState('');
   const [pin, setPin] = useState('');
@@ -124,8 +128,9 @@ const LoginRetailOS = () => {
     <Grid container sx={{ minHeight: '100vh', overflow: 'hidden' }}>
       {/* Left Side - Image & Branding */}
       <Grid
-        size={{ xs: 12, md: 6 }}
+        size={{ md: 5, lg: 6 }}
         sx={{
+          display: { xs: 'none', md: 'flex' },
           position: 'relative',
           backgroundColor: 'dark.900', // Use theme dark paper
           backgroundImage: 'url(https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop)', // Retail store background
@@ -178,14 +183,16 @@ const LoginRetailOS = () => {
 
       {/* Right Side - Login Form */}
       <Grid
-        size={{ xs: 12, md: 6 }}
+        size={{ xs: 12, md: 7, lg: 6 }}
         sx={{
           bgcolor: 'grey.50',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          p: 4
+          p: { xs: 2, sm: 4, md: 6 },
+          minHeight: '100vh',
+          overflowY: 'auto'
         }}
       >
         <Box sx={{ width: '100%', maxWidth: 420 }}>
@@ -199,7 +206,7 @@ const LoginRetailOS = () => {
             </Typography>
           </Box>
 
-          {/* Role Selection */}
+{/* 
           <Box sx={{ mb: 4 }}>
             <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', fontWeight: 600 }}>
               Select Role
@@ -234,6 +241,7 @@ const LoginRetailOS = () => {
               />
             </Paper>
           </Box>
+*/}
 
           {/* Form Fields */}
           <Stack spacing={2.5} sx={{ mb: 4 }}>
@@ -339,13 +347,20 @@ const LoginRetailOS = () => {
             </Grid>
           </Grid>
 
+          {error && (
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+              {error.message || 'Login failed. Please check your credentials.'}
+            </Alert>
+          )}
+
           {/* Submit Button */}
           <Button
             fullWidth
             variant="contained"
             size="large"
+            disabled={loading}
             onClick={handleSubmit}
-            endIcon={<ArrowForwardIcon />}
+            endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ArrowForwardIcon />}
             sx={{
               py: 1.5,
               borderRadius: 2,
@@ -355,7 +370,7 @@ const LoginRetailOS = () => {
               boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
             }}
           >
-            Access Terminal
+            {loading ? 'Authenticating...' : 'Access Terminal'}
           </Button>
 
           {/* Footer help */}

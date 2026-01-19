@@ -18,12 +18,12 @@ function* login(action) {
       successAction: loginSuccess(),
       failAction: loginFail(),
       body: datas,
-      authourization: null
+      authourization: 'None' // commonApi handles null/None as no-auth
     };
 
     let res = yield call(commonApi, params);
     if (res) {
-      yield localStorage.setItem(import.meta.env.VITE_APP_SESSION_TOKEN, res.token);
+      yield localStorage.setItem('token', res.token);
       yield localStorage.setItem('user', JSON.stringify(res.user));
 
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
@@ -54,7 +54,7 @@ function* login(action) {
 
 function* logOut() {
   try {
-    yield localStorage.removeItem(import.meta.env.VITE_APP_SESSION_TOKEN);
+    yield localStorage.removeItem('token');
     yield localStorage.removeItem('user');
     // clear any stored redirectAfterLogin to avoid redirecting next user to previous user's page
     yield localStorage.removeItem('redirectAfterLogin');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme, alpha } from '@mui/material/styles';
 import {
   Box,
@@ -97,6 +97,18 @@ const LoginRetailOS = () => {
   const error = useSelector(selectError);
 
   const [role, setRole] = useState('Cashier');
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : null;
+    
+    if (token && user) {
+      const path = user.role === 'TenantAdmin' ? '/admin/dashboard' : '/pos/dashboard';
+      navigate(path);
+    }
+  }, [navigate]);
+
   const [employeeId, setEmployeeId] = useState('');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
@@ -144,7 +156,6 @@ const LoginRetailOS = () => {
           backgroundImage: 'url(https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop)', // Retail store background
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           p: 6,

@@ -34,7 +34,7 @@ const PosRoutes = {
       children: [
         {
           index: true,
-          element: <Navigate to="/admin/dashboard" replace />
+          element: <Navigate to="/login" replace />
         },
         {
           path: 'pos',

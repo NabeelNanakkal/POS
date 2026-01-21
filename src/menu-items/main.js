@@ -59,7 +59,7 @@ const main = {
       type: 'item',
       url: '/pos/terminal',
       icon: IconDeviceGamepad2,
-      permittedRoles: ['Cashier', 'Manager'],
+      permittedRoles: ['Cashier'],
       breadcrumbs: false
     },
     {
@@ -68,7 +68,7 @@ const main = {
       type: 'item',
       url: '/pos/shift',
       icon: IconReceipt2,
-      permittedRoles: ['Cashier', 'Manager'],
+      permittedRoles: ['Cashier'],
       breadcrumbs: false
     },
     {

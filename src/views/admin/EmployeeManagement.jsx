@@ -35,8 +35,8 @@ import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import EditTwoToneIcon from '@mui/icons-material/EditTwoTone';
 import DeleteTwoToneIcon from '@mui/icons-material/DeleteTwoTone';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
@@ -366,8 +366,20 @@ const EmployeeManagement = () => {
                     variant="outlined" 
                     color="inherit" 
                     onClick={() => setImportOpen(true)}
-                    startIcon={<FileUploadIcon sx={{ color: 'primary.main' }} />} 
-                    sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 800, borderColor: 'divider', px: 2, whiteSpace: 'nowrap' }}
+                    startIcon={<CloudDownloadIcon sx={{ color: 'primary.main' }} />} 
+                    sx={{ 
+                      borderRadius: 3, 
+                      textTransform: 'none', 
+                      fontWeight: 800, 
+                      borderColor: alpha(theme.palette.primary.main, 0.2), 
+                      px: 2.5, 
+                      whiteSpace: 'nowrap',
+                      bgcolor: alpha(theme.palette.primary.main, 0.05),
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        borderColor: theme.palette.primary.main
+                      }
+                    }}
                 >
                     Import
                 </Button>
@@ -375,8 +387,20 @@ const EmployeeManagement = () => {
                     variant="outlined" 
                     color="inherit" 
                     onClick={handleExport}
-                    startIcon={<FileDownloadIcon sx={{ color: 'primary.main' }} />} 
-                    sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 800, borderColor: 'divider', px: 2, whiteSpace: 'nowrap' }}
+                    startIcon={<CloudUploadIcon sx={{ color: 'primary.main' }} />} 
+                    sx={{ 
+                      borderRadius: 3, 
+                      textTransform: 'none', 
+                      fontWeight: 800, 
+                      borderColor: alpha(theme.palette.primary.main, 0.2), 
+                      px: 2.5, 
+                      whiteSpace: 'nowrap',
+                      bgcolor: alpha(theme.palette.primary.main, 0.05),
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        borderColor: theme.palette.primary.main
+                      }
+                    }}
                 >
                     Export
                 </Button>

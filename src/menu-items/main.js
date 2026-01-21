@@ -1,81 +1,104 @@
 // assets
-import { IconLayoutDashboard , IconUser, IconUserCheck, IconUserQuestion, IconCircleCheck, IconCircleX } from '@tabler/icons-react';
+import { 
+  IconLayoutDashboard, 
+  IconDeviceGamepad2, 
+  IconBuildingStore, 
+  IconUsers, 
+  IconPackage, 
+  IconArchive, 
+  IconReceipt2, 
+  IconReportAnalytics 
+} from '@tabler/icons-react';
 
-// constant
-// ==============================|| DASHBOARD MENU ITEMS ||============================== //
+// ==============================|| POS MENU ITEMS ||============================== //
 
-const dashboard = {
+const main = {
   id: 'main',
   type: 'group',
-  permittedRoles: ["all"],
+  permittedRoles: ['all'],
   children: [
-    // {
-    //   id: 'home',
-    //   title: 'Home',
-    //   type: 'item',
-    //   url: '/main/home',
-    //   permittedRoles: ["all"],
-    //   icon: IconHomeFilled,
-    //   breadcrumbs: false
-    // },
-    // {
-    //   id: 'alarms',
-    //   title: 'Alarms',
-    //   type: 'item',
-    //   url: '/main/alarms',
-    //   permittedRoles: ["all"],
-    //   icon: IconAlertTriangleFilled,
-    //   breadcrumbs: false
-    // },
-    // Admin-only items
     {
-      id: 'admin',
+      id: 'admin-dashboard',
       title: 'Admin Dashboard',
       type: 'item',
-      url: '/main/admin',
-      permittedRoles: ['all'],
+      url: '/admin/dashboard',
       icon: IconLayoutDashboard,
+      permittedRoles: ['TenantAdmin'],
       breadcrumbs: false
     },
     {
-      id: 'all-leads',
-      title: 'All Leads',
+      id: 'admin-stores',
+      title: 'Store Management',
       type: 'item',
-      url: '/main/all-leads',
-      permittedRoles: ['all'],
-      icon: IconUserQuestion,
+      url: '/admin/stores',
+      icon: IconBuildingStore,
+      permittedRoles: ['TenantAdmin'],
       breadcrumbs: false
     },
-{
-      id: 'team',
-      title: 'Team',
-      type: 'item',
-      url: '/main/team',
-      permittedRoles: ['all'],
-      icon: IconUserQuestion,
-      breadcrumbs: false
-    },
-    // Telecaller-only items
     {
-      id: 'user',
+      id: 'admin-employees',
+      title: 'Employee Management',
+      type: 'item',
+      url: '/admin/employees',
+      icon: IconUsers,
+      permittedRoles: ['TenantAdmin'],
+      breadcrumbs: false
+    },
+    {
+      id: 'dashboard',
       title: 'Dashboard',
       type: 'item',
-      url: '/main/user',
-      permittedRoles: ['all'],
-      icon: IconUser,
+      url: '/pos/dashboard',
+      icon: IconLayoutDashboard,
+      permittedRoles: ['Manager', 'Cashier'],
       breadcrumbs: false
     },
     {
-      id: 'assigned-leads',
-      title: 'Assigned Leads',
+      id: 'terminal',
+      title: 'POS Terminal',
       type: 'item',
-      url: '/main/assigned-leads',
-      permittedRoles: ['all'],
-      icon: IconUserCheck,
+      url: '/pos/terminal',
+      icon: IconDeviceGamepad2,
+      permittedRoles: ['Cashier', 'Manager'],
       breadcrumbs: false
     },
-
+    {
+      id: 'shift',
+      title: 'Shift Management',
+      type: 'item',
+      url: '/pos/shift',
+      icon: IconReceipt2,
+      permittedRoles: ['Cashier', 'Manager'],
+      breadcrumbs: false
+    },
+    {
+      id: 'products',
+      title: 'Product Management',
+      type: 'item',
+      url: '/pos/products',
+      icon: IconPackage,
+      permittedRoles: ['Manager'],
+      breadcrumbs: false
+    },
+    {
+      id: 'inventory',
+      title: 'Inventory',
+      type: 'item',
+      url: '/pos/inventory',
+      icon: IconArchive,
+      permittedRoles: ['Manager'],
+      breadcrumbs: false
+    },
+    {
+      id: 'reports',
+      title: 'Reports',
+      type: 'item',
+      url: '/pos/reports',
+      icon: IconReportAnalytics,
+      permittedRoles: ['Manager', 'TenantAdmin'],
+      breadcrumbs: false
+    }
   ]
 };
 
-export default dashboard;
+export default main;

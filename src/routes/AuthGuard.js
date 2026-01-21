@@ -3,19 +3,26 @@ import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
-const AuthGuard = ({ children }) => {
-  const dispatch = useDispatch();
+const AuthGuard = ({ children, permittedRoles }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    let isAuthenticated = localStorage.getItem(import.meta.env.VITE_APP_SESSION_TOKEN);
-    try {
-    } catch (error) {
-    }
-    if (!isAuthenticated) {
+    const token = localStorage.getItem('token');
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : null;
+
+    if (!token) {
       navigate('/login');
+      return;
     }
-  }, [dispatch, navigate]);
+
+    if (permittedRoles && permittedRoles.length > 0 && !permittedRoles.includes('all')) {
+      if (!user || !permittedRoles.includes(user.role)) {
+        // Redirection logic if unauthorized
+        navigate('/pos/dashboard');
+      }
+    }
+  }, [navigate, permittedRoles]);
 
   return children;
 };

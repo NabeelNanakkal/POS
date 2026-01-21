@@ -53,6 +53,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CategoryIcon from '@mui/icons-material/Category';
 import PaidIcon from '@mui/icons-material/Paid';
 import * as XLSX from 'xlsx';
+import NoDataLottie from 'ui-component/NoDataLottie';
 
 // Components
 const StatCard = ({ title, value, icon, color, trend }) => {
@@ -674,112 +675,118 @@ const ProductManagement = () => {
       {/* Products Table/Card View */}
       <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
         <Stack spacing={2}>
-            {filteredProducts.map((product) => (
-                <Paper 
-                  key={product.id} 
-                  elevation={0} 
-                  sx={{ 
-                    p: 2.5, 
-                    borderRadius: 5, 
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'rgba(255,255,255,0.8)', 
-                    backdropFilter: 'blur(10px)',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 12px 24px rgba(0,0,0,0.05)',
-                      borderColor: 'primary.light',
-                      '&::before': {
-                        opacity: 1
-                      }
-                    },
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 4,
-                      bgcolor: 'primary.main',
-                      opacity: 0,
-                      transition: 'opacity 0.3s ease'
-                    }
-                  }}
-                >
-                    <Stack direction="row" spacing={2} alignItems="center">
-                        <Avatar 
-                          variant="rounded" 
-                          src={product.image} 
-                          sx={{ 
-                            width: 64, 
-                            height: 64, 
-                            borderRadius: 2.5,
-                            border: '2px solid white',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-                          }} 
-                        />
-                        <Box sx={{ flex: 1 }}>
-                            <Typography variant="subtitle1" fontWeight={800} sx={{ color: 'text.primary', mb: 0.2 }}>{product.name}</Typography>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography variant="caption" sx={{ fontFamily: 'Monospace', color: 'text.secondary', fontWeight: 600 }}>SKU: {product.sku}</Typography>
-                                <Typography variant="caption" sx={{ fontFamily: 'Monospace', color: 'text.secondary', fontWeight: 600 }}>|</Typography>
-                                <Typography variant="caption" sx={{ fontFamily: 'Monospace', color: 'text.secondary', fontWeight: 600 }}>BC: {product.barcode}</Typography>
-                            </Stack>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1.5 }}>
-                                <Typography variant="h5" fontWeight={900} color="primary.main">${product.retailPrice.toFixed(2)}</Typography>
-                                <Chip 
-                                    label={product.stock < 5 ? 'Low Stock' : 'In Stock'} 
-                                    size="small" 
-                                    sx={{ 
-                                        fontWeight: 800, 
-                                        borderRadius: 2,
-                                        fontSize: '0.65rem',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: 0.5,
-                                        bgcolor: product.stock < 5 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.success.main, 0.1),
-                                        color: product.stock < 5 ? theme.palette.error.main : theme.palette.success.main,
-                                        border: '1px solid',
-                                        borderColor: product.stock < 5 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.success.main, 0.2),
-                                        backdropFilter: 'blur(4px)',
-                                        boxShadow: (theme) => product.stock < 5 
-                                          ? `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
-                                          : `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
-                                    }} 
-                                />
-                            </Stack>
-                        </Box>
-                        <Stack spacing={1}>
-                            <IconButton 
-                              size="medium" 
-                              onClick={() => handleEditClick(product)} 
+            {filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => (
+                    <Paper 
+                      key={product.id} 
+                      elevation={0} 
+                      sx={{ 
+                        p: 2.5, 
+                        borderRadius: 5, 
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'rgba(255,255,255,0.8)', 
+                        backdropFilter: 'blur(10px)',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 24px rgba(0,0,0,0.05)',
+                          borderColor: 'primary.light',
+                          '&::before': {
+                            opacity: 1
+                          }
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 4,
+                          bgcolor: 'primary.main',
+                          opacity: 0,
+                          transition: 'opacity 0.3s ease'
+                        }
+                      }}
+                    >
+                        <Stack direction="row" spacing={2} alignItems="center">
+                            <Avatar 
+                              variant="rounded" 
+                              src={product.image} 
                               sx={{ 
-                                color: 'primary.main', 
-                                bgcolor: alpha(theme.palette.primary.main, 0.05),
-                                borderRadius: 2,
-                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
-                              }}
-                            >
-                              <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton 
-                              size="medium" 
-                              onClick={() => handleDeleteClick(product)}
-                              sx={{ 
-                                color: 'error.main', 
-                                bgcolor: alpha(theme.palette.error.main, 0.05),
-                                borderRadius: 2,
-                                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }
-                              }}
-                            >
-                              <DeleteOutlineIcon fontSize="small" />
-                            </IconButton>
+                                width: 64, 
+                                height: 64, 
+                                borderRadius: 2.5,
+                                border: '2px solid white',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                              }} 
+                            />
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="subtitle1" fontWeight={800} sx={{ color: 'text.primary', mb: 0.2 }}>{product.name}</Typography>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="caption" sx={{ fontFamily: 'Monospace', color: 'text.secondary', fontWeight: 600 }}>SKU: {product.sku}</Typography>
+                                    <Typography variant="caption" sx={{ fontFamily: 'Monospace', color: 'text.secondary', fontWeight: 600 }}>|</Typography>
+                                    <Typography variant="caption" sx={{ fontFamily: 'Monospace', color: 'text.secondary', fontWeight: 600 }}>BC: {product.barcode}</Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1.5 }}>
+                                    <Typography variant="h5" fontWeight={900} color="primary.main">${product.retailPrice.toFixed(2)}</Typography>
+                                    <Chip 
+                                        label={product.stock < 5 ? 'Low Stock' : 'In Stock'} 
+                                        size="small" 
+                                        sx={{ 
+                                            fontWeight: 800, 
+                                            borderRadius: 2,
+                                            fontSize: '0.65rem',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: 0.5,
+                                            bgcolor: product.stock < 5 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.success.main, 0.1),
+                                            color: product.stock < 5 ? theme.palette.error.main : theme.palette.success.main,
+                                            border: '1px solid',
+                                            borderColor: product.stock < 5 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.success.main, 0.2),
+                                            backdropFilter: 'blur(4px)',
+                                            boxShadow: (theme) => product.stock < 5 
+                                              ? `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
+                                              : `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
+                                        }} 
+                                    />
+                                </Stack>
+                            </Box>
+                            <Stack spacing={1}>
+                                <IconButton 
+                                  size="medium" 
+                                  onClick={() => handleEditClick(product)} 
+                                  sx={{ 
+                                    color: 'primary.main', 
+                                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                                    borderRadius: 2,
+                                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+                                  }}
+                                >
+                                  <EditOutlinedIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton 
+                                  size="medium" 
+                                  onClick={() => handleDeleteClick(product)}
+                                  sx={{ 
+                                    color: 'error.main', 
+                                    bgcolor: alpha(theme.palette.error.main, 0.05),
+                                    borderRadius: 2,
+                                    '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }
+                                  }}
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </IconButton>
+                            </Stack>
                         </Stack>
-                    </Stack>
+                    </Paper>
+                ))
+            ) : (
+                <Paper elevation={0} sx={{ p: 5, borderRadius: 5, border: '1px solid', borderColor: 'divider' }}>
+                    <NoDataLottie message="No products found matching your search" />
                 </Paper>
-            ))}
+            )}
         </Stack>
       </Box>
 
@@ -827,162 +834,170 @@ const ProductManagement = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredProducts.map((product, index) => (
-              <TableRow 
-                key={product.id}
-                hover
-                sx={{ 
-                    '&:last-child td, &:last-child th': { border: 0 },
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    '&:hover': { 
-                      bgcolor: alpha(theme.palette.primary.main, 0.03),
-                      '& .side-indicator': { opacity: 1 }
-                    }
-                }}
-              >
-                <TableCell sx={{ py: 3, pl: 4, position: 'relative' }}>
-                  <Box 
-                    className="side-indicator" 
+            {filteredProducts.length > 0 ? (
+                filteredProducts.map((product, index) => (
+                  <TableRow 
+                    key={product.id}
+                    hover
                     sx={{ 
-                      position: 'absolute', 
-                      left: 0, 
-                      top: '15%', 
-                      bottom: '15%', 
-                      width: 4, 
-                      bgcolor: 'primary.main', 
-                      borderRadius: '0 4px 4px 0', 
-                      opacity: 0, 
-                      transition: 'opacity 0.3s ease' 
-                    }} 
-                  />
-                  <Typography variant="body2" fontWeight={800} color="text.disabled" sx={{ fontSize: '0.8rem' }}>
-                    {String(index + 1).padStart(2, '0')}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={2.5} alignItems="center">
-                    <Avatar 
-                      variant="rounded" 
-                      src={product.image} 
-                      sx={{ 
-                        width: 48, 
-                        height: 48, 
-                        borderRadius: 2, 
-                        border: '2px solid white', 
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.06)' 
-                      }} 
-                    />
-                    <Box>
-                      <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'text.primary', mb: 0.2 }}>{product.name}</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>{product.description}</Typography>
-                    </Box>
-                  </Stack>
-                </TableCell>
-                <TableCell>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontFamily: 'Monospace', 
-                      color: 'text.secondary', 
-                      bgcolor: '#f1f5f9', 
-                      px: 1, 
-                      py: 0.5, 
-                      borderRadius: 1.5, 
-                      display: 'inline-block',
-                      fontSize: '0.75rem',
-                      fontWeight: 700
+                        '&:last-child td, &:last-child th': { border: 0 },
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        '&:hover': { 
+                          bgcolor: alpha(theme.palette.primary.main, 0.03),
+                          '& .side-indicator': { opacity: 1 }
+                        }
                     }}
                   >
-                    {product.sku}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontFamily: 'Monospace', 
-                      color: 'text.secondary', 
-                      bgcolor: '#f1f5f9', 
-                      px: 1, 
-                      py: 0.5, 
-                      borderRadius: 1.5, 
-                      display: 'inline-block',
-                      fontSize: '0.75rem',
-                      fontWeight: 700
-                    }}
-                  >
-                    {product.barcode}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" fontWeight={600} color="text.primary">{product.category}</Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="subtitle1" fontWeight={900} color="primary.main">
-                    ${product.retailPrice.toFixed(2)}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    label={product.stock < 5 ? 'Low Stock' : 'In Stock'} 
-                    size="small" 
-                    sx={{ 
-                        fontWeight: 800, 
-                        borderRadius: 2, 
-                        px: 1.5,
-                        py: 0.5,
-                        fontSize: '0.65rem',
-                        textTransform: 'uppercase',
-                        letterSpacing: 0.5,
-                        bgcolor: product.stock < 5 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.success.main, 0.1), 
-                        color: product.stock < 5 ? theme.palette.error.main : theme.palette.success.main,
-                        border: '1px solid',
-                        borderColor: product.stock < 5 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.success.main, 0.2),
-                        boxShadow: (theme) => product.stock < 5 
-                          ? `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
-                          : `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
-                    }} 
-                  />
-                  <Typography variant="caption" display="block" sx={{ mt: 0.8, fontWeight: 700, color: 'text.secondary', ml: 0.5, opacity: 0.8 }}>
-                    {product.stock} Units left
-                  </Typography>
-                </TableCell>
-                <TableCell align="right" sx={{ pr: 4 }}>
-                  <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Tooltip title="Edit Product">
-                      <IconButton 
-                        size="small" 
-                        onClick={(e) => { e.stopPropagation(); handleEditClick(product); }} 
+                    <TableCell sx={{ py: 3, pl: 4, position: 'relative' }}>
+                      <Box 
+                        className="side-indicator" 
                         sx={{ 
+                          position: 'absolute', 
+                          left: 0, 
+                          top: '15%', 
+                          bottom: '15%', 
+                          width: 4, 
+                          bgcolor: 'primary.main', 
+                          borderRadius: '0 4px 4px 0', 
+                          opacity: 0, 
+                          transition: 'opacity 0.3s ease' 
+                        }} 
+                      />
+                      <Typography variant="body2" fontWeight={800} color="text.disabled" sx={{ fontSize: '0.8rem' }}>
+                        {String(index + 1).padStart(2, '0')}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={2.5} alignItems="center">
+                        <Avatar 
+                          variant="rounded" 
+                          src={product.image} 
+                          sx={{ 
+                            width: 48, 
+                            height: 48, 
+                            borderRadius: 2, 
+                            border: '2px solid white', 
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.06)' 
+                          }} 
+                        />
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'text.primary', mb: 0.2 }}>{product.name}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>{product.description}</Typography>
+                        </Box>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontFamily: 'Monospace', 
                           color: 'text.secondary', 
-                          bgcolor: 'white', 
-                          border: '1px solid #eee',
-                          '&:hover': { color: 'primary.main', borderColor: 'primary.light', bgcolor: alpha(theme.palette.primary.main, 0.05) }
+                          bgcolor: '#f1f5f9', 
+                          px: 1, 
+                          py: 0.5, 
+                          borderRadius: 1.5, 
+                          display: 'inline-block',
+                          fontSize: '0.75rem',
+                          fontWeight: 700
                         }}
                       >
-                        <EditOutlinedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete Product">
-                      <IconButton 
-                        size="small" 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }}
+                        {product.sku}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography 
+                        variant="body2" 
                         sx={{ 
-                          color: 'text.secondary',
-                          bgcolor: 'white', 
-                          border: '1px solid #eee',
-                          '&:hover': { color: 'error.main', borderColor: 'error.light', bgcolor: alpha(theme.palette.error.main, 0.05) }
+                          fontFamily: 'Monospace', 
+                          color: 'text.secondary', 
+                          bgcolor: '#f1f5f9', 
+                          px: 1, 
+                          py: 0.5, 
+                          borderRadius: 1.5, 
+                          display: 'inline-block',
+                          fontSize: '0.75rem',
+                          fontWeight: 700
                         }}
                       >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            ))}
+                        {product.barcode}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={600} color="text.primary">{product.category}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="subtitle1" fontWeight={900} color="primary.main">
+                        ${product.retailPrice.toFixed(2)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={product.stock < 5 ? 'Low Stock' : 'In Stock'} 
+                        size="small" 
+                        sx={{ 
+                            fontWeight: 800, 
+                            borderRadius: 2, 
+                            px: 1.5,
+                            py: 0.5,
+                            fontSize: '0.65rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                            bgcolor: product.stock < 5 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.success.main, 0.1), 
+                            color: product.stock < 5 ? theme.palette.error.main : theme.palette.success.main,
+                            border: '1px solid',
+                            borderColor: product.stock < 5 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.success.main, 0.2),
+                            boxShadow: (theme) => product.stock < 5 
+                              ? `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
+                              : `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
+                        }} 
+                      />
+                      <Typography variant="caption" display="block" sx={{ mt: 0.8, fontWeight: 700, color: 'text.secondary', ml: 0.5, opacity: 0.8 }}>
+                        {product.stock} Units left
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" sx={{ pr: 4 }}>
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Tooltip title="Edit Product">
+                          <IconButton 
+                            size="small" 
+                            onClick={(e) => { e.stopPropagation(); handleEditClick(product); }} 
+                            sx={{ 
+                              color: 'text.secondary', 
+                              bgcolor: 'white', 
+                              border: '1px solid #eee',
+                              '&:hover': { color: 'primary.main', borderColor: 'primary.light', bgcolor: alpha(theme.palette.primary.main, 0.05) }
+                            }}
+                          >
+                            <EditOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Product">
+                          <IconButton 
+                            size="small" 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }}
+                            sx={{ 
+                              color: 'text.secondary',
+                              bgcolor: 'white', 
+                              border: '1px solid #eee',
+                              '&:hover': { color: 'error.main', borderColor: 'error.light', bgcolor: alpha(theme.palette.error.main, 0.05) }
+                            }}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={8} sx={{ py: 10 }}>
+                        <NoDataLottie message="No products found matching your search" />
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
         

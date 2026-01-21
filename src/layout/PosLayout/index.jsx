@@ -32,25 +32,34 @@ import MenuIcon from '@mui/icons-material/Menu';
 const drawerWidth = 260;
 const miniDrawerWidth = 80;
 
-const MENU_ITEMS = [
-  { text: 'Dashboard', icon: GridViewIcon, path: '/pos/dashboard' },
-  { text: 'POS Terminal', icon: PointOfSaleIcon, path: '/pos/terminal' },
-  { text: 'Products', icon: Inventory2OutlinedIcon, path: '/pos/products' },
-  { text: 'Inventory', icon: StorefrontIcon, path: '/pos/inventory' },
-  { text: 'Shift Management', icon: EventAvailableIcon, path: '/pos/shift' },
-  { text: 'Reports', icon: AssessmentOutlinedIcon, path: '/pos/reports' },
-];
+import menuItems from 'menu-items';
+import { filterRoutesByRole } from 'utils/filterRoutesByRole';
 
 const PosLayout = () => {
   const theme = useTheme();
   const location = useLocation();
   const { menuMaster } = useGetMenuMaster();
-  
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = user?.role || 'Cashier';
+
+  // Get dynamic menu items filtered by role
+  const filteredMenu = useMemo(() => {
+    // menuItems is an array (from menu-items/index.js), we take the first group 'main'
+    const mainGroup = menuItems[0];
+    return filterRoutesByRole([mainGroup], userRole)[0]?.children || [];
+  }, [userRole]);
+
   // drawerOpen is true when expanded, false when collapsed/closed
   const drawerOpen = menuMaster?.isDashboardDrawerOpened ?? false;
   const sidebarCollapsed = !drawerOpen;
   
   const currentWidth = sidebarCollapsed ? miniDrawerWidth : drawerWidth;
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.replace('/login');
+  };
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f3f4f6' }}>
@@ -71,18 +80,22 @@ const PosLayout = () => {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.shorter,
             }),
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100vh',
             overflowX: 'hidden'
           },
         }}
         variant="permanent"
         anchor="left"
       >
-        {/* Unified Sidebar Header */}
+        {/* Unified Sidebar Header - FIXED TOP */}
         <Box
           sx={{
-            height: 80,
+            height: 90,
             display: 'flex',
             alignItems: 'center',
+            pt: 2,
             justifyContent: sidebarCollapsed ? 'center' : 'space-between',
             px: sidebarCollapsed ? 0 : 2,
             bgcolor: sidebarCollapsed ? 'primary.main' : 'transparent',
@@ -90,6 +103,7 @@ const PosLayout = () => {
             cursor: 'pointer',
             transition: 'all 0.3s ease',
             borderBottom: sidebarCollapsed ? 'none' : '1px solid rgba(0, 0, 0, 0.05)',
+            flexShrink: 0,
             '&:hover': {
               bgcolor: sidebarCollapsed ? 'primary.dark' : alpha(theme.palette.primary.main, 0.02)
             }
@@ -135,86 +149,96 @@ const PosLayout = () => {
           </IconButton>
         </Box>
 
-        {/* Menu Items */}
-        <List sx={{ px: 2, pt: 2 }}>
-          {MENU_ITEMS.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <ListItem key={item.text} disablePadding sx={{ mb: 1.5 }}>
-                <ListItemButton
-                  component={item.path !== '#' ? RouterLink : 'div'}
-                  to={item.path}
-                  sx={{
-                    borderRadius: 4,
-                    py: 1.5,
-                    px: 2,
-                    position: 'relative',
-                    overflow: 'hidden',
-                    bgcolor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                    color: isActive ? 'primary.main' : 'text.secondary',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      left: 0,
-                      top: '20%',
-                      bottom: '20%',
-                      width: 4,
-                      bgcolor: 'primary.main',
-                      borderRadius: '0 4px 4px 0',
-                      transform: isActive ? 'scaleY(1)' : 'scaleY(0)',
-                      transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    },
-                    '&:hover': {
-                      bgcolor: isActive ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.main, 0.04),
-                      color: 'primary.main',
-                      transform: 'translateX(4px)',
-                      '& .MuiListItemIcon-root': {
-                        transform: 'scale(1.1) rotate(-5deg)',
-                        color: 'primary.main'
+        {/* Dynamic Menu Items - SCROLLABLE MIDDLE */}
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflowY: 'auto', 
+          px: 2, 
+          pt: 4,
+          '&::-webkit-scrollbar': { width: '4px' },
+          '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.1)', borderRadius: '10px' }
+        }}>
+          <List sx={{ p: 0 }}>
+            {filteredMenu.map((item) => {
+              const isActive = location.pathname === item.url;
+              const Icon = item.icon;
+              return (
+                <ListItem key={item.id} disablePadding sx={{ mb: 1.5 }}>
+                  <ListItemButton
+                    component={RouterLink}
+                    to={item.url}
+                    sx={{
+                      borderRadius: 4,
+                      py: 1.5,
+                      px: 2,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      bgcolor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                      color: isActive ? 'primary.main' : 'text.secondary',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        left: 0,
+                        top: '20%',
+                        bottom: '20%',
+                        width: 4,
+                        bgcolor: 'primary.main',
+                        borderRadius: '0 4px 4px 0',
+                        transform: isActive ? 'scaleY(1)' : 'scaleY(0)',
+                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      },
+                      '&:hover': {
+                        bgcolor: isActive ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.main, 0.04),
+                        color: 'primary.main',
+                        transform: 'translateX(4px)',
+                        '& .MuiListItemIcon-root': {
+                          transform: 'scale(1.1) rotate(-5deg)',
+                          color: 'primary.main'
+                        }
                       }
-                    }
-                  }}
-                >
-                  <ListItemIcon 
-                    sx={{ 
-                      color: isActive ? 'primary.main' : 'inherit', 
-                      minWidth: sidebarCollapsed ? 0 : 42,
-                      justifyContent: 'center',
-                      transition: 'all 0.3s ease'
                     }}
                   >
-                    <item.icon sx={{ fontSize: 22 }} />
-                  </ListItemIcon>
-                  {!sidebarCollapsed && (
-                    <ListItemText 
-                      primary={item.text} 
-                      primaryTypographyProps={{ 
-                        fontWeight: isActive ? 800 : 600,
-                        fontSize: '0.9rem',
-                        letterSpacing: 0.2
-                      }} 
-                    />
-                  )}
-                  {isActive && (
-                    <Box 
+                    <ListItemIcon 
                       sx={{ 
-                        width: 6, 
-                        height: 6, 
-                        borderRadius: '50%', 
-                        bgcolor: 'primary.main',
-                        boxShadow: `0 0 10px ${theme.palette.primary.main}`
-                      }} 
-                    />
-                  )}
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
-        </List>
+                        color: isActive ? 'primary.main' : 'inherit', 
+                        minWidth: sidebarCollapsed ? 0 : 42,
+                        justifyContent: 'center',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      <Icon sx={{ fontSize: 22 }} />
+                    </ListItemIcon>
+                    {!sidebarCollapsed && (
+                      <ListItemText 
+                        primary={item.title} 
+                        primaryTypographyProps={{ 
+                          fontWeight: isActive ? 800 : 600,
+                          fontSize: '0.9rem',
+                          letterSpacing: 0.2
+                        }} 
+                      />
+                    )}
+                    {isActive && (
+                      <Box 
+                        sx={{ 
+                          width: 6, 
+                          height: 6, 
+                          borderRadius: '50%', 
+                          bgcolor: 'primary.main',
+                          boxShadow: `0 0 10px ${theme.palette.primary.main}`
+                        }} 
+                      />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </Box>
 
-        {/* User Profile Section */}
-        <Box sx={{ mt: 'auto', p: 2 }}>
+        {/* User Profile Section - FIXED BOTTOM */}
+        <Box sx={{ mt: 'auto', p: 2, flexShrink: 0 }}>
           <Divider sx={{ mb: 2, opacity: 0.5 }} />
           <Box 
             sx={{ 
@@ -237,16 +261,17 @@ const PosLayout = () => {
                   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
               }}
             >
-              JD
+              {user.name ? user.name.charAt(0) : 'U'}
             </Avatar>
             {!sidebarCollapsed && (
               <>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                  <Typography variant="body2" fontWeight={800} noWrap sx={{ color: 'text.primary' }}>Jane Doe</Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap sx={{ display: 'block', opacity: 0.8 }}>Store Manager</Typography>
+                  <Typography variant="body2" fontWeight={800} noWrap sx={{ color: 'text.primary' }}>{user.name || 'User'}</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap sx={{ display: 'block', opacity: 0.8 }}>{userRole}</Typography>
                 </Box>
                 <IconButton 
                   size="small" 
+                  onClick={handleLogout}
                   sx={{ 
                       color: 'error.main', 
                       bgcolor: alpha(theme.palette.error.main, 0.08),

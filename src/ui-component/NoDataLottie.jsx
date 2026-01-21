@@ -1,7 +1,8 @@
 import React from "react";
 import Lottie from "lottie-react";
 import animationData from "assets/animations/noDataLottie.json";
-import Typography from '@mui/material/Typography'
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 
 const NoDataLottie = ({ message, marginTop, size }) => {
     return (
@@ -25,7 +26,15 @@ const NoDataLottie = ({ message, marginTop, size }) => {
                     height: "auto",
                 }}
             />
-            <Typography sx={{ padding: "16px" }} variant="body1" color="initial"> {message ? message : "No Records Found"}</Typography>
+            <Box sx={{ px: 2, py: 1, textAlign: 'center' }}>
+                {typeof message === 'string' ? (
+                    <Typography variant="body1" color="text.secondary" fontWeight={600}>
+                        {message}
+                    </Typography>
+                ) : (
+                    message || <Typography variant="body1" color="text.secondary" fontWeight={600}>No Records Found</Typography>
+                )}
+            </Box>
         </div>
     );
 };

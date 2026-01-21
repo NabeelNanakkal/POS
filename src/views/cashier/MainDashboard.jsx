@@ -190,6 +190,8 @@ const MainDashboard = () => {
   const theme = useTheme();
   const [isShiftOpen, setIsShiftOpen] = useState(false);
   const [shiftData, setShiftData] = useState(null);
+  const user = JSON.parse(localStorage.getItem('user'));
+  const userRole = user?.role || 'Cashier';
 
   useEffect(() => {
     const savedStatus = localStorage.getItem('isShiftOpen') === 'true';
@@ -197,6 +199,10 @@ const MainDashboard = () => {
     setIsShiftOpen(savedStatus);
     if (savedData) setShiftData(JSON.parse(savedData));
   }, []);
+
+  const isAdmin = userRole === 'TenantAdmin';
+  const isManager = userRole === 'Manager';
+  const isCashier = userRole === 'Cashier';
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1600, mx: 'auto', px: { xs: 2, md: 3 }, py: 3 }}>
@@ -293,40 +299,66 @@ const MainDashboard = () => {
             sx={{ 
                 display: 'grid', 
                 gridTemplateColumns: { 
-                  xs: 'repeat(2, 1fr)', 
-                  md: 'repeat(4, 1fr)' 
+                    xs: 'repeat(2, 1fr)', 
+                    md: 'repeat(4, 1fr)' 
                 }, 
                 gap: { xs: 1.5, sm: 2 } 
             }}
         >
-            <QuickActionCard 
-                title="Terminal Checkout" 
-                subtitle={isShiftOpen ? `${shiftData?.itemsSold || 0} Items Sold This Shift` : "Opening shift required"}
-                icon={PointOfSaleIcon} 
-                color="secondary"
-                onClick={() => navigate('/pos/terminal')}
-            />
-            <QuickActionCard 
-                title={isShiftOpen ? "End Shift" : "Start Shift"} 
-                subtitle={isShiftOpen ? `Started at ${shiftData?.startTime}` : "Click to check-in"}
-                icon={EventAvailableIcon} 
-                color={isShiftOpen ? "error" : "success"}
-                onClick={() => navigate('/pos/shift')}
-            />
-            <QuickActionCard 
-                title="Inventory Hub" 
-                subtitle="Manage your stocks"
-                icon={Inventory2OutlinedIcon} 
-                color="info"
-                onClick={() => navigate('/pos/products')}
-            />
-            <QuickActionCard 
-                title="Business Insights" 
-                subtitle="View sales reports"
-                icon={AssessmentOutlinedIcon} 
-                color="primary"
-                onClick={() => navigate('/pos/reports')}
-            />
+            {(isCashier || isManager || isAdmin) && (
+                <QuickActionCard 
+                    title="Terminal Checkout" 
+                    subtitle={isShiftOpen ? `${shiftData?.itemsSold || 0} Items Sold This Shift` : "Opening shift required"}
+                    icon={PointOfSaleIcon} 
+                    color="secondary"
+                    onClick={() => navigate('/pos/terminal')}
+                />
+            )}
+            {(isCashier || isManager || isAdmin) && (
+                <QuickActionCard 
+                    title={isShiftOpen ? "End Shift" : "Start Shift"} 
+                    subtitle={isShiftOpen ? `Started at ${shiftData?.startTime}` : "Click to check-in"}
+                    icon={EventAvailableIcon} 
+                    color={isShiftOpen ? "error" : "success"}
+                    onClick={() => navigate('/pos/shift')}
+                />
+            )}
+            {(isManager || isAdmin) && (
+                <>
+                    <QuickActionCard 
+                        title="Inventory Hub" 
+                        subtitle="Manage your stocks"
+                        icon={Inventory2OutlinedIcon} 
+                        color="info"
+                        onClick={() => navigate('/pos/products')}
+                    />
+                    <QuickActionCard 
+                        title="Business Insights" 
+                        subtitle="View sales reports"
+                        icon={AssessmentOutlinedIcon} 
+                        color="primary"
+                        onClick={() => navigate('/pos/reports')}
+                    />
+                </>
+            )}
+            {isAdmin && (
+                <>
+                    <QuickActionCard 
+                        title="Store Management" 
+                        subtitle="Manage locations"
+                        icon={StorefrontIcon} 
+                        color="warning"
+                        onClick={() => navigate('/admin/stores')}
+                    />
+                    <QuickActionCard 
+                        title="Employee Hub" 
+                        subtitle="Staff & Permissions"
+                        icon={InventoryIcon} 
+                        color="secondary"
+                        onClick={() => navigate('/admin/employees')}
+                    />
+                </>
+            )}
         </Box>
       </Box>
 

@@ -124,6 +124,14 @@ const LoginRetailOS = () => {
     dispatch(userLogin(payload));
   };
 
+  const handleDemoLogin = (userRole, path) => {
+    localStorage.clear();
+    const name = userRole === 'TenantAdmin' ? 'Admin Demo' : userRole === 'Manager' ? 'Manager Demo' : 'Cashier Demo';
+    localStorage.setItem('user', JSON.stringify({ role: userRole, name }));
+    localStorage.setItem('token', 'mock-token');
+    window.location.replace(path);
+  };
+
   return (
     <Grid container sx={{ minHeight: '100vh', overflow: 'hidden' }}>
       {/* Left Side - Image & Branding */}
@@ -372,6 +380,70 @@ const LoginRetailOS = () => {
           >
             {loading ? 'Authenticating...' : 'Access Terminal'}
           </Button>
+
+          {/* Demo Login Options */}
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 600, mb: 1, display: 'block', textAlign: 'center' }}>
+              ENVIRONMENT DEMO ACCESS
+            </Typography>
+            <Stack spacing={1.5}>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => handleDemoLogin('TenantAdmin', '/admin/dashboard')}
+                startIcon={<AdminPanelSettingsIcon />}
+                sx={{
+                  py: 1,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderStyle: 'dashed',
+                  color: 'primary.main',
+                  '&:hover': { borderStyle: 'dashed', bgcolor: alpha(theme.palette.primary.main, 0.05) }
+                }}
+              >
+                Demo Login (Admin)
+              </Button>
+              <Stack direction="row" spacing={1.5}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => handleDemoLogin('Manager', '/pos/dashboard')}
+                  startIcon={<BusinessCenterIcon />}
+                  sx={{
+                    py: 1,
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    borderStyle: 'dashed',
+                    color: 'success.main',
+                    borderColor: 'success.light',
+                    '&:hover': { borderStyle: 'dashed', bgcolor: alpha(theme.palette.success.main, 0.05), borderColor: 'success.main' }
+                  }}
+                >
+                  Manager
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => handleDemoLogin('Cashier', '/pos/dashboard')}
+                  startIcon={<StorefrontIcon />}
+                  sx={{
+                    py: 1,
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    borderStyle: 'dashed',
+                    color: 'info.main',
+                    borderColor: 'info.light',
+                    '&:hover': { borderStyle: 'dashed', bgcolor: alpha(theme.palette.info.main, 0.05), borderColor: 'info.main' }
+                  }}
+                >
+                  Cashier
+                </Button>
+              </Stack>
+            </Stack>
+          </Box>
 
           {/* Footer help */}
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 3, color: 'text.secondary' }}>

@@ -16,6 +16,8 @@ import CustomerActionWatcher from 'container/CustomerContainer/saga';
 import ShiftActionWatcher from 'container/ShiftContainer/saga';
 import UploadActionWatcher from 'container/UploadContainer/saga';
 import ReportActionWatcher from 'container/ReportContainer/saga';
+import StoreActionWatcher from 'container/StoreContainer/saga';
+import EmployeeActionWatcher from 'container/EmployeeContainer/saga';
 
 
 function* rootSaga() {
@@ -37,7 +39,9 @@ function* rootSaga() {
       call(CustomerActionWatcher),
       call(ShiftActionWatcher),
       call(UploadActionWatcher),
-      call(ReportActionWatcher)
+      call(ReportActionWatcher),
+      call(StoreActionWatcher),
+      call(EmployeeActionWatcher)
 
     ]);
 }

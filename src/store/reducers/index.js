@@ -18,6 +18,8 @@ import customer from 'container/CustomerContainer/slice';
 import shift from 'container/ShiftContainer/slice';
 import upload from 'container/UploadContainer/slice';
 import report from 'container/ReportContainer/slice';
+import store from 'container/StoreContainer/slice';
+import employee from 'container/EmployeeContainer/slice';
 
 import menu from './menu';
 import customizationReducer from 'store/customizationReducer';
@@ -42,7 +44,9 @@ const reducer = combineReducers({
   customer: customer,
   shift: shift,
   upload: upload,
-  report: report
+  report: report,
+  store: store,
+  employee: employee
 });
 
 

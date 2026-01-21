@@ -12,6 +12,11 @@ const ProductManagement = Loadable(lazy(() => import('views/cashier/ProductManag
 const InventoryManagement = Loadable(lazy(() => import('views/cashier/InventoryManagement')));
 const ShiftManagement = Loadable(lazy(() => import('views/cashier/ShiftManagement')));
 const Reports = Loadable(lazy(() => import('views/cashier/Reports')));
+const StoreManagement = Loadable(lazy(() => import('views/admin/StoreManagement')));
+const EmployeeManagement = Loadable(lazy(() => import('views/admin/EmployeeManagement')));
+const AdminDashboard = Loadable(lazy(() => import('views/admin/AdminDashboard')));
+
+import AuthGuard from './AuthGuard';
 
 // ==============================|| POS ROUTING ||============================== //
 
@@ -21,38 +26,59 @@ const PosRoutes = {
   children: [
     {
       path: '/',
-      element: <PosLayout />,
+      element: (
+        <AuthGuard>
+          <PosLayout />
+        </AuthGuard>
+      ),
       children: [
         {
           index: true,
-          element: <Navigate to="/pos/dashboard" replace />
+          element: <Navigate to="/admin/dashboard" replace />
         },
         {
           path: 'pos',
           children: [
             {
               path: 'dashboard',
-              element: <MainDashboard />
+              element: <AuthGuard permittedRoles={['all']}><MainDashboard /></AuthGuard>
             },
             {
               path: 'terminal',
-              element: <PosTerminal />
+              element: <AuthGuard permittedRoles={['Cashier', 'Manager', 'TenantAdmin']}><PosTerminal /></AuthGuard>
             },
             {
               path: 'products',
-              element: <ProductManagement />
+              element: <AuthGuard permittedRoles={['Manager', 'TenantAdmin']}><ProductManagement /></AuthGuard>
             },
             {
               path: 'inventory',
-              element: <InventoryManagement />
+              element: <AuthGuard permittedRoles={['Manager', 'TenantAdmin']}><InventoryManagement /></AuthGuard>
             },
             {
               path: 'shift',
-              element: <ShiftManagement />
+              element: <AuthGuard permittedRoles={['Cashier', 'Manager', 'TenantAdmin']}><ShiftManagement /></AuthGuard>
             },
             {
               path: 'reports',
-              element: <Reports />
+              element: <AuthGuard permittedRoles={['Manager', 'TenantAdmin']}><Reports /></AuthGuard>
+            }
+          ]
+        },
+        {
+          path: 'admin',
+          children: [
+            {
+              path: 'dashboard',
+              element: <AuthGuard permittedRoles={['TenantAdmin']}><AdminDashboard /></AuthGuard>
+            },
+            {
+              path: 'stores',
+              element: <AuthGuard permittedRoles={['TenantAdmin']}><StoreManagement /></AuthGuard>
+            },
+            {
+              path: 'employees',
+              element: <AuthGuard permittedRoles={['TenantAdmin']}><EmployeeManagement /></AuthGuard>
             }
           ]
         }

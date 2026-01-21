@@ -76,7 +76,7 @@ function* commonApi(value) {
   } catch (error) {
     yield put({
       type: `${value.failAction.type}`,
-      payload: error
+      payload: error.message || 'An unexpected error occurred'
     });
     throw error
   }

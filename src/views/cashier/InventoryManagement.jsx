@@ -1,4 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+    fetchProducts, 
+    adjustStock, 
+    fetchProductStats 
+} from 'container/ProductContainer/slice';
+import { fetchStores } from 'container/StoreContainer/slice';
 import {
   Box,
   Typography,
@@ -40,59 +47,53 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import ShoppingCartCheckoutIcon from '@mui/icons-material/ShoppingCartCheckout';
 
-// Reuse MOCK_PRODUCTS for data consistency
-const MOCK_PRODUCTS = [
-  { 
-    id: 1, name: 'Wireless Headphones', sku: 'WH-001', barcode: '123456789012', category: 'Electronics', 
-    stock: 3, reorderPoint: 5, warehouseName: 'San Jose', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=100&q=80',
-    committed: 2, available: 1
-  },
-  { 
-    id: 2, name: 'Mechanical Keyboard', sku: 'KB-RGB', barcode: '234567890123', category: 'Electronics', 
-    stock: 12, reorderPoint: 5, warehouseName: 'San Jose', image: 'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?auto=format&fit=crop&w=100&q=80',
-    committed: 4, available: 8
-  },
-  { 
-    id: 3, name: 'Gaming Mouse', sku: 'MS-GPRO', barcode: '345678901234', category: 'Electronics', 
-    stock: 25, reorderPoint: 10, warehouseName: 'Main Warehouse', image: 'https://images.unsplash.com/photo-1527443154391-507e9dc6c5cc?auto=format&fit=crop&w=100&q=80',
-    committed: 5, available: 20
-  },
-  { 
-    id: 4, name: '4K Monitor', sku: 'MN-4K27', barcode: '456789012345', category: 'Electronics', 
-    stock: 8, reorderPoint: 3, warehouseName: 'San Jose', image: 'https://images.unsplash.com/photo-1527443210214-469bfb4b9b94?auto=format&fit=crop&w=100&q=80',
-    committed: 1, available: 7
-  },
-  { 
-    id: 5, name: 'Smart Watch', sku: 'SW-G5', barcode: '567890123456', category: 'Accessories', 
-    stock: 45, reorderPoint: 15, warehouseName: 'Main Warehouse', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=100&q=80',
-    committed: 10, available: 35
-  },
-  { 
-    id: 6, name: 'Laptop Backpack', sku: 'BP-LT15', barcode: '678901234567', category: 'Bags', 
-    stock: 50, reorderPoint: 20, warehouseName: 'Main Warehouse', image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=100&q=80',
-    committed: 5, available: 45
-  },
-  { 
-    id: 7, name: 'Coffee Mug', sku: 'MG-CER35', barcode: '789012345678', category: 'Kitchen', 
-    stock: 120, reorderPoint: 30, warehouseName: 'Main Warehouse', image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcc3d1?auto=format&fit=crop&w=100&q=80',
-    committed: 20, available: 100
-  },
-  { 
-    id: 8, name: 'Leather Wallet', sku: 'WL-LTR-BF', barcode: '890123456789', category: 'Accessories', 
-    stock: 22, reorderPoint: 10, warehouseName: 'Main Warehouse', image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=100&q=80',
-    committed: 3, available: 19
-  },
-  { 
-    id: 9, name: 'Desktop Speaker', sku: 'SP-DK20', barcode: '901234567890', category: 'Electronics', 
-    stock: 15, reorderPoint: 5, warehouseName: 'San Jose', image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=100&q=80',
-    committed: 2, available: 13
-  },
-  { 
-    id: 10, name: 'Webcam HD', sku: 'WC-HD10', barcode: '012345678901', category: 'Electronics', 
-    stock: 18, reorderPoint: 8, warehouseName: 'San Jose', image: 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=100&q=80',
-    committed: 4, available: 14
-  }
-];
+import PaidIcon from '@mui/icons-material/Paid';
+import RouterIcon from '@mui/icons-material/Router';
+import MonitorIcon from '@mui/icons-material/Monitor';
+import KeyboardIcon from '@mui/icons-material/Keyboard';
+import HeadsetIcon from '@mui/icons-material/Headset';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import LaptopIcon from '@mui/icons-material/Laptop';
+import StorageIcon from '@mui/icons-material/Storage';
+import MemoryIcon from '@mui/icons-material/Memory';
+import MouseIcon from '@mui/icons-material/Mouse';
+import UsbIcon from '@mui/icons-material/Usb';
+import SmartphoneIcon from '@mui/icons-material/Smartphone';
+import PrintIcon from '@mui/icons-material/Print';
+import CableIcon from '@mui/icons-material/Cable';
+import SettingsInputComponentIcon from '@mui/icons-material/SettingsInputComponent';
+
+// UI Helper: Generate consistent colors from strings
+const stringToColor = (string) => {
+    let hash = 0;
+    for (let i = 0; i < string.length; i++) {
+        hash = string.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash % 360);
+    return `hsl(${hue}, 70%, 45%)`;
+};
+
+// UI Helper: Get context-aware icon based on name
+const getProductIcon = (name = '', categoryName = '') => {
+    const searchString = `${name} ${categoryName}`.toLowerCase();
+    
+    if (searchString.includes('router') || searchString.includes('wi-fi') || searchString.includes('wifi')) return <RouterIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('monitor') || searchString.includes('screen') || searchString.includes('display')) return <MonitorIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('kb') || searchString.includes('keyboard')) return <KeyboardIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('mouse')) return <MouseIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('headset') || searchString.includes('audio') || searchString.includes('headphone')) return <HeadsetIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('camera') || searchString.includes('cam') || searchString.includes('video')) return <VideocamIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('laptop') || searchString.includes('notebook')) return <LaptopIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('disk') || searchString.includes('ssd') || searchString.includes('hdd') || searchString.includes('storage')) return <StorageIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('ram') || searchString.includes('memory') || searchString.includes('ddr')) return <MemoryIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('usb') || searchString.includes('flash') || searchString.includes('hub')) return <UsbIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('phone') || searchString.includes('mobile')) return <SmartphoneIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('print') || searchString.includes('ink')) return <PrintIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('cable') || searchString.includes('wire') || searchString.includes('adapter')) return <CableIcon sx={{ fontSize: '1.2rem' }} />;
+    if (searchString.includes('processor') || searchString.includes('cpu') || searchString.includes('chip')) return <SettingsInputComponentIcon sx={{ fontSize: '1.2rem' }} />;
+    
+    return <InventoryIcon sx={{ fontSize: '1.2rem' }} />;
+};
 
 const StatCard = ({ title, value, icon, color }) => {
     const theme = useTheme();
@@ -138,7 +139,7 @@ const AdjustmentDialog = ({ open, onClose, product, onAdjust }) => {
     const theme = useTheme();
 
     const handleConfirm = () => {
-        onAdjust(product.id, adjustmentType, parseInt(quantity), reason);
+        onAdjust(product.id || product._id, adjustmentType, parseInt(quantity), reason);
         setQuantity('');
         onClose();
     };
@@ -358,7 +359,11 @@ const OrderSuccessDialog = ({ open, onClose }) => {
 
 const InventoryManagement = () => {
     const theme = useTheme();
-    const [inventory, setInventory] = useState(MOCK_PRODUCTS);
+    const dispatch = useDispatch();
+    const { products, loading: productsLoading, stats } = useSelector((state) => state.product);
+    const { stores, loading: storesLoading } = useSelector((state) => state.store);
+    
+    // Local state
     const [searchQuery, setSearchQuery] = useState('');
     const [warehouseFilter, setWarehouseFilter] = useState('all');
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -366,13 +371,19 @@ const InventoryManagement = () => {
     const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
     const [isOrderSuccessOpen, setIsOrderSuccessOpen] = useState(false);
 
+    // Initial Fetch
+    useEffect(() => {
+        dispatch(fetchProducts({ page: 1, limit: 100 })); // Fetch more for inventory view
+        dispatch(fetchProductStats());
+        dispatch(fetchStores());
+    }, [dispatch]);
+
     const handleAdjustment = (id, type, qty, reason) => {
-        setInventory(prev => prev.map(item => {
-            if (item.id === id) {
-                const newStock = type === 'add' ? item.stock + qty : Math.max(0, item.stock - qty);
-                return { ...item, stock: newStock, available: newStock - item.committed };
-            }
-            return item;
+        dispatch(adjustStock({ 
+            id, 
+            type, 
+            quantity: qty, 
+            reason 
         }));
     };
 
@@ -382,15 +393,21 @@ const InventoryManagement = () => {
         // In a real app, we would send this to the back-end to create POs
     };
 
-    const filteredInventory = inventory.filter(item => {
+    const filteredInventory = products.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                              item.sku.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesWarehouse = warehouseFilter === 'all' || item.warehouseName === warehouseFilter;
+        
+        // Match against real store names or "Main Warehouse" fallback
+        const matchesWarehouse = warehouseFilter === 'all' || 
+            (item.warehouseName || 'Main Warehouse') === warehouseFilter;
+            
         return matchesSearch && matchesWarehouse;
     });
 
-    const lowStockCount = inventory.filter(p => p.stock < p.reorderPoint).length;
-    const totalInventoryValue = inventory.reduce((acc, item) => acc + (item.stock * 100), 0); // Simplified value calculation
+    // Use stats from Redux for cards, list for table
+    const lowStockCount = stats?.lowStockCount || 0;
+    const inventoryCount = stats?.totalProducts || 0;
+    const itemsCommitted = products.reduce((acc, item) => acc + (item.committed || 0), 0);
 
     return (
         <Box sx={{ 
@@ -412,7 +429,7 @@ const InventoryManagement = () => {
             <OrderStockDialog 
                 open={isOrderDialogOpen} 
                 onClose={() => setIsOrderDialogOpen(false)} 
-                inventory={inventory} 
+                inventory={products} 
                 onOrder={handleOrder}
             />
 
@@ -440,10 +457,10 @@ const InventoryManagement = () => {
 
             {/* Stats Overview */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
-                <StatCard title="Total Inventory" value={inventory.length} icon={<InventoryIcon />} color={theme.palette.primary.main} />
+                <StatCard title="Total Inventory" value={inventoryCount} icon={<InventoryIcon />} color={theme.palette.primary.main} />
                 <StatCard title="Low Stock Items" value={lowStockCount} icon={<WarningAmberIcon />} color={theme.palette.error.main} />
-                <StatCard title="Warehouses" value="2" icon={<StoreIcon />} color={theme.palette.success.main} />
-                <StatCard title="Recent Activity" value="12 Today" icon={<HistoryIcon />} color={theme.palette.warning.main} />
+                <StatCard title="Stores" value={stores.length || 1} icon={<StoreIcon />} color={theme.palette.success.main} />
+                <StatCard title="Committed Stock" value={itemsCommitted} icon={<HistoryIcon />} color={theme.palette.warning.main} />
             </Box>
 
             {/* Filter Toolbar */}
@@ -465,9 +482,10 @@ const InventoryManagement = () => {
                         onChange={(e) => setWarehouseFilter(e.target.value)}
                         sx={{ borderRadius: 3, bgcolor: '#f8fafc', '& fieldset': { border: 'none' } }}
                     >
-                        <MenuItem value="all">All Warehouses</MenuItem>
-                        <MenuItem value="San Jose">San Jose Branch</MenuItem>
-                        <MenuItem value="Main Warehouse">Central Warehouse</MenuItem>
+                        <MenuItem value="all">All Stores</MenuItem>
+                        {stores.map(store => (
+                            <MenuItem key={store.id} value={store.name}>{store.name}</MenuItem>
+                        ))}
                     </Select>
                 </FormControl>
             </Paper>
@@ -493,7 +511,19 @@ const InventoryManagement = () => {
                                 <TableRow key={item.id} hover sx={{ transition: '0.3s' }}>
                                     <TableCell sx={{ pl: 4, py: 2 }}>
                                         <Stack direction="row" spacing={2} alignItems="center">
-                                            <Avatar variant="rounded" src={item.image} sx={{ width: 44, height: 44, borderRadius: 2 }} />
+                                            <Avatar 
+                                              variant="rounded" 
+                                              src={item.image} 
+                                              sx={{ 
+                                                width: 44, 
+                                                height: 44, 
+                                                borderRadius: 2,
+                                                bgcolor: stringToColor(item.name || ''),
+                                                color: 'white'
+                                              }} 
+                                            >
+                                               {getProductIcon(item.name, typeof item.category === 'object' ? item.category.name : item.category)}
+                                            </Avatar>
                                             <Box>
                                                 <Typography variant="subtitle2" fontWeight={800}>{item.name}</Typography>
                                                 <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'Monospace' }}>{item.sku}</Typography>
@@ -502,7 +532,7 @@ const InventoryManagement = () => {
                                     </TableCell>
                                     <TableCell>
                                         <Chip 
-                                            label={item.warehouseName} 
+                                            label={item.warehouseName || 'Main Warehouse'} 
                                             size="small" 
                                             sx={{ fontWeight: 700, bgcolor: '#f1f5f9', color: 'text.secondary' }} 
                                         />
@@ -518,10 +548,10 @@ const InventoryManagement = () => {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <Typography variant="body2" color="text.secondary" fontWeight={600}>{item.committed}</Typography>
+                                        <Typography variant="body2" color="text.secondary" fontWeight={600}>{item.committed || 0}</Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Typography variant="body2" fontWeight={800}>{item.available}</Typography>
+                                        <Typography variant="body2" fontWeight={800}>{item.stock - (item.committed || 0)}</Typography>
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="body2" color="text.disabled" fontWeight={700}>{item.reorderPoint}</Typography>

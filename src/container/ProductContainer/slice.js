@@ -12,6 +12,12 @@ const productSlice = createSlice({
       limit: 10,
       total: 0,
       totalPages: 0
+    },
+    stats: {
+      totalProducts: 0,
+      lowStockCount: 0,
+      totalCategories: 0,
+      catalogValue: 0
     }
   },
   reducers: {
@@ -96,6 +102,46 @@ const productSlice = createSlice({
     searchProductsFail: (state, action) => {
       state.loading = false;
       state.error = action.payload;
+    },
+
+    // Bulk create products
+    bulkCreateProducts: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    bulkCreateProductsSuccess: (state) => {
+      state.loading = false;
+    },
+    bulkCreateProductsFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
+    // Fetch product stats
+    fetchProductStats: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    fetchProductStatsSuccess: (state, action) => {
+      state.loading = false;
+      state.stats = action.payload.data;
+    },
+    fetchProductStatsFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
+    // Adjust stock
+    adjustStock: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    adjustStockSuccess: (state) => {
+      state.loading = false;
+    },
+    adjustStockFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
     }
   }
 });
@@ -106,7 +152,10 @@ export const {
   createProduct, createProductSuccess, createProductFail,
   updateProduct, updateProductSuccess, updateProductFail,
   deleteProduct, deleteProductSuccess, deleteProductFail,
-  searchProducts, searchProductsSuccess, searchProductsFail
+  searchProducts, searchProductsSuccess, searchProductsFail,
+  bulkCreateProducts, bulkCreateProductsSuccess, bulkCreateProductsFail,
+  fetchProductStats, fetchProductStatsSuccess, fetchProductStatsFail,
+  adjustStock, adjustStockSuccess, adjustStockFail
 } = productSlice.actions;
 
 export default productSlice.reducer;

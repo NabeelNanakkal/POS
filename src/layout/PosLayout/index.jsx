@@ -12,7 +12,9 @@ import {
   IconButton,
   Stack,
   Divider,
-  Fab
+  Fab,
+  Dialog,
+  Button
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 import { useState, useMemo } from 'react';
@@ -41,6 +43,7 @@ const PosLayout = () => {
   const { menuMaster } = useGetMenuMaster();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user?.role || 'Cashier';
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   // Get dynamic menu items filtered by role
   const filteredMenu = useMemo(() => {
@@ -266,12 +269,19 @@ const PosLayout = () => {
             {!sidebarCollapsed && (
               <>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                  <Typography variant="body2" fontWeight={800} noWrap sx={{ color: 'text.primary' }}>{user.name || 'User'}</Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap sx={{ display: 'block', opacity: 0.8 }}>{userRole}</Typography>
+                  <Typography variant="subtitle2" fontWeight={800} noWrap sx={{ color: 'text.primary', lineHeight: 1.2 }}>
+                    {user.username || user.name || 'User'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', lineHeight: 1.2 }}>
+                    ID: {user.employeeId || (user.id || user._id || '0000').slice(-4).toUpperCase()}
+                  </Typography>
+                  <Typography variant="caption" fontWeight={700} sx={{ display: 'block', color: 'primary.main', fontSize: '0.65rem', mt: 0.3, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {userRole}
+                  </Typography>
                 </Box>
                 <IconButton 
                   size="small" 
-                  onClick={handleLogout}
+                  onClick={() => setLogoutDialogOpen(true)}
                   sx={{ 
                       color: 'error.main', 
                       bgcolor: alpha(theme.palette.error.main, 0.08),
@@ -302,6 +312,37 @@ const PosLayout = () => {
         <Outlet context={{ handlerDrawerOpen, drawerOpen }} />
 
       </Box>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={() => setLogoutDialogOpen(false)}
+        PaperProps={{ sx: { borderRadius: 3, p: 1, minWidth: 320 } }}
+      >
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Avatar sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', width: 60, height: 60, mx: 'auto', mb: 2 }}>
+                <LogoutIcon sx={{ fontSize: 30 }} />
+            </Avatar>
+            <Typography variant="h6" fontWeight={800} gutterBottom>Confirm Logout</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Are you sure you want to end your session?
+            </Typography>
+            <Stack direction="row" spacing={2}>
+                <Button fullWidth onClick={() => setLogoutDialogOpen(false)} sx={{ fontWeight: 700, borderRadius: 2 }}>
+                    Cancel
+                </Button>
+                <Button 
+                    fullWidth 
+                    variant="contained" 
+                    color="error" 
+                    onClick={handleLogout}
+                    sx={{ fontWeight: 700, borderRadius: 2, boxShadow: 'none' }}
+                >
+                    Logout
+                </Button>
+            </Stack>
+        </Box>
+      </Dialog>
     </Box>
   );
 };

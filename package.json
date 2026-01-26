@@ -16,6 +16,7 @@
     "@tabler/icons-react": "3.31.0",
     "@vitejs/plugin-react": "4.4.1",
     "apexcharts": "^5.3.4",
+    "axios": "^1.13.3",
     "dayjs": "^1.11.18",
     "formik": "^2.4.6",
     "framer-motion": "^12.10.1",

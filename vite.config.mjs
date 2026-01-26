@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   // depending on your application, base can also be "/"
   const env = loadEnv(mode, process.cwd(), '');
   const API_URL = `/`;
-  const PORT = 3000;
+  const PORT = 3002;
 
   return {
     server: {

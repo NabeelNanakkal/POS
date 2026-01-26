@@ -35,6 +35,7 @@ import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import RevenueChart from 'views/cashier/components/RevenueChart';
 import { fetchStores } from 'container/StoreContainer/slice';
 import { fetchEmployees } from 'container/EmployeeContainer/slice';
+import { getCardCounts } from 'container/dashBoardContainer/slice';
 import NoDataLottie from 'ui-component/NoDataLottie';
 
 const StatCard = ({ title, value, icon: Icon, color, trend }) => {
@@ -162,15 +163,18 @@ const AdminDashboard = () => {
   const dispatch = useDispatch();
   const { stores } = useSelector((state) => state.store);
   const { employees } = useSelector((state) => state.employee);
+  const { cardCounts } = useSelector((state) => state.dashboard);
 
   useEffect(() => {
     dispatch(fetchStores());
     dispatch(fetchEmployees());
+    dispatch(getCardCounts());
   }, [dispatch]);
 
-  // Mock aggregated data
-  const totalRevenue = "$124,500.00";
-  const revenueTrend = "+15.82%";
+  // Real data from cardCounts
+  const totalRevenue = cardCounts?.totalRevenue ? `$${Number(cardCounts.totalRevenue).toLocaleString()}` : "$0.00";
+  const revenueTrend = cardCounts?.revenueTrend || "0%";
+  const activeSessions = cardCounts?.activeSessions || "0";
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1600, mx: 'auto', px: { xs: 2, md: 3 }, py: 3 }}>
@@ -196,18 +200,16 @@ const AdminDashboard = () => {
           value={stores.length.toString()} 
           icon={StorefrontIcon} 
           color="primary" 
-          trend="+2 stores" 
         />
         <StatCard 
           title="Total Staff" 
           value={employees.length.toString()} 
           icon={GroupsIcon} 
           color="info" 
-          trend="+5 new"
         />
         <StatCard 
           title="Active Sessions" 
-          value="12" 
+          value={activeSessions} 
           icon={PeopleIcon} 
           color="warning" 
         />

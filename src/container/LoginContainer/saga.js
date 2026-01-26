@@ -1,5 +1,5 @@
-import commonApi from '../api';
-import config from '../../config';
+import authService from '../../services/authService';
+import { tokenManager } from '../../utils/tokenManager';
 import 'react-toastify/dist/ReactToastify.css';
 import { loginSuccess, loginFail } from './slice';
 import { takeEvery, call, put } from 'redux-saga/effects';
@@ -7,65 +7,79 @@ import { roleBasedRedirects } from 'constants/roleBasedRedirects';
 
 function* login(action) {
   try {
-    const data = {
-      email: action.payload.email,
-      password: action.payload.password,
-    };
-    const datas = JSON.stringify(data);
-    let params = {
-      api: `${config.ip}/auth/login`,
-      method: 'POST',
-      successAction: loginSuccess(),
-      failAction: loginFail(),
-      body: datas,
-      authourization: 'None' // commonApi handles null/None as no-auth
-    };
+    const { email, password } = action.payload;
 
-    let res = yield call(commonApi, params);
-    if (res) {
-      yield localStorage.setItem('token', res.token);
-      yield localStorage.setItem('user', JSON.stringify(res.user));
+    // Call the new backend API
+    const response = yield call(authService.login, email, password);
+    
+    if (response && response.data) {
+      const { user, accessToken, refreshToken } = response.data;
 
+      // Store tokens using token manager
+      yield call(tokenManager.setTokens, accessToken, refreshToken);
+      
+      // Store user data
+      yield localStorage.setItem('user', JSON.stringify(user));
+
+      // Dispatch success action
+      yield put(loginSuccess({ user, accessToken, refreshToken }));
+
+      // Handle redirect
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
-      const userRole = res.user?.role;
-      // clg('User Role:', userRole);
+      const userRole = user?.role;
+
       if (redirectUrl && redirectUrl.startsWith(window.location.origin)) {
         yield localStorage.removeItem('redirectAfterLogin');
         window.location.href = redirectUrl;
       } else {
-  const targetUrl = roleBasedRedirects[userRole] || '/main/admin';
-  // After login we must reload the app so routes/menu (which are generated
-  // at module-load time using localStorage) are rebuilt with the new user
-  // role. Navigate without reload can land on a missing route until the
-  // router is re-created, so do a hard replace here.
-  yield call(() => window.location.replace(targetUrl));
+        const targetUrl = roleBasedRedirects[userRole] || '/main/admin';
+        // Hard reload to rebuild routes/menu with new user role
+        yield call(() => window.location.replace(targetUrl));
       }
     } else {
-      yield put(loginFail({ error: 'No response from server' }));
-      // yield call(action.payload.navigate, '/login', { replace: true });
+      yield put(loginFail({ message: 'No response from server' }));
     }
   } catch (error) {
-    yield put(loginFail({ error: 'No response from server' }));
     console.error('Login failed:', error);
-    // yield put(loginFail({ error: error.message || 'An unexpected error occurred' }));
-    yield call(action.payload.navigate, '/login', { replace: true });
+    yield put(loginFail({ message: error.message || 'Login failed' }));
+    
+    if (action.payload.navigate) {
+      yield call(action.payload.navigate, '/login', { replace: true });
+    }
   }
 }
 
 function* logOut() {
   try {
-    yield localStorage.removeItem('token');
+    const refreshToken = yield call(tokenManager.getRefreshToken);
+    
+    // Call logout API to invalidate refresh token
+    if (refreshToken) {
+      try {
+        yield call(authService.logout, refreshToken);
+      } catch (error) {
+        console.error('Logout API call failed:', error);
+        // Continue with local cleanup even if API call fails
+      }
+    }
+
+    // Clear tokens and user data
+    yield call(tokenManager.clearTokens);
     yield localStorage.removeItem('user');
-    // clear any stored redirectAfterLogin to avoid redirecting next user to previous user's page
     yield localStorage.removeItem('redirectAfterLogin');
+    
+    // Redirect to login
     window.location.replace('/login');
   } catch (error) {
-    console.error(error);
+    console.error('Logout error:', error);
+    // Force cleanup and redirect even on error
+    tokenManager.clearTokens();
+    localStorage.clear();
+    window.location.replace('/login');
   }
 }
 
 export default function* LoginActionWatcher() {
   yield takeEvery('login/userLogin', login);
   yield takeEvery('login/userLogOut', logOut);
-  // yield takeEvery('login/getLoginUser', getLoginUserDetail);
 }

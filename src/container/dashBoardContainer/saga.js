@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 function* getCardCountsFn() {
     try {
         let params = {
-            api: `${config.ip}/dashboard-count`,
+            api: `${config.ip}/dashboard/stats`,
             method: 'GET',
             successAction: getCardCountsSuccess(),
             failAction: getCardCountsFail(),
@@ -26,11 +26,11 @@ function* getActivityCountsFn(action) {
             ? dayjs(action.payload).format('YYYY-MM-DD')
             : new Date().toISOString().split('T')[0];
         let params = {
-            api: `${config.ip}/dashboard/activitycount?date=${date}`,
+            api: `${config.ip}/dashboard/activity`,
             method: 'GET',
             successAction: getActivityCountsSuccess(),
             failAction: getActivityCountsFail(),
-            authorization: "token",
+            authourization: "token",
         };
         yield call(commonApi, params);
     } catch (error) {

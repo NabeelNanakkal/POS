@@ -4,6 +4,21 @@ const storeSlice = createSlice({
   name: 'store',
   initialState: {
     stores: [],
+    pagination: {
+      total: 0,
+      page: 1,
+      limit: 10,
+      pages: 0
+    },
+    stats: {
+      totalStores: 0,
+      activeStores: 0,
+      totalStaff: 0,
+      growth: {
+        value: 0,
+        trend: 0
+      }
+    },
     loading: false,
     error: null
   },
@@ -14,22 +29,36 @@ const storeSlice = createSlice({
     },
     fetchStoresSuccess: (state, action) => {
       state.loading = false;
-      state.stores = action.payload.data || [];
+      const { stores, pagination, stats } = action.payload.data;
+      
+      // Map _id to id for frontend compatibility
+      state.stores = (stores || []).map(store => ({
+        ...store,
+        id: store._id || store.id
+      }));
+      state.pagination = pagination || state.pagination;
+      state.stats = stats || state.stats;
     },
     fetchStoresFail: (state, action) => {
       state.loading = false;
       state.error = action.payload;
     },
-    setStoresBulk: (state, action) => {
-       const newStores = action.payload.map((item, index) => ({
-        id: Date.now() + index,
-        name: item.Name || item.name,
-        code: item.Code || item.code || `STR${index + 1}`,
-        location: item.Location || item.location || 'Unknown',
-        status: item.Status || item.status || 'Active',
-        active: true
+    bulkCreateStore: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    bulkCreateStoreSuccess: (state, action) => {
+      state.loading = false;
+      const newStores = action.payload.data || [];
+      const storesWithIds = newStores.map(store => ({
+        ...store,
+        id: store._id || store.id
       }));
-      state.stores = newStores;
+      state.stores.push(...storesWithIds);
+    },
+    bulkCreateStoreFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
     },
     createStore: (state) => {
       state.loading = true;
@@ -37,7 +66,11 @@ const storeSlice = createSlice({
     },
     createStoreSuccess: (state, action) => {
       state.loading = false;
-      state.stores.push(action.payload.data);
+      const newStore = action.payload.data;
+      state.stores.push({ 
+        ...newStore, 
+        id: newStore._id || newStore.id
+      });
     },
     createStoreFail: (state, action) => {
       state.loading = false;
@@ -49,12 +82,39 @@ const storeSlice = createSlice({
     },
     updateStoreSuccess: (state, action) => {
       state.loading = false;
-      const index = state.stores.findIndex((s) => s.id === action.payload.data.id);
+      const updatedStore = action.payload.data;
+      const storeWithId = { 
+        ...updatedStore, 
+        id: updatedStore._id || updatedStore.id
+      };
+      
+      const index = state.stores.findIndex((s) => s.id === storeWithId.id);
       if (index !== -1) {
-        state.stores[index] = action.payload.data;
+        state.stores[index] = storeWithId;
       }
     },
     updateStoreFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+    toggleStoreStatus: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    toggleStoreStatusSuccess: (state, action) => {
+      state.loading = false;
+      const updatedStore = action.payload.data;
+      const storeWithId = { 
+        ...updatedStore, 
+        id: updatedStore._id || updatedStore.id
+      };
+      
+      const index = state.stores.findIndex((s) => s.id === storeWithId.id);
+      if (index !== -1) {
+        state.stores[index] = storeWithId;
+      }
+    },
+    toggleStoreStatusFail: (state, action) => {
       state.loading = false;
       state.error = action.payload;
     },
@@ -75,9 +135,10 @@ const storeSlice = createSlice({
 
 export const {
   fetchStores, fetchStoresSuccess, fetchStoresFail,
-  setStoresBulk,
+  bulkCreateStore, bulkCreateStoreSuccess, bulkCreateStoreFail,
   createStore, createStoreSuccess, createStoreFail,
   updateStore, updateStoreSuccess, updateStoreFail,
+  toggleStoreStatus, toggleStoreStatusSuccess, toggleStoreStatusFail,
   deleteStore, deleteStoreSuccess, deleteStoreFail
 } = storeSlice.actions;
 

@@ -45,23 +45,23 @@ const PosRoutes = {
             },
             {
               path: 'terminal',
-              element: <AuthGuard permittedRoles={['Cashier', 'Manager', 'TenantAdmin']}><PosTerminal /></AuthGuard>
+              element: <AuthGuard permittedRoles={['CASHIER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN']}><PosTerminal /></AuthGuard>
             },
             {
               path: 'products',
-              element: <AuthGuard permittedRoles={['Manager', 'TenantAdmin']}><ProductManagement /></AuthGuard>
+              element: <AuthGuard permittedRoles={['MANAGER', 'ADMIN', 'SUPER_ADMIN']}><ProductManagement /></AuthGuard>
             },
             {
               path: 'inventory',
-              element: <AuthGuard permittedRoles={['Manager', 'TenantAdmin']}><InventoryManagement /></AuthGuard>
+              element: <AuthGuard permittedRoles={['MANAGER', 'INVENTORY_MANAGER', 'ADMIN', 'SUPER_ADMIN']}><InventoryManagement /></AuthGuard>
             },
             {
               path: 'shift',
-              element: <AuthGuard permittedRoles={['Cashier', 'Manager', 'TenantAdmin']}><ShiftManagement /></AuthGuard>
+              element: <AuthGuard permittedRoles={['CASHIER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN']}><ShiftManagement /></AuthGuard>
             },
             {
               path: 'reports',
-              element: <AuthGuard permittedRoles={['Manager', 'TenantAdmin']}><Reports /></AuthGuard>
+              element: <AuthGuard permittedRoles={['MANAGER', 'ADMIN', 'SUPER_ADMIN']}><Reports /></AuthGuard>
             }
           ]
         },
@@ -70,15 +70,15 @@ const PosRoutes = {
           children: [
             {
               path: 'dashboard',
-              element: <AuthGuard permittedRoles={['TenantAdmin']}><AdminDashboard /></AuthGuard>
+              element: <AuthGuard permittedRoles={['ADMIN', 'SUPER_ADMIN']}><AdminDashboard /></AuthGuard>
             },
             {
               path: 'stores',
-              element: <AuthGuard permittedRoles={['TenantAdmin']}><StoreManagement /></AuthGuard>
+              element: <AuthGuard permittedRoles={['ADMIN', 'SUPER_ADMIN']}><StoreManagement /></AuthGuard>
             },
             {
               path: 'employees',
-              element: <AuthGuard permittedRoles={['TenantAdmin']}><EmployeeManagement /></AuthGuard>
+              element: <AuthGuard permittedRoles={['ADMIN', 'SUPER_ADMIN']}><EmployeeManagement /></AuthGuard>
             }
           ]
         }

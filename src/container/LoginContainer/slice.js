@@ -4,7 +4,9 @@ import { toast } from 'react-toastify';
 const loginSlice = createSlice({
   name: 'login',
   initialState: {
-    data: {},
+    user: null,
+    accessToken: null,
+    refreshToken: null,
     loading: false,
     error: null
   },
@@ -15,22 +17,36 @@ const loginSlice = createSlice({
     },
     loginSuccess: (state, action) => {
       state.loading = false;
-      toast.success('Login successfully', {
+      state.user = action.payload.user;
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      toast.success('Login successful', {
         autoClose: 3000
       });
-      state.data = action.payload;
     },
     loginFail: (state, action) => {
-      toast.error(action?.payload?.message ,{
+      toast.error(action?.payload?.message || 'Login failed', {
         autoClose: 3000
       });
       state.loading = false;
       state.error = action.payload;
     },
 
-    userLogOut: () => {
-      toast.warn("Logging Out...")
+    userLogOut: (state) => {
+      toast.warn("Logging out...");
+      state.user = null;
+      state.accessToken = null;
+      state.refreshToken = null;
     },
+
+    // Update tokens after refresh
+    updateTokens: (state, action) => {
+      state.accessToken = action.payload.accessToken;
+      if (action.payload.refreshToken) {
+        state.refreshToken = action.payload.refreshToken;
+      }
+    },
+
     getLoginUser: (state) => {
       state.loading = true;
       state.error = null;
@@ -46,7 +62,19 @@ const loginSlice = createSlice({
   }
 });
 
-export const { userLogin, loginSuccess, loginFail, userLogOut, getLoginUser, getLoginUserSuccess, getLoginUserFail } = loginSlice.actions;
+export const { 
+  userLogin, 
+  loginSuccess, 
+  loginFail, 
+  userLogOut, 
+  updateTokens,
+  getLoginUser, 
+  getLoginUserSuccess, 
+  getLoginUserFail 
+} = loginSlice.actions;
+
 export const selectError = (state) => state.login.error;
+export const selectUser = (state) => state.login.user;
+export const selectAccessToken = (state) => state.login.accessToken;
 
 export default loginSlice.reducer;

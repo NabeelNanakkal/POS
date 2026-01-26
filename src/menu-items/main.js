@@ -23,7 +23,7 @@ const main = {
       type: 'item',
       url: '/admin/dashboard',
       icon: IconLayoutDashboard,
-      permittedRoles: ['TenantAdmin'],
+      permittedRoles: ['ADMIN', 'SUPER_ADMIN'],
       breadcrumbs: false
     },
     {
@@ -32,7 +32,7 @@ const main = {
       type: 'item',
       url: '/admin/stores',
       icon: IconBuildingStore,
-      permittedRoles: ['TenantAdmin'],
+      permittedRoles: ['ADMIN', 'SUPER_ADMIN'],
       breadcrumbs: false
     },
     {
@@ -41,7 +41,7 @@ const main = {
       type: 'item',
       url: '/admin/employees',
       icon: IconUsers,
-      permittedRoles: ['TenantAdmin'],
+      permittedRoles: ['ADMIN', 'SUPER_ADMIN'],
       breadcrumbs: false
     },
     {
@@ -50,7 +50,7 @@ const main = {
       type: 'item',
       url: '/pos/dashboard',
       icon: IconLayoutDashboard,
-      permittedRoles: ['Manager', 'Cashier'],
+      permittedRoles: ['MANAGER', 'CASHIER', 'INVENTORY_MANAGER'],
       breadcrumbs: false
     },
     {
@@ -59,7 +59,7 @@ const main = {
       type: 'item',
       url: '/pos/terminal',
       icon: IconDeviceGamepad2,
-      permittedRoles: ['Cashier'],
+      permittedRoles: ['CASHIER'],
       breadcrumbs: false
     },
     {
@@ -68,7 +68,7 @@ const main = {
       type: 'item',
       url: '/pos/shift',
       icon: IconReceipt2,
-      permittedRoles: ['Cashier'],
+      permittedRoles: ['CASHIER'],
       breadcrumbs: false
     },
     {
@@ -77,7 +77,7 @@ const main = {
       type: 'item',
       url: '/pos/products',
       icon: IconPackage,
-      permittedRoles: ['Manager'],
+      permittedRoles: ['MANAGER'],
       breadcrumbs: false
     },
     {
@@ -86,7 +86,7 @@ const main = {
       type: 'item',
       url: '/pos/inventory',
       icon: IconArchive,
-      permittedRoles: ['Manager'],
+      permittedRoles: ['MANAGER', 'INVENTORY_MANAGER', 'ADMIN', 'SUPER_ADMIN'],
       breadcrumbs: false
     },
     {
@@ -95,7 +95,7 @@ const main = {
       type: 'item',
       url: '/pos/reports',
       icon: IconReportAnalytics,
-      permittedRoles: ['Manager', 'TenantAdmin'],
+      permittedRoles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
       breadcrumbs: false
     }
   ]

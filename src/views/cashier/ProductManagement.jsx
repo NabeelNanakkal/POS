@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -52,8 +53,35 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CategoryIcon from '@mui/icons-material/Category';
 import PaidIcon from '@mui/icons-material/Paid';
+import RouterIcon from '@mui/icons-material/Router';
+import MonitorIcon from '@mui/icons-material/Monitor';
+import KeyboardIcon from '@mui/icons-material/Keyboard';
+import HeadsetIcon from '@mui/icons-material/Headset';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import LaptopIcon from '@mui/icons-material/Laptop';
+import StorageIcon from '@mui/icons-material/Storage';
+import MemoryIcon from '@mui/icons-material/Memory';
+import MouseIcon from '@mui/icons-material/Mouse';
+import UsbIcon from '@mui/icons-material/Usb';
+import SmartphoneIcon from '@mui/icons-material/Smartphone';
+import PrintIcon from '@mui/icons-material/Print';
+import CableIcon from '@mui/icons-material/Cable';
+import SettingsInputComponentIcon from '@mui/icons-material/SettingsInputComponent';
+
 import * as XLSX from 'xlsx';
 import NoDataLottie from 'ui-component/NoDataLottie';
+
+import { 
+    fetchProducts, 
+    createProduct, 
+    updateProduct, 
+    deleteProduct, 
+    bulkCreateProducts, 
+    searchProducts,
+    fetchProductStats
+} from 'container/ProductContainer/slice';
+import { fetchCategories } from 'container/CategoryContainer/slice';
+import { fetchStores } from 'container/StoreContainer/slice';
 
 // Components
 const StatCard = ({ title, value, icon, color, trend }) => {
@@ -66,28 +94,30 @@ const StatCard = ({ title, value, icon, color, trend }) => {
                 flex: 1, 
                 borderRadius: 4, 
                 border: '1px solid #eee',
+                bgcolor: 'white',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 2,
-                transition: '0.3s',
-                '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 24px rgba(0,0,0,0.05)' }
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 24px rgba(0,0,0,0.06)',
+                    borderColor: alpha(color, 0.2)
+                }
             }}
         >
             <Box sx={{ 
-                width: 48, 
-                height: 48, 
+                p: 1.5, 
                 borderRadius: 3, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                bgcolor: alpha(color, 0.1),
-                color: color
+                bgcolor: alpha(color, 0.08), 
+                color: color,
+                display: 'flex'
             }}>
                 {icon}
             </Box>
             <Box>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>{title}</Typography>
-                <Typography variant="h4" fontWeight={800}>{value}</Typography>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>{title}</Typography>
+                <Typography variant="h3" fontWeight={800}>{value}</Typography>
                 {trend && (
                     <Typography variant="caption" sx={{ color: trend.startsWith('+') ? 'success.main' : 'error.main', fontWeight: 700 }}>
                         {trend} <Typography component="span" variant="caption" color="text.secondary">vs last month</Typography>
@@ -96,6 +126,38 @@ const StatCard = ({ title, value, icon, color, trend }) => {
             </Box>
         </Paper>
     );
+};
+
+// UI Helper: Generate consistent colors from strings
+const stringToColor = (string) => {
+    let hash = 0;
+    for (let i = 0; i < string.length; i++) {
+        hash = string.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash % 360);
+    return `hsl(${hue}, 70%, 45%)`;
+};
+
+// UI Helper: Get context-aware icon based on name
+const getProductIcon = (name = '', categoryName = '') => {
+    const searchString = `${name} ${categoryName}`.toLowerCase();
+    
+    if (searchString.includes('router') || searchString.includes('wi-fi') || searchString.includes('wifi')) return <RouterIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('monitor') || searchString.includes('screen') || searchString.includes('display')) return <MonitorIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('kb') || searchString.includes('keyboard')) return <KeyboardIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('mouse')) return <MouseIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('headset') || searchString.includes('audio') || searchString.includes('headphone')) return <HeadsetIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('camera') || searchString.includes('cam') || searchString.includes('video')) return <VideocamIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('laptop') || searchString.includes('notebook')) return <LaptopIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('disk') || searchString.includes('ssd') || searchString.includes('hdd') || searchString.includes('storage')) return <StorageIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('ram') || searchString.includes('memory') || searchString.includes('ddr')) return <MemoryIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('usb') || searchString.includes('flash') || searchString.includes('hub')) return <UsbIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('phone') || searchString.includes('mobile')) return <SmartphoneIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('print') || searchString.includes('ink')) return <PrintIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('cable') || searchString.includes('wire') || searchString.includes('adapter')) return <CableIcon sx={{ fontSize: '1.4rem' }} />;
+    if (searchString.includes('processor') || searchString.includes('cpu') || searchString.includes('chip')) return <SettingsInputComponentIcon sx={{ fontSize: '1.4rem' }} />;
+    
+    return <InventoryIcon sx={{ fontSize: '1.4rem' }} />;
 };
 
 const DeleteConfirmationDialog = ({ open, onClose, onConfirm, productName }) => {
@@ -332,44 +394,15 @@ const FileUploadDialog = ({ open, onClose, onImport }) => {
     );
 };
 
-const MOCK_PRODUCTS = [
-  { 
-    id: 1, name: 'Wireless Headphones', description: 'Noise cancelling wireless headphones', retailPrice: 149.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Bulk purchase from vendor', purchaseRate: 85.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 5, vendor: 'Sony', stock: 3, initialStockRate: 85.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'WH-001', barcode: '123456789012', category: 'Electronics', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 2, name: 'Mechanical Keyboard', description: 'RGB Backlit Mechanical Keyboard', retailPrice: 89.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Bulk purchase', purchaseRate: 45.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 5, vendor: 'Corsair', stock: 12, initialStockRate: 45.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'KB-RGB', barcode: '234567890123', category: 'Electronics', image: 'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 3, name: 'Gaming Mouse', description: 'High precision wireless gaming mouse', retailPrice: 59.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Bulk purchase', purchaseRate: 25.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 10, vendor: 'Logitech', stock: 25, initialStockRate: 25.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'MS-GPRO', barcode: '345678901234', category: 'Electronics', image: 'https://images.unsplash.com/photo-1527443154391-507e9dc6c5cc?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 4, name: '4K Monitor', description: '27-inch 4K UHD IPS Monitor', retailPrice: 349.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Vendor Order', purchaseRate: 210.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 3, vendor: 'Dell', stock: 8, initialStockRate: 210.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'MN-4K27', barcode: '456789012345', category: 'Electronics', image: 'https://images.unsplash.com/photo-1527443210214-469bfb4b9b94?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 5, name: 'Smart Watch', description: 'Fitness tracker with heart rate monitor', retailPrice: 199.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Direct Supplier', purchaseRate: 120.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 15, vendor: 'Samsung', stock: 45, initialStockRate: 120.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'SW-G5', barcode: '567890123456', category: 'Accessories', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 6, name: 'Laptop Backpack', description: 'Waterproof laptop backpack with USB port', retailPrice: 49.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Importer X', purchaseRate: 15.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 20, vendor: 'Targus', stock: 50, initialStockRate: 15.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'BP-LT15', barcode: '678901234567', category: 'Bags', image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 7, name: 'Coffee Mug', description: 'Ceramic coffee mug 350ml', retailPrice: 12.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Local Pottery', purchaseRate: 4.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 30, vendor: 'HomeStyles', stock: 120, initialStockRate: 4.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'MG-CER35', barcode: '789012345678', category: 'Kitchen', image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcc3d1?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 8, name: 'Leather Wallet', description: 'Genuine leather bifold wallet', retailPrice: 35.00, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Leather Craft Co', purchaseRate: 12.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 10, vendor: 'Timberland', stock: 22, initialStockRate: 12.00, warehouseName: 'Main Warehouse', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'WL-LTR-BF', barcode: '890123456789', category: 'Accessories', image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 9, name: 'Desktop Speaker', description: 'Compact USB powered desktop speakers', retailPrice: 29.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Tech Hub', purchaseRate: 10.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 5, vendor: 'Creative', stock: 15, initialStockRate: 10.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'SP-DK20', barcode: '901234567890', category: 'Electronics', image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 10, name: 'Webcam HD', description: '1080p HD Webcam with microphone', retailPrice: 69.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Office Depot', purchaseRate: 35.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 8, vendor: 'Logitech', stock: 18, initialStockRate: 35.00, warehouseName: 'San Jose', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Active', sku: 'WC-HD10', barcode: '012345678901', category: 'Electronics', image: 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=100&q=80' 
-  },
-  { 
-    id: 11, name: 'Old Monitor', description: 'Legacy LCD Monitor', retailPrice: 49.99, productType: 'Goods', account: 'Sales', usageUnit: 'pcs', purchaseDescription: 'Legacy stock', purchaseRate: 20.00, itemType: 'Inventory', purchaseAccount: 'Cost of Goods Sold', inventoryAccount: 'Inventory Asset', reorderPoint: 0, vendor: 'Dell', stock: 0, initialStockRate: 20.00, warehouseName: 'Warehouse B', taxName: 'VAT', taxType: 'Percentage', taxPercentage: 15, exemptionReason: '', status: 'Inactive', sku: 'MN-OLD', barcode: '00000000000', category: 'Electronics', image: 'https://images.unsplash.com/photo-1527443210214-469bfb4b9b94?auto=format&fit=crop&w=100&q=80' 
-  }
-];
+
 
 const ProductManagement = () => {
   const theme = useTheme();
+  const dispatch = useDispatch();
+  const { products, loading, pagination, stats, error: empError } = useSelector((state) => state.product);
+  const { categories } = useSelector((state) => state.category);
+  const { stores } = useSelector((state) => state.store);
+
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -378,14 +411,22 @@ const ProductManagement = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [products, setProducts] = useState(MOCK_PRODUCTS);
+  
+  useEffect(() => {
+    dispatch(fetchProducts({ page: 1, limit: 10 }));
+    dispatch(fetchCategories());
+    dispatch(fetchStores());
+    dispatch(fetchProductStats());
+  }, [dispatch]);
   
   // Form State
   const [formState, setFormState] = useState({});
 
   const handleEditClick = (product) => {
     setSelectedProduct(product);
-    setFormState(product || {});
+    // Extract ID if category is populated as an object
+    const categoryId = typeof product.category === 'object' ? (product.category.id || product.category._id) : product.category;
+    setFormState({ ...product, category: categoryId } || {});
     setIsDrawerOpen(true);
   };
 
@@ -400,10 +441,8 @@ const ProductManagement = () => {
         usageUnit: 'pcs',
         purchaseDescription: '',
         purchaseRate: '',
-        itemType: 'Inventory',
-        purchaseAccount: 'Cost of Goods Sold',
         inventoryAccount: 'Inventory Asset',
-        reorderPoint: '',
+        reorderPoint: 50,
         vendor: '',
         stock: '',
         initialStockRate: '',
@@ -423,13 +462,13 @@ const ProductManagement = () => {
   };
 
   const handleConfirmDelete = () => {
-    setProducts(products.filter(p => p.id !== productToDelete.id));
+    dispatch(deleteProduct({ id: productToDelete.id || productToDelete._id }));
     setIsDeleteDialogOpen(false);
     setProductToDelete(null);
   };
 
   const handleConfirmUpdate = () => {
-    setProducts(products.map(p => p.id === selectedProduct.id ? { ...p, ...formState } : p));
+    dispatch(updateProduct({ id: selectedProduct.id || selectedProduct._id, ...formState, refetch: true }));
     setIsUpdateConfirmOpen(false);
     setIsDrawerOpen(false);
     setSelectedProduct(null);
@@ -437,26 +476,15 @@ const ProductManagement = () => {
 
   const handleSaveProduct = () => {
     if (selectedProduct) {
-        // Show confirmation before update
         setIsUpdateConfirmOpen(true);
     } else {
-        // Add new product immediately
-        const newProduct = {
-            ...formState,
-            id: products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1,
-            sku: `SKU-${Math.floor(Math.random() * 10000)}`,
-            barcode: `BC-${Math.floor(Math.random() * 100000000)}`,
-            image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=100&q=80',
-            category: 'New'
-        };
-        setProducts([...products, newProduct]);
+        dispatch(createProduct({ ...formState, refetch: true }));
         setIsDrawerOpen(false);
     }
   };
 
   const handleImportData = (data) => {
-    const newProducts = data.map((item, index) => ({
-        id: products.length + index + 1,
+    const productsToImport = data.map((item) => ({
         name: item["Item Name"] || 'Unknown Product',
         description: item["Description"] || '',
         retailPrice: parseFloat(item["Rate"]) || 0,
@@ -468,7 +496,7 @@ const ProductManagement = () => {
         itemType: item["Item Type"] || 'Inventory',
         purchaseAccount: item["Purchase Account"] || 'Cost of Goods Sold',
         inventoryAccount: item["Inventory Account"] || 'Inventory Asset',
-        reorderPoint: parseInt(item["Reorder Point"]) || 0,
+        reorderPoint: parseInt(item["Reorder Point"]) || 50,
         vendor: item["Vendor"] || 'N/A',
         stock: parseInt(item["Initial Stock"]) || 0,
         initialStockRate: parseFloat(item["Initial Stock Rate"]) || 0,
@@ -478,21 +506,21 @@ const ProductManagement = () => {
         taxPercentage: parseFloat(item["Tax Percentage"]) || 0,
         exemptionReason: item["Exemption Reason"] || '',
         status: item["Status"] || 'Active',
-        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=100&q=80',
         sku: `SKU-${Math.floor(Math.random() * 10000)}`,
-        barcode: `BC-${Math.floor(Math.random() * 100000000)}`,
-        category: 'Imported'
+        barcode: `BC-${Math.floor(Math.random() * 100000000)}`
     }));
-    setProducts([...products, ...newProducts]);
+    dispatch(bulkCreateProducts({ products: productsToImport }));
     setIsImportOpen(false);
   };
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = (products || []).filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesStatus = showActive ? p.status === 'Active' : p.status === 'Inactive';
+    // Status can be 'Active'/'Inactive' or boolean isActive
+    const productActive = p.status ? p.status === 'Active' : p.isActive !== false;
+    const matchesStatus = showActive ? productActive : !productActive;
     
     return matchesSearch && matchesStatus;
   });
@@ -514,10 +542,10 @@ const ProductManagement = () => {
 
       {/* Quick Stats Row */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
-        <StatCard title="Total Products" value="128" icon={<InventoryIcon />} color={theme.palette.primary.main} trend="+12%" />
-        <StatCard title="Low Stock" value="5" icon={<WarningAmberIcon />} color={theme.palette.error.main} trend="-2" />
-        <StatCard title="Categories" value="12" icon={<CategoryIcon />} color={theme.palette.success.main} />
-        <StatCard title="Catalog Value" value="$12,450" icon={<PaidIcon />} color={theme.palette.warning.main} trend="+5.4%" />
+        <StatCard title="Total Products" value={stats?.totalProducts || 0} icon={<InventoryIcon />} color={theme.palette.primary.main} />
+        <StatCard title="Low Stock" value={stats?.lowStockCount || 0} icon={<WarningAmberIcon />} color={theme.palette.error.main} />
+        <StatCard title="Categories" value={stats?.totalCategories || 0} icon={<CategoryIcon />} color={theme.palette.success.main} />
+        <StatCard title="Catalog Value" value={`$${(stats?.catalogValue || 0).toLocaleString()}`} icon={<PaidIcon />} color={theme.palette.warning.main} />
       </Box>
 
       {/* Refined Tool Bar */}
@@ -552,7 +580,11 @@ const ProductManagement = () => {
               placeholder="Search items by name, SKU or barcode..."
               size="small"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                dispatch(fetchProducts({ page: 1, limit: 10, search: val }));
+              }}
               sx={{ flex: { md: 2, lg: 1.5 } }}
               InputProps={{
                 startAdornment: (
@@ -571,8 +603,9 @@ const ProductManagement = () => {
                         sx={{ borderRadius: 3, height: 40, bgcolor: 'white', border: '1px solid #f1f5f9', '& fieldset': { border: 'none' } }}
                     >
                         <MenuItem value="all">Categories</MenuItem>
-                        <MenuItem value="electronics">Electronics</MenuItem>
-                        <MenuItem value="clothing">Clothing</MenuItem>
+                        {(categories || []).map(cat => (
+                            <MenuItem key={cat.id || cat._id} value={cat.id || cat._id}>{cat.name}</MenuItem>
+                        ))}
                     </Select>
                 </FormControl>
 
@@ -718,11 +751,15 @@ const ProductManagement = () => {
                               sx={{ 
                                 width: 64, 
                                 height: 64, 
-                                borderRadius: 2.5,
-                                border: '2px solid white',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                                borderRadius: 3, 
+                                border: '2px solid white', 
+                                boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                                bgcolor: stringToColor(product.name),
+                                color: 'white'
                               }} 
-                            />
+                            >
+                              {getProductIcon(product.name, typeof product.category === 'object' ? product.category.name : product.category)}
+                            </Avatar>
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="subtitle1" fontWeight={800} sx={{ color: 'text.primary', mb: 0.2 }}>{product.name}</Typography>
                                 <Stack direction="row" spacing={1} alignItems="center">
@@ -866,7 +903,7 @@ const ProductManagement = () => {
                         }} 
                       />
                       <Typography variant="body2" fontWeight={800} color="text.disabled" sx={{ fontSize: '0.8rem' }}>
-                        {String(index + 1).padStart(2, '0')}
+                        {String(((pagination?.page - 1) * pagination?.limit) + index + 1).padStart(2, '0')}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -877,11 +914,15 @@ const ProductManagement = () => {
                           sx={{ 
                             width: 48, 
                             height: 48, 
-                            borderRadius: 2, 
+                            borderRadius: 2.5, 
                             border: '2px solid white', 
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.06)' 
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                            bgcolor: stringToColor(product.name),
+                            color: 'white'
                           }} 
-                        />
+                        >
+                          {getProductIcon(product.name, typeof product.category === 'object' ? product.category.name : product.category)}
+                        </Avatar>
                         <Box>
                           <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'text.primary', mb: 0.2 }}>{product.name}</Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>{product.description}</Typography>
@@ -925,7 +966,9 @@ const ProductManagement = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={600} color="text.primary">{product.category}</Typography>
+                      <Typography variant="body2" fontWeight={600} color="text.primary">
+                        {typeof product.category === 'object' ? product.category.name : product.category}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="subtitle1" fontWeight={900} color="primary.main">
@@ -934,7 +977,7 @@ const ProductManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Chip 
-                        label={product.stock < 5 ? 'Low Stock' : 'In Stock'} 
+                        label={product.stock <= (product.reorderPoint || 0) ? 'Low Stock' : 'In Stock'} 
                         size="small" 
                         sx={{ 
                             fontWeight: 800, 
@@ -944,11 +987,11 @@ const ProductManagement = () => {
                             fontSize: '0.65rem',
                             textTransform: 'uppercase',
                             letterSpacing: 0.5,
-                            bgcolor: product.stock < 5 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.success.main, 0.1), 
-                            color: product.stock < 5 ? theme.palette.error.main : theme.palette.success.main,
+                            bgcolor: product.stock <= (product.reorderPoint || 0) ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.success.main, 0.1), 
+                            color: product.stock <= (product.reorderPoint || 0) ? theme.palette.error.main : theme.palette.success.main,
                             border: '1px solid',
-                            borderColor: product.stock < 5 ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.success.main, 0.2),
-                            boxShadow: (theme) => product.stock < 5 
+                            borderColor: product.stock <= (product.reorderPoint || 0) ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.success.main, 0.2),
+                            boxShadow: (theme) => product.stock <= (product.reorderPoint || 0) 
                               ? `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
                               : `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
                         }} 
@@ -1002,8 +1045,16 @@ const ProductManagement = () => {
         </Table>
         
         <Box sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', gap: 2 }}>
-          <Typography variant="caption" color="text.secondary">Showing 1 to 5 of 128 results</Typography>
-          <Pagination count={10} shape="rounded" size="small" />
+          <Typography variant="caption" color="text.secondary">
+            Showing {(pagination?.page - 1) * pagination?.limit + 1} to {Math.min(pagination?.page * pagination?.limit, pagination?.total)} of {pagination?.total} results
+          </Typography>
+          <Pagination 
+            count={pagination?.pages || 1} 
+            page={pagination?.page || 1}
+            onChange={(e, val) => dispatch(fetchProducts({ page: val, limit: 10, search: searchQuery }))}
+            shape="rounded" 
+            size="small" 
+          />
         </Box>
       </TableContainer>
 
@@ -1035,20 +1086,39 @@ const ProductManagement = () => {
               sx={{ 
                 border: '2px dashed #e2e8f0', 
                 borderRadius: 5, 
-                p: { xs: 3, sm: 5 }, 
+                p: { xs: 3, sm: 4 }, 
                 textAlign: 'center', 
                 mb: 4,
                 cursor: 'pointer',
                 transition: '0.3s',
                 bgcolor: '#f8fafc',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 2,
                 '&:hover': { bgcolor: '#fff', borderColor: 'primary.main', boxShadow: '0 8px 24px rgba(0,0,0,0.05)' }
               }}
             >
-              <Box sx={{ width: 56, height: 56, borderRadius: '50%', bgcolor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                <CloudUploadIcon sx={{ fontSize: 28, color: 'primary.main' }} />
+              <Avatar 
+                variant="rounded" 
+                src={formState.image} 
+                sx={{ 
+                  width: 80, 
+                  height: 80, 
+                  borderRadius: 4, 
+                  border: '3px solid white', 
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+                  bgcolor: stringToColor(formState.name || 'New Product'),
+                  color: 'white',
+                  fontSize: '2rem'
+                }}
+              >
+                {getProductIcon(formState.name, '')}
+              </Avatar>
+              <Box>
+                <Typography variant="body2" fontWeight={700} color="text.primary">Drop your image here, or <Typography component="span" variant="body2" color="primary.main" fontWeight={800}>browse</Typography></Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>Supports PNG, JPG (Max 5MB)</Typography>
               </Box>
-              <Typography variant="body2" fontWeight={700} color="text.primary">Drop your image here, or <Typography component="span" variant="body2" color="primary.main" fontWeight={800}>browse</Typography></Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={500}>Supports PNG, JPG, JPEG (Max 5MB)</Typography>
             </Box>
 
             {/* 21 Fields in Sequential Order */}
@@ -1081,7 +1151,23 @@ const ProductManagement = () => {
                 />
               </Box>
 
-              {/* 3. Rate */}
+              {/* 3. Category */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Category</Typography>
+                <FormControl fullWidth size="small">
+                    <Select
+                        value={formState.category || ''}
+                        onChange={(e) => setFormState({ ...formState, category: e.target.value })}
+                        sx={{ borderRadius: 2 }}
+                    >
+                        {(categories || []).map(cat => (
+                            <MenuItem key={cat.id || cat._id} value={cat.id || cat._id}>{cat.name}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+              </Box>
+
+              {/* 4. Rate */}
               <Box>
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Rate (Retail Price)</Typography>
                 <TextField 
@@ -1261,16 +1347,22 @@ const ProductManagement = () => {
                 />
               </Box>
 
-              {/* 16. Warehouse Name */}
+              {/* 16. Store Name */}
               <Box>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Warehouse Name</Typography>
-                <TextField 
-                    fullWidth 
-                    size="small" 
-                    value={formState.warehouseName || 'Main Warehouse'} 
-                    onChange={(e) => setFormState({ ...formState, warehouseName: e.target.value })}
-                    InputProps={{ sx: { borderRadius: 2 } }} 
-                />
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Store (Location)</Typography>
+                <FormControl fullWidth size="small">
+                    <Select 
+                        value={formState.warehouseName || ''} 
+                        onChange={(e) => setFormState({ ...formState, warehouseName: e.target.value })}
+                        displayEmpty
+                        sx={{ borderRadius: 2 }}
+                    >
+                        <MenuItem value="" disabled>Select Store</MenuItem>
+                        {(stores || []).map((store) => (
+                            <MenuItem key={store.id} value={store.name}>{store.name}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
               </Box>
 
               <Divider />

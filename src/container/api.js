@@ -2,10 +2,11 @@ import { delay, put } from 'redux-saga/effects';
 import { Base64 } from 'js-base64';
 import { toast } from 'react-toastify';
 import { userLogOut } from './LoginContainer/slice';
+import { tokenManager } from 'utils/tokenManager';
 
 function* commonApi(value) {
 
-  const token = yield localStorage.getItem(import.meta.env.VITE_APP_SESSION_TOKEN);
+  const token = tokenManager.getAccessToken();
 
   let authorization = value.authourization
     ? value.authourization === 'Basic'
@@ -36,7 +37,7 @@ function* commonApi(value) {
     });
 
     if (!response.ok) {
-      if (response.status === 405) {
+      if (response.status === 401 || response.status === 405) {
         const currentUrl = window.location.href;
         localStorage.setItem("redirectAfterLogin", currentUrl);
         toast.warn('Session expired! Logging out...', { autoClose: 1200 });

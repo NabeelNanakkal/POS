@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useBarcodeScanner } from 'hooks/useBarcodeScanner';
 import {
@@ -63,23 +63,19 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 
 // Mock Data
-const CATEGORIES = [
-  { id: 'all', name: 'All Items', icon: GridViewIcon },
-  { id: 'apparel', name: 'Apparel', icon: ShoppingBagIcon },
-  { id: 'electronics', name: 'Electronics', icon: LocalShippingOutlinedIcon },
-  { id: 'snacks', name: 'Snacks', icon: StorefrontIcon },
-];
-
-const PRODUCTS = [
-  { id: 1, name: 'Noise Cancelling Headphones', price: 129.0, sku: 'NC-HEAD-001', barcode: '123456789012', stock: '12 Left', stockType: 'warning', category: 'electronics', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=300&q=80' },
-  { id: 2, name: 'Smart Watch Series 5', price: 249.0, sku: 'SW-SERIES-5', barcode: '234567890123', stock: 'In Stock', stockType: 'success', category: 'electronics', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=300&q=80' },
-  { id: 3, name: 'Running Sneakers Pro', price: 89.99, sku: 'SP-RUN-PRO', barcode: '345678901234', stock: 'Low Stock', stockType: 'error', category: 'apparel', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80' },
-  { id: 5, name: 'Genuine Leather Wallet', price: 45.0, sku: 'AC-LTH-WLT', barcode: '456789012345', stock: 'In Stock', stockType: 'success', category: 'apparel', image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=300&q=80' },
-  { id: 6, name: 'Organic Cotton Tee', price: 25.0, sku: 'CL-COT-TEE', barcode: '567890123456', stock: '100+', stockType: 'success', category: 'apparel', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=300&q=80' },
-  { id: 8, name: 'Espresso Maker Pro', price: 199.0, sku: 'COF-MAK-PRO', barcode: '678901234567', stock: 'In Stock', stockType: 'success', category: 'electronics', image: 'https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?auto=format&fit=crop&w=300&q=80' },
-  { id: 10, name: 'Gourmet Mix Nuts', price: 15.0, sku: 'SNK-NIX-NUT', barcode: '789012345678', stock: '50+', stockType: 'success', category: 'snacks', image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=300&q=80' },
-  { id: 11, name: 'Premium Dark Chocolate', price: 8.5, sku: 'SNK-DRK-CHO', barcode: '890123456789', stock: 'In Stock', stockType: 'success', category: 'snacks', image: 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=300&q=80' },
-];
+import { fetchProducts } from 'container/ProductContainer/slice';
+import { fetchStores } from 'container/StoreContainer/slice';
+import { useSelector, useDispatch } from 'react-redux';
+import customerService from 'services/customerService';
+// Helper to match ProductManagement color logic
+const stringToColor = (string) => {
+    let hash = 0;
+    for (let i = 0; i < string.length; i++) {
+        hash = string.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash % 360);
+    return `hsl(${hue}, 70%, 45%)`;
+};
 
 const ProductCard = ({ product, onAdd }) => (
   <Paper
@@ -117,17 +113,34 @@ const ProductCard = ({ product, onAdd }) => (
               overflow: 'hidden', 
               bgcolor: 'grey.50',
               position: 'relative'
-          }}>
-              <img 
-                src={product.image} 
-                alt={product.name} 
-                style={{ 
-                    width: '100%', 
-                    height: '100%', 
-                    objectFit: 'cover',
-                    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-                }} 
-              />
+              }}>
+              {product.image ? (
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
+                    style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'cover',
+                        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }} 
+                  />
+              ) : (
+                  <Avatar 
+                    variant="square" 
+                    sx={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        bgcolor: 'primary.light',
+                        color: 'primary.main',
+                        fontSize: '2rem',
+                        fontWeight: 700
+                    }}
+                  >
+                    {product.name.substring(0, 2).toUpperCase()}
+                  </Avatar>
+              )}
+
               <Box 
                 sx={{ 
                   position: 'absolute', 
@@ -141,7 +154,7 @@ const ProductCard = ({ product, onAdd }) => (
               />
           </Box>
           <Chip
-              label={product.stock}
+              label={product.stock <= (product.reorderPoint || 0) ? 'Low Stock' : `${product.stock} In Stock`}
               size="small"
               sx={{
                   position: 'absolute',
@@ -153,10 +166,10 @@ const ProductCard = ({ product, onAdd }) => (
                   textTransform: 'uppercase',
                   letterSpacing: 0.5,
                   backdropFilter: 'blur(8px)',
-                  bgcolor: (theme) => alpha(theme.palette[product.stockType].main, 0.85),
+                  bgcolor: (theme) => product.stock <= (product.reorderPoint || 0) ? alpha(theme.palette.error.main, 0.85) : alpha(theme.palette.success.main, 0.85),
                   color: 'white',
                   border: '1px solid rgba(255,255,255,0.2)',
-                  boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette[product.stockType].main, 0.3)}`
+                  boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette[product.stock <= (product.reorderPoint || 0) ? 'error' : 'success'].main, 0.3)}`
               }}
           />
       </Box>
@@ -190,7 +203,7 @@ const ProductCard = ({ product, onAdd }) => (
                     Price
                 </Typography>
                 <Typography variant="subtitle1" fontWeight={900} color="primary.main" sx={{ fontSize: '1rem' }}>
-                    ${product.price.toFixed(2)}
+                    ${(product.retailPrice || product.price || 0).toFixed(2)}
                 </Typography>
               </Box>
               <IconButton
@@ -224,8 +237,94 @@ const ProductCard = ({ product, onAdd }) => (
 
 // Customer Collection Dialog
 const CustomerDialog = ({ open, onClose, onSave, initialData }) => {
+    const [step, setStep] = useState('search'); // 'search' or 'form'
     const [data, setData] = useState(initialData || { name: '', phone: '', email: '' });
-    const theme = useTheme();
+    const [searchPhone, setSearchPhone] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [foundCustomer, setFoundCustomer] = useState(null);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (open) {
+            if (initialData) {
+                setData(initialData);
+                setStep('form');
+            } else {
+                setStep('search');
+                setSearchPhone('');
+                setFoundCustomer(null);
+                setData({ name: '', phone: '', email: '' });
+                setError('');
+            }
+        }
+    }, [open, initialData]);
+
+    // Debounced Search Effect
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (step === 'search' && searchPhone.length >= 5) {
+                handleSearch();
+            }
+        }, 500); // 500ms debounce
+
+        return () => clearTimeout(timer);
+    }, [searchPhone, step]);
+
+    const handleSearch = async () => {
+        if (!searchPhone || searchPhone.length < 5) return;
+        setLoading(true);
+        setError('');
+        try {
+            const res = await customerService.getCustomers({ search: searchPhone });
+            if (res.data.customers && res.data.customers.length > 0) {
+                // Determine exact match or best match
+                const match = res.data.customers.find(c => c.phone === searchPhone) || res.data.customers[0];
+                setFoundCustomer(match);
+            } else {
+                setFoundCustomer(null);
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Error searching customer');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreateNew = () => {
+        setData({ name: '', phone: searchPhone, email: '' });
+        setStep('form');
+    };
+
+    const handleSelectFound = () => {
+        onSave(foundCustomer);
+        onClose();
+    };
+
+    const handleSaveNew = async () => {
+        try {
+            setLoading(true);
+            let res;
+            if (data._id) {
+                // Update existing customer
+                res = await customerService.updateCustomer(data._id, data);
+            } else {
+                // Create new customer
+                res = await customerService.createCustomer(data);
+            }
+            onSave(res.data); // Use the returned customer with ID
+            onClose();
+        } catch (err) {
+            console.error(err);
+            if (err.response && err.response.status === 409) {
+                 alert("Customer with this phone already exists!");
+            } else {
+                 alert("Failed to save customer");
+            }
+        } finally {
+             setLoading(false);
+        }
+    };
 
     return (
         <Dialog 
@@ -237,58 +336,122 @@ const CustomerDialog = ({ open, onClose, onSave, initialData }) => {
         >
             <DialogTitle sx={{ fontWeight: 800, pb: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <PersonAddAltOutlinedIcon color="primary" />
-                Customer Information
+                {step === 'search' ? 'Find Customer' : 'Customer Information'}
             </DialogTitle>
             <DialogContent>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 3, display: 'block', fontWeight: 600 }}>
-                    Collect customer details for loyalty points and receipt history.
-                </Typography>
-                <Stack spacing={2.5} sx={{ mt: 1 }}>
-                    <TextField 
-                        fullWidth 
-                        label="Full Name" 
-                        placeholder="John Doe"
-                        value={data.name}
-                        onChange={(e) => setData({ ...data, name: e.target.value })}
-                        InputProps={{
-                            startAdornment: <InputAdornment position="start"><PersonOutlineOutlinedIcon fontSize="small" /></InputAdornment>,
-                            sx: { borderRadius: 2.5 }
-                        }}
-                    />
-                    <TextField 
-                        fullWidth 
-                        label="Phone Number" 
-                        placeholder="+1 (234) 567-890"
-                        value={data.phone}
-                        onChange={(e) => setData({ ...data, phone: e.target.value })}
-                        InputProps={{
-                            startAdornment: <InputAdornment position="start"><PhoneOutlinedIcon fontSize="small" /></InputAdornment>,
-                            sx: { borderRadius: 2.5 }
-                        }}
-                    />
-                    <TextField 
-                        fullWidth 
-                        label="Email Address" 
-                        placeholder="john@example.com"
-                        value={data.email}
-                        onChange={(e) => setData({ ...data, email: e.target.value })}
-                        InputProps={{
-                            startAdornment: <InputAdornment position="start"><EmailOutlinedIcon fontSize="small" /></InputAdornment>,
-                            sx: { borderRadius: 2.5 }
-                        }}
-                    />
-                </Stack>
+                {step === 'search' ? (
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Enter phone number to search or add new customer.
+                        </Typography>
+                        <TextField 
+                            fullWidth 
+                            autoFocus
+                            label="Phone Number" 
+                            placeholder="+1 (234) 567-890"
+                            value={searchPhone}
+                            onChange={(e) => setSearchPhone(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start"><PhoneOutlinedIcon fontSize="small" /></InputAdornment>,
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton onClick={handleSearch} disabled={!searchPhone || loading} edge="end" color="primary">
+                                            <SearchIcon />
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                                sx: { borderRadius: 2.5 }
+                            }}
+                        />
+                        {loading && <Typography variant="caption" align="center" sx={{ display: 'block' }}>Searching...</Typography>}
+                        {error && <Typography variant="caption" align="center" color="error" sx={{ display: 'block', fontWeight: 700 }}>{error}</Typography>}
+                        
+                        {foundCustomer && (
+                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: alpha('#4caf50', 0.05), borderColor: '#4caf50' }}>
+                                <Stack direction="row" alignItems="center" spacing={2}>
+                                    <Avatar sx={{ bgcolor: 'success.main' }}>{foundCustomer.name.charAt(0)}</Avatar>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="subtitle2" fontWeight={700}>{foundCustomer.name}</Typography>
+                                        <Typography variant="caption" display="block">{foundCustomer.phone}</Typography>
+                                        {foundCustomer.loyaltyPoints > 0 && (
+                                            <Chip label={`${foundCustomer.loyaltyPoints} pts`} size="small" color="primary" sx={{ mt: 0.5, height: 20, fontSize: '0.65rem' }} />
+                                        )}
+                                    </Box>
+                                    <Button variant="contained" size="small" onClick={handleSelectFound} color="success" sx={{ fontWeight: 700 }}>
+                                        Select
+                                    </Button>
+                                </Stack>
+                            </Paper>
+                        )}
+
+                        {!foundCustomer && searchPhone.length > 3 && !loading && (
+                            <Button 
+                                fullWidth 
+                                variant="outlined" 
+                                startIcon={<AddIcon />} 
+                                onClick={handleCreateNew}
+                                sx={{ borderRadius: 2, py: 1, borderStyle: 'dashed' }}
+                            >
+                                Add New Customer
+                            </Button>
+                        )}
+                    </Stack>
+                ) : (
+                    <>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 3, display: 'block', fontWeight: 600 }}>
+                            Collect customer details for loyalty points and receipt history.
+                        </Typography>
+                        <Stack spacing={2.5} sx={{ mt: 1 }}>
+                            <TextField 
+                                fullWidth 
+                                label="Full Name" 
+                                placeholder="John Doe"
+                                value={data.name}
+                                onChange={(e) => setData({ ...data, name: e.target.value })}
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start"><PersonOutlineOutlinedIcon fontSize="small" /></InputAdornment>,
+                                    sx: { borderRadius: 2.5 }
+                                }}
+                            />
+                            <TextField 
+                                fullWidth 
+                                label="Phone Number" 
+                                placeholder="+1 (234) 567-890"
+                                value={data.phone}
+                                onChange={(e) => setData({ ...data, phone: e.target.value })}
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start"><PhoneOutlinedIcon fontSize="small" /></InputAdornment>,
+                                    sx: { borderRadius: 2.5 }
+                                }}
+                            />
+                            <TextField 
+                                fullWidth 
+                                label="Email Address" 
+                                placeholder="john@example.com"
+                                value={data.email}
+                                onChange={(e) => setData({ ...data, email: e.target.value })}
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start"><EmailOutlinedIcon fontSize="small" /></InputAdornment>,
+                                    sx: { borderRadius: 2.5 }
+                                }}
+                            />
+                        </Stack>
+                    </>
+                )}
             </DialogContent>
             <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
-                <Button onClick={onClose} sx={{ color: 'text.secondary', fontWeight: 700 }}>Skip</Button>
-                <Button 
-                    variant="contained" 
-                    onClick={() => { onSave(data); onClose(); }} 
-                    disabled={!data.name}
-                    sx={{ borderRadius: 2, px: 4, fontWeight: 800 }}
-                >
-                    Save Customer
-                </Button>
+                <Button onClick={onClose} sx={{ color: 'text.secondary', fontWeight: 700 }}>Cancel</Button>
+                {step === 'form' && (
+                    <Button 
+                        variant="contained" 
+                        onClick={handleSaveNew} 
+                        disabled={!data.name || loading}
+                        sx={{ borderRadius: 2, px: 4, fontWeight: 800 }}
+                    >
+                        {loading ? 'Saving...' : 'Save & Select'}
+                    </Button>
+                )}
             </DialogActions>
         </Dialog>
     );
@@ -492,15 +655,16 @@ const BarcodeDialog = ({ open, onClose, onAdd }) => {
 
     const handleSubmit = (e) => {
         if (e) e.preventDefault();
-        const product = PRODUCTS.find(p => p.barcode === barcode);
-        if (product) {
-            onAdd(product);
-            setBarcode('');
-            setError('');
-            onClose();
-        } else {
-            setError('Product not found for this barcode');
-        }
+        // Use real products prop which will be passed down or available via context if not strict
+        // But here BarcodeDialog doesn't have access to PRODUCTS list directly if we remove it.
+        // We will pass `products` as prop or use a callback that handles it.
+        // For now, let's assume `onAdd` handles the lookup or we find it here.
+        // Actually, BarcodeDialog is a child. We should pass the product to onAdd.
+        // We'll fix this in the main component.
+        onAdd(barcode); // Pass barcode string to parent to handle lookup
+        setBarcode('');
+        setError('');
+        onClose();
     };
 
     return (
@@ -890,20 +1054,45 @@ const InfoDialog = ({ open, onClose }) => {
                 <Button fullWidth onClick={onClose} variant="contained" sx={{ borderRadius: 2.5, fontWeight: 700 }}>Great, thanks!</Button>
             </DialogActions>
         </Dialog>
-    );
-};
-
+        );
+      }
 const PosTerminal = () => {
   const theme = useTheme();
-  const { handlerDrawerOpen: setDrawerOpen } = useOutletContext() || {};
+  // Redux hooks
+  const dispatch = useDispatch();
+  const { products, loading } = useSelector((state) => state.product);
+  const { user } = useSelector((state) => state.login);
+  const { stores } = useSelector((state) => state.store);
+
+  // Initial Fetch logic
+  useEffect(() => {
+    dispatch(fetchStores());
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Determine warehouse filter
+    let warehouseName = '';
+    if (user?.store) {
+        if (typeof user.store === 'object') {
+            warehouseName = user.store.name;
+        } else if (stores.length > 0) {
+             const s = stores.find(st => st.id === user.store || st._id === user.store);
+             if (s) warehouseName = s.name;
+        }
+    }
+
+    dispatch(fetchProducts({ 
+        page: 1, 
+        limit: 1000, // Fetch large batch for POS 
+        warehouseName: warehouseName,
+        isActive: true
+    }));
+  }, [dispatch, user, stores]);
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [layoutPosition, setLayoutPosition] = useState('right');
-  const [cart, setCart] = useState([
-    { ...PRODUCTS[0], quantity: 1, id: PRODUCTS[0].id },
-    { ...PRODUCTS[2], quantity: 1, id: PRODUCTS[2].id },
-    { ...PRODUCTS[5], quantity: 2, id: PRODUCTS[5].id },
-  ]);
+  const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState(null);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [heldBills, setHeldBills] = useState([]);
@@ -932,7 +1121,7 @@ const PosTerminal = () => {
     if (isRefundDialogOpen) {
         setLastScannedRefundCode(code);
     } else {
-        const product = PRODUCTS.find(p => p.barcode === code);
+        const product = products.find(p => p.barcode === code);
         if (product) {
             addToCart(product);
         }
@@ -945,10 +1134,8 @@ const PosTerminal = () => {
   }, []);
 
   useEffect(() => {
-    if (layoutPosition === 'left' && setDrawerOpen) {
-      setDrawerOpen(false);
-    }
-  }, [layoutPosition, setDrawerOpen]);
+    // Optional: Drawer logic if needed
+  }, []);
 
   const toggleLayout = () => {
     const newPos = layoutPosition === 'right' ? 'left' : 'right';
@@ -956,17 +1143,65 @@ const PosTerminal = () => {
     localStorage.setItem('posLayoutPosition', newPos);
   };
 
-  const filteredProducts = PRODUCTS.filter(p => {
-    const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = 
-        p.name.toLowerCase().includes(searchLower) || 
-        (p.sku && p.sku.toLowerCase().includes(searchLower)) ||
-        (p.barcode && p.barcode.toLowerCase().includes(searchLower));
-    return matchesCategory && matchesSearch;
+
+  // Derive categories from filtered products (or all products for the store)
+  const categories = useMemo(() => {
+    const uniqueCats = new Set(['all']);
+    products.forEach(p => {
+        if (p.category) {
+            uniqueCats.add(typeof p.category === 'object' ? p.category.name : p.category);
+        }
+    });
+    
+    // Map to display structure with icons
+    return Array.from(uniqueCats).map(cat => {
+        let icon = GridViewIcon;
+        const name = cat.toLowerCase();
+        
+        if (name === 'all') {
+            return { id: 'all', name: 'All Items', icon: GridViewIcon };
+        } else if (name.includes('apparel') || name.includes('cloth') || name.includes('shirt')) {
+            icon = ShoppingBagIcon;
+        } else if (name.includes('electr') || name.includes('comp') || name.includes('phone') || name.includes('device')) {
+            icon = LocalShippingOutlinedIcon; // or generic device icon
+        } else if (name.includes('snack') || name.includes('food') || name.includes('grocery')) {
+            icon = StorefrontIcon;
+        } else {
+            icon = LocalOfferOutlinedIcon; // Default icon
+        }
+
+        return { 
+            id: cat, // Use actual category name as ID for filtering
+            name: cat.charAt(0).toUpperCase() + cat.slice(1), 
+            icon: icon 
+        };
+    });
+  }, [products]);
+
+  // Filter products based on search and category
+  const filteredProducts = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           (product.sku && product.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           (product.barcode && product.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const productCat = typeof product.category === 'object' ? product.category.name : product.category;
+      
+      const matchesCategory = selectedCategory === 'all' || productCat === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
   });
 
-  const addToCart = (product) => {
+  const addToCart = (productOrBarcode) => {
+    // Handle both object (click) and barcode string (scan)
+    let product = productOrBarcode;
+    if (typeof productOrBarcode === 'string') {
+        product = products.find(p => p.barcode === productOrBarcode || p.sku === productOrBarcode);
+        if (!product) {
+            // Show error/toast
+            return; 
+        }
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -1041,6 +1276,44 @@ const PosTerminal = () => {
     setDiscount(0);
     setNote('');
     handleMenuClose();
+  };
+
+  const handlePayment = async () => {
+    if (cart.length === 0) {
+      alert('Cart is empty!');
+      return;
+    }
+
+    // If no customer, open customer dialog
+    if (!customer) {
+      setIsCustomerDialogOpen(true);
+      return;
+    }
+
+    try {
+      // Update customer purchase history
+      const response = await customerService.updatePurchaseHistory(
+        customer._id || customer.id,
+        total
+      );
+
+      // Update local customer state with new values
+      if (response.data) {
+        setCustomer(response.data);
+      }
+
+      // Show success message
+      alert(`Payment of $${total.toFixed(2)} processed successfully for ${customer.name}!\n\nLast Purchase: $${total.toFixed(2)}\nTotal Spent: $${response.data?.totalSpent?.toFixed(2) || 'N/A'}`);
+
+      // Clear cart and reset transaction
+      setCart([]);
+      setDiscount(0);
+      setNote('');
+      // Keep customer selected for next transaction
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Failed to process payment. Please try again.');
+    }
   };
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -1128,7 +1401,7 @@ const PosTerminal = () => {
                 '&::-webkit-scrollbar-thumb': { bgcolor: 'grey.200', borderRadius: 2 }
             }}
         >
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
                 <Button
                     key={cat.id}
                     size="small"
@@ -1259,25 +1532,18 @@ const PosTerminal = () => {
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ whiteSpace: 'nowrap' }}>
                                 {customer.phone || 'No Phone'}
                             </Typography>
-                            {customer.email && (
-                                <>
-                                    <Typography variant="caption" color="divider">|</Typography>
-                                    <Typography 
-                                        variant="caption" 
-                                        color="text.secondary" 
-                                        fontWeight={600}
-                                        sx={{ 
-                                            maxWidth: '100%',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
-                                        }}
-                                        title={customer.email}
-                                    >
-                                        {customer.email}
-                                    </Typography>
-                                </>
-                            )}
+                        </Stack>
+                        
+                        {/* Loyalty Stats */}
+                        <Stack direction="row" spacing={2} sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'divider' }}>
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.65rem' }}>Total Spent</Typography>
+                                <Typography variant="caption" fontWeight={800} color="success.dark">${(customer.totalSpent || 0).toFixed(2)}</Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.65rem' }}>Last Purchase</Typography>
+                                <Typography variant="caption" fontWeight={800} color="primary.main">${(customer.lastPurchaseAmount || 0).toFixed(2)}</Typography>
+                            </Box>
                         </Stack>
                     </Box>
                     <IconButton size="small" onClick={() => setCustomer(null)} sx={{ color: 'text.disabled' }}>
@@ -1307,7 +1573,21 @@ const PosTerminal = () => {
                 cart.map(item => (
                     <Paper key={item.id} elevation={0} sx={{ p: 1, mb: 1.5, borderRadius: 2.5, bgcolor: '#f8fafc', border: '1px solid transparent', '&:hover': { borderColor: 'primary.lighter' } }}>
                         <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Avatar variant="rounded" src={item.image} sx={{ width: 50, height: 50, borderRadius: 1.5 }} />
+                            <Avatar 
+                                variant="rounded" 
+                                src={item.image} 
+                                sx={{ 
+                                    width: 50, 
+                                    height: 50, 
+                                    borderRadius: 1.5,
+                                    bgcolor: item.image ? 'transparent' : stringToColor(item.name || ''),
+                                    fontWeight: 700,
+                                    fontSize: '1rem',
+                                    color: 'white'
+                                }}
+                            >
+                                {item.name ? item.name.substring(0, 2).toUpperCase() : 'IT'}
+                            </Avatar>
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ fontSize: '0.8rem' }}>{item.name}</Typography>
                                 <Typography variant="subtitle2" fontWeight={800} color="primary.main">
@@ -1486,14 +1766,8 @@ const PosTerminal = () => {
             fullWidth 
             variant="contained" 
             size="large" 
-            onClick={() => {
-                if (!customer && cart.length > 0) {
-                    setIsCustomerDialogOpen(true);
-                } else {
-                    // Normal payment logic
-                    alert('Processing Payment for ' + (customer ? customer.name : 'Guest'));
-                }
-            }}
+            onClick={handlePayment}
+            disabled={cart.length === 0}
             endIcon={<KeyboardArrowDownIcon sx={{ transform: 'rotate(-90deg)' }} />}
             sx={{ 
                 py: { xs: 1.5, sm: 1.8 }, 

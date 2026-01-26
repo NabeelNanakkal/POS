@@ -1,17 +1,19 @@
 import { useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { tokenManager } from 'utils/tokenManager';
 
 const AuthGuard = ({ children, permittedRoles }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    // Check for access token using token manager
+    const token = tokenManager.getAccessToken();
     const userString = localStorage.getItem('user');
     const user = userString ? JSON.parse(userString) : null;
 
-    if (!token) {
+    if (!token || typeof token !== 'string' || token.split('.').length !== 3) {
+      tokenManager.clearTokens();
       navigate('/login');
       return;
     }

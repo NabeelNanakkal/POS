@@ -40,6 +40,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
+import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
 import BadgeIcon from '@mui/icons-material/Badge';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -47,11 +48,14 @@ import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import ClearIcon from '@mui/icons-material/Clear';
 
 import NoDataLottie from 'ui-component/NoDataLottie';
 import BulkImportModal from 'ui-component/BulkImportModal';
 
-import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee, setEmployeesBulk } from 'container/EmployeeContainer/slice';
+import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee, bulkCreateEmployees, resetPassword, fetchStats } from 'container/EmployeeContainer/slice';
 import { fetchStores } from 'container/StoreContainer/slice';
 import { exportToExcel, importFromExcel } from 'utils/excelUtils';
 
@@ -99,17 +103,7 @@ const StatCard = ({ title, value, icon: Icon, color, trend }) => {
           {title}
         </Typography>
         <Typography variant={{ xs: 'h3', sm: 'h2' }} fontWeight={800} sx={{ mb: 0.5 }}>{value}</Typography>
-        {trend && (
-          <Stack direction="row" alignItems="center" spacing={0.5}>
-            <TrendingUpIcon fontSize="small" color={color} />
-            <Typography variant="caption" fontWeight={700} color={`${color}.main`}>
-              +{trend}%
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', lg: 'inline' } }}>
-              vs last month
-            </Typography>
-          </Stack>
-        )}
+        {/* Trend removed at user request */}
       </Box>
     </Paper>
   );
@@ -166,7 +160,7 @@ const DeleteConfirmationDialog = ({ open, onClose, onConfirm, name }) => {
 const EmployeeManagement = () => {
   const theme = useTheme();
   const dispatch = useDispatch();
-  const { employees, loading: empLoading } = useSelector((state) => state.employee);
+  const { employees, stats, loading: empLoading, error: empError } = useSelector((state) => state.employee);
   const { stores, loading: storeLoading } = useSelector((state) => state.store);
   
   // UI State
@@ -175,7 +169,23 @@ const EmployeeManagement = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [personToDelete, setPersonToDelete] = useState(null);
   const [currentEmployee, setCurrentEmployee] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', role: '', storeId: '' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    email: '', 
+    role: '', 
+    storeId: '',
+    password: '' 
+  });
+  
+  const [resetPasswordData, setResetPasswordData] = useState({
+    id: '',
+    name: '',
+    password: '',
+    open: false
+  });
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   
   // Search, Filter, Sort State
   const [searchTerm, setSearchTerm] = useState('');
@@ -187,15 +197,15 @@ const EmployeeManagement = () => {
   useEffect(() => {
     dispatch(fetchEmployees());
     dispatch(fetchStores());
+    dispatch(fetchStats());
   }, [dispatch]);
 
-  // Stats calculation
-  const stats = useMemo(() => ({
-    total: employees?.length || 0,
-    admins: (employees || []).filter(e => e.role === 'TenantAdmin').length,
-    managers: (employees || []).filter(e => e.role === 'Manager').length,
-    cashiers: (employees || []).filter(e => e.role === 'Cashier').length
-  }), [employees]);
+  const apiStats = stats || {
+    totalBox: { value: 0, trend: null },
+    accountBox: { value: 0, trend: null },
+    managerBox: { value: 0, trend: null },
+    cashierBox: { value: 0, trend: null }
+  };
 
   // Derived Data (Search, Filter, Sort)
   const filteredAndSortedEmployees = useMemo(() => {
@@ -248,7 +258,10 @@ const EmployeeManagement = () => {
     setOpen(true);
   };
 
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    setOpen(false);
+    setShowPassword(false);
+  };
 
   const handleSubmit = () => {
     if (currentEmployee) {
@@ -277,20 +290,41 @@ const EmployeeManagement = () => {
   };
 
   const handleImport = (data) => {
-    dispatch(setEmployeesBulk(data));
+    // Map Excel columns to backend expected field names
+    const mappedData = data.map(item => ({
+      name: item.Name || item.name,
+      email: item.Email || item.email,
+      role: (item.Role || item.role || 'CASHIER').toUpperCase(),
+      storeId: item.StoreID || item.StoreId || item.storeId,
+      password: item.Password || item.password || 'Welcome@123'
+    }));
+    dispatch(bulkCreateEmployees(mappedData));
   };
 
   const getRoleColor = (role) => {
     switch (role) {
-      case 'TenantAdmin': return theme.palette.error.main;
-      case 'Manager': return theme.palette.warning.main;
-      case 'Cashier': return theme.palette.success.main;
+      case 'ADMIN': return theme.palette.error.main;
+      case 'MANAGER': return theme.palette.warning.main;
+      case 'CASHIER': return theme.palette.success.main;
       default: return theme.palette.primary.main;
     }
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: '#f8fafc', minHeight: '100vh', m: -3 }}>
+    <Box 
+      sx={{ 
+        p: { xs: 2, md: 4 }, 
+        bgcolor: '#f8fafc', 
+        minHeight: '100vh', 
+        m: -3,
+        '& input::-ms-reveal, & input::-ms-clear': { display: 'none' }
+      }}
+    >
+      {empError && (
+        <Paper sx={{ p: 2, mb: 4, bgcolor: alpha(theme.palette.error.main, 0.05), border: '1px solid', borderColor: alpha(theme.palette.error.main, 0.2), borderRadius: 3 }}>
+          <Typography color="error" fontWeight={700}>Error: {empError}</Typography>
+        </Paper>
+      )}
       {/* Summary Cards */}
       <Box 
         sx={{ 
@@ -301,10 +335,10 @@ const EmployeeManagement = () => {
           width: '100%' 
         }}
       >
-          <StatCard title="Total Staff" value={stats.total} icon={PeopleAltIcon} color="primary" trend={8} />
-          <StatCard title="Admins" value={stats.admins} icon={AdminPanelSettingsIcon} color="error" trend={2} />
-          <StatCard title="Managers" value={stats.managers} icon={SupervisorAccountIcon} color="warning" trend={12} />
-          <StatCard title="Active Now" value={stats.cashiers} icon={RadioButtonCheckedIcon} color="success" trend={24} />
+          <StatCard title="Total Staff" value={apiStats.totalBox.value} icon={PeopleAltIcon} color="primary" />
+          <StatCard title="Accountants" value={apiStats.accountBox.value} icon={AdminPanelSettingsIcon} color="error" />
+          <StatCard title="Managers" value={apiStats.managerBox.value} icon={SupervisorAccountIcon} color="warning" />
+          <StatCard title="Cashiers" value={apiStats.cashierBox.value} icon={BadgeIcon} color="success" />
       </Box>
 
       {/* Filter & Action Bar */}
@@ -333,6 +367,13 @@ const EmployeeManagement = () => {
                     <SearchIcon fontSize="small" color="primary" />
                   </InputAdornment>
                 ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchTerm('')}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
                 sx: { borderRadius: 3, bgcolor: '#f8fafc', '& fieldset': { border: 'none' } }
               }}
               sx={{ flexGrow: 1 }}
@@ -346,9 +387,9 @@ const EmployeeManagement = () => {
                 sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: '#f8fafc', '& fieldset': { border: 'none' } } }}
               >
                   <MenuItem value="All">All Roles</MenuItem>
-                  <MenuItem value="TenantAdmin">Admin</MenuItem>
-                  <MenuItem value="Manager">Manager</MenuItem>
-                  <MenuItem value="Cashier">Cashier</MenuItem>
+                  <MenuItem value="ADMIN">Accountant</MenuItem>
+                  <MenuItem value="MANAGER">Manager</MenuItem>
+                  <MenuItem value="CASHIER">Cashier</MenuItem>
               </TextField>
               <TextField
                 select
@@ -452,7 +493,7 @@ const EmployeeManagement = () => {
               {filteredAndSortedEmployees.map((emp, index) => (
                 <TableRow key={emp.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                   <TableCell>
-                    <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                      <Typography variant="body2" color="text.secondary" fontWeight={600}>
                         {String(index + 1).padStart(2, '0')}
                     </Typography>
                   </TableCell>
@@ -469,15 +510,15 @@ const EmployeeManagement = () => {
                   </TableCell>
                   <TableCell>
                     <Chip 
-                        label={emp.role === 'TenantAdmin' ? 'Admin' : emp.role} 
+                        label={emp.role === 'ADMIN' ? 'Accountant' : emp.role.charAt(0) + emp.role.slice(1).toLowerCase()} 
                         size="small" 
-                        sx={{ 
-                            fontWeight: 700, 
-                            borderRadius: 1.5,
-                            bgcolor: alpha(getRoleColor(emp.role), 0.1),
-                            color: getRoleColor(emp.role)
-                        }}
-                    />
+                            sx={{ 
+                                fontWeight: 700, 
+                                borderRadius: 1.5,
+                                bgcolor: alpha(getRoleColor(emp.role), 0.1),
+                                color: getRoleColor(emp.role)
+                            }}
+                        />
                   </TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={1} alignItems="center">
@@ -515,7 +556,11 @@ const EmployeeManagement = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Switch defaultChecked size="small" />
+                    <Switch 
+                      checked={emp.active} 
+                      onChange={(e) => dispatch(updateEmployee({ id: emp.id, isActive: e.target.checked }))}
+                      size="small" 
+                    />
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -532,6 +577,21 @@ const EmployeeManagement = () => {
                             }}
                           >
                             <EditOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Reset Password">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => setResetPasswordData({ id: emp.id, name: emp.name, password: '', open: true })}
+                            sx={{ 
+                              color: 'text.secondary', 
+                              bgcolor: 'white', 
+                             border: '1px solid #eee',
+                              borderRadius: 1.5,
+                              '&:hover': { color: 'warning.main', borderColor: 'warning.light', bgcolor: alpha(theme.palette.warning.main, 0.05) }
+                            }}
+                          >
+                            <VpnKeyOutlinedIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete Personnel">
@@ -615,10 +675,37 @@ const EmployeeManagement = () => {
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             >
-              <MenuItem value="Cashier">Cashier</MenuItem>
-              <MenuItem value="Manager">Manager</MenuItem>
-              <MenuItem value="TenantAdmin">Tenant Admin</MenuItem>
+              <MenuItem value="CASHIER">Cashier</MenuItem>
+              <MenuItem value="MANAGER">Manager</MenuItem>
+              <MenuItem value="ADMIN">Account</MenuItem>
             </TextField>
+            {!currentEmployee && (
+              <TextField
+                fullWidth
+                label="Login Password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Leave blank for default (Welcome@123)"
+                error={!!formData.password && formData.password.length < 6}
+                helperText={!!formData.password && formData.password.length < 6 ? "Password must be at least 6 characters" : ""}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            )}
             <TextField
               fullWidth
               select
@@ -628,7 +715,7 @@ const EmployeeManagement = () => {
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             >
               {stores.map((s) => (
-                <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+                <MenuItem key={s.id || s._id} value={s.id || s._id}>{s.name}</MenuItem>
               ))}
             </TextField>
           </Stack>
@@ -638,10 +725,69 @@ const EmployeeManagement = () => {
           <Button 
             onClick={handleSubmit} 
             variant="contained" 
-            disabled={!formData.name || !formData.role || !formData.storeId}
+            disabled={!formData.name || !formData.role || !formData.storeId || (!!formData.password && formData.password.length < 6)}
             sx={{ px: 4, borderRadius: 2, fontWeight: 700 }}
           >
             {currentEmployee ? 'Save Changes' : 'Complete Hiring'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog 
+        open={resetPasswordData.open} 
+        onClose={() => {
+          setResetPasswordData({ ...resetPasswordData, open: false });
+          setShowResetPassword(false);
+        }} 
+        maxWidth="xs" 
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Reset Password for {resetPasswordData.name}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            margin="dense"
+            label="New Password"
+            type={showResetPassword ? 'text' : 'password'}
+            value={resetPasswordData.password}
+            onChange={(e) => setResetPasswordData({ ...resetPasswordData, password: e.target.value })}
+            error={!!resetPasswordData.password && resetPasswordData.password.length < 6}
+            helperText={!!resetPasswordData.password && resetPasswordData.password.length < 6 ? "Password must be at least 6 characters" : ""}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowResetPassword(!showResetPassword)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    edge="end"
+                  >
+                    {showResetPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+            sx={{ mt: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => {
+            setResetPasswordData({ ...resetPasswordData, open: false });
+            setShowResetPassword(false);
+          }} color="inherit">Cancel</Button>
+          <Button 
+            variant="contained" 
+            disabled={!resetPasswordData.password || resetPasswordData.password.length < 6}
+            onClick={() => {
+              dispatch(resetPassword({ id: resetPasswordData.id, password: resetPasswordData.password }));
+              setResetPasswordData({ ...resetPasswordData, open: false });
+              setShowResetPassword(false);
+            }}
+            sx={{ borderRadius: 2, fontWeight: 700 }}
+          >
+            Reset Password
           </Button>
         </DialogActions>
       </Dialog>
@@ -652,7 +798,7 @@ const EmployeeManagement = () => {
         onImport={handleImport}
         title="Import Personnel"
         sampleFileName="Employee_Import"
-        columns={['Name', 'Email', 'Role', 'StoreID']}
+        columns={['Name', 'Email', 'Role', 'StoreID', 'Password']}
       />
 
       <DeleteConfirmationDialog 

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import authService from 'services/authService';
+import { tokenManager } from 'utils/tokenManager';
 import { useTheme, alpha } from '@mui/material/styles';
 import {
   Box,
@@ -10,7 +12,9 @@ import {
   InputAdornment,
   TextField,
   Paper,
-  ButtonBase
+  ButtonBase,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
@@ -27,8 +31,8 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { userLogin, selectError } from 'container/LoginContainer/slice';
-import { CircularProgress, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import config from 'config';
 
 // ==============================|| RETAIL OS LOGIN ||============================== //
 
@@ -96,52 +100,107 @@ const LoginRetailOS = () => {
   const { loading } = useSelector((state) => state.login);
   const error = useSelector(selectError);
 
+
+
   const [role, setRole] = useState('Cashier');
   // Redirect if already logged in
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getAccessToken();
     const userString = localStorage.getItem('user');
     const user = userString ? JSON.parse(userString) : null;
     
     if (token && user) {
-      const path = user.role === 'TenantAdmin' ? '/admin/dashboard' : '/pos/dashboard';
+      const path = ['SUPER_ADMIN', 'ADMIN'].includes(user.role) 
+        ? '/admin/dashboard' 
+        : '/pos/dashboard';
       navigate(path);
     }
   }, [navigate]);
 
-  const [employeeId, setEmployeeId] = useState('');
-  const [pin, setPin] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPin, setShowPin] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  // System Health Check
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const response = await fetch(config.health);
+        setIsOnline(response.ok);
+      } catch (error) {
+        setIsOnline(false);
+      }
+    };
+    
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   // Keypad handling
   const handleKeypadClick = (value) => {
     if (value === 'backspace') {
-      setPin((prev) => prev.slice(0, -1));
+      setPassword((prev) => prev.slice(0, -1));
     } else if (value === 'submit') {
       handleSubmit();
     } else {
-      if (pin.length < 6) {
-        setPin((prev) => prev + value);
+      if (password.length < 20) {
+        setPassword((prev) => prev + value);
       }
     }
   };
 
   const handleSubmit = () => {
-    // Mapping ID/PIN to Email/Password for backend compatibility
+    // Mapping Email/Password for backend compatibility
     const payload = {
-      email: employeeId,
-      password: pin,
+      email: email,
+      password: password,
       navigate: navigate
     };
     dispatch(userLogin(payload));
   };
 
-  const handleDemoLogin = (userRole, path) => {
+  const handleDemoLogin = (userRole, path, customUser = null) => {
     localStorage.clear();
-    const name = userRole === 'TenantAdmin' ? 'Admin Demo' : userRole === 'Manager' ? 'Manager Demo' : 'Cashier Demo';
-    localStorage.setItem('user', JSON.stringify({ role: userRole, name }));
+    
+    // If we have real credentials, dispatch a real login
+    if (customUser && customUser.email && customUser.password) {
+      const payload = {
+        email: customUser.email,
+        password: customUser.password,
+        navigate: navigate
+      };
+      dispatch(userLogin(payload));
+      return;
+    }
+
+    // Fallback for mock demo logins
+    const defaultUser = {
+      role: userRole,
+      name: userRole === 'TenantAdmin' || userRole === 'ADMIN' ? 'Admin Demo' : userRole === 'Manager' ? 'Manager Demo' : 'Cashier Demo'
+    };
+    const userToStore = customUser || defaultUser;
+    localStorage.setItem('user', JSON.stringify(userToStore));
     localStorage.setItem('token', 'mock-token');
     window.location.replace(path);
+  };
+
+
+
+  const handleRegisterAdmin = async () => {
+    try {
+      const response = await authService.setupAdmin();
+      
+      if (response && response.success) {
+        alert('Default Admin setup successfully!\nEmail: admin@pos.com\nPassword: Admin@123\n\nPlease use these credentials to login.');
+      } else {
+        alert(`Setup failed: ${response?.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Setup admin error:', error);
+      alert(`Connection failed: ${error.message || 'Check server connection'}`);
+    }
   };
 
   return (
@@ -152,7 +211,7 @@ const LoginRetailOS = () => {
         sx={{
           display: { xs: 'none', md: 'flex' },
           position: 'relative',
-          backgroundColor: 'dark.900', // Use theme dark paper
+          backgroundColor: '#111827', // Dark slate background
           backgroundImage: 'url(https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop)', // Retail store background
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -195,7 +254,7 @@ const LoginRetailOS = () => {
           </Typography>
           <Typography variant="body1" color="rgba(255,255,255,0.8)" sx={{ mb: 1, lineHeight: 1.6 }}>
             Secure, fast, and reliable point of sale access for your entire team.
-            System status: <Box component="span" sx={{ color: '#4caf50', fontWeight: 'bold' }}>● Online</Box>
+            System status: <Box component="span" sx={{ color: isOnline ? '#4caf50' : '#f44336', fontWeight: 'bold' }}>● {isOnline ? 'Online' : 'Offline'}</Box>
           </Typography>
         </Box>
       </Grid>
@@ -217,7 +276,7 @@ const LoginRetailOS = () => {
         <Box sx={{ width: '100%', maxWidth: 420 }}>
           {/* Header */}
           <Box sx={{ mb: 5 }}>
-            <Typography variant="h2" fontWeight={800} gutterBottom sx={{ color: 'text.primary' }}>
+            <Typography variant="h1" fontWeight={800} gutterBottom sx={{ color: 'text.primary', fontSize: '2.125rem' }}>
               Welcome back
             </Typography>
             <Typography variant="body1" color="text.secondary">
@@ -225,54 +284,17 @@ const LoginRetailOS = () => {
             </Typography>
           </Box>
 
-{/* 
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', fontWeight: 600 }}>
-              Select Role
-            </Typography>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 0.5,
-                bgcolor: 'rgba(0,0,0,0.03)',
-                borderRadius: 2.5,
-                display: 'flex',
-                gap: 0.5
-              }}
-            >
-              <RoleButton
-                role="Cashier"
-                icon={StorefrontIcon}
-                selected={role === 'Cashier'}
-                onClick={setRole}
-              />
-              <RoleButton
-                role="Manager"
-                icon={BusinessCenterIcon}
-                selected={role === 'Manager'}
-                onClick={setRole}
-              />
-              <RoleButton
-                role="Admin"
-                icon={AdminPanelSettingsIcon}
-                selected={role === 'Admin'}
-                onClick={setRole}
-              />
-            </Paper>
-          </Box>
-*/}
-
           {/* Form Fields */}
           <Stack spacing={2.5} sx={{ mb: 4 }}>
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary', fontWeight: 600 }}>
-                Employee ID
+                Email Address
               </Typography>
               <TextField
                 fullWidth
-                placeholder="Enter your ID"
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -293,25 +315,26 @@ const LoginRetailOS = () => {
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                  PIN Code
+                  Password
                 </Typography>
                 <Typography 
                   variant="caption" 
                   sx={{ 
                     color: 'primary.main', 
-                    cursor: 'pointer', 
-                    fontWeight: 600 
+                    fontWeight: 600, 
+                    cursor: 'pointer',
+                    '&:hover': { textDecoration: 'underline' }
                   }}
                 >
-                  Forgot PIN?
+                  Forgot Password?
                 </Typography>
               </Box>
               <TextField
                 fullWidth
                 type={showPin ? 'text' : 'password'}
-                placeholder="••••"
-                value={pin}
-                disabled // Input driven by keypad primarily, though we could allow typing
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -324,15 +347,13 @@ const LoginRetailOS = () => {
                         {showPin ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
                     </InputAdornment>
-                  ),
+                  )
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     bgcolor: '#fff',
                     borderRadius: 2,
                     '& fieldset': { borderColor: 'rgba(0,0,0,0.1)' },
-                    letterSpacing: '4px',
-                    fontWeight: 'bold'
                   }
                 }}
               />
@@ -351,7 +372,7 @@ const LoginRetailOS = () => {
                 value={<BackspaceOutlinedIcon fontSize="small" />} 
                 onClick={() => handleKeypadClick('backspace')}
                 isAction="backspace" 
-                sx={{ bgcolor: 'rgba(0,0,0,0.03) !important', border: 'none !important' }} // Custom visual for backspace if needed, overriding default
+                sx={{ bgcolor: 'rgba(0,0,0,0.03) !important', border: 'none !important' }}
               />
             </Grid>
             <Grid size={{ xs: 4 }}>
@@ -401,16 +422,27 @@ const LoginRetailOS = () => {
               <Button
                 fullWidth
                 variant="outlined"
-                onClick={() => handleDemoLogin('TenantAdmin', '/admin/dashboard')}
+                onClick={() => handleDemoLogin('ADMIN', '/admin/dashboard', {
+                  email: "admin@pos.com",
+                  password: "Admin@123",
+                  name: "Admin User",
+                  role: "ADMIN"
+                })}
                 startIcon={<AdminPanelSettingsIcon />}
                 sx={{
-                  py: 1,
-                  borderRadius: 2,
-                  fontWeight: 600,
+                  py: 1.5,
+                  borderRadius: 2.5,
+                  fontWeight: 800,
                   textTransform: 'none',
                   borderStyle: 'dashed',
+                  borderColor: theme.palette.primary.main,
                   color: 'primary.main',
-                  '&:hover': { borderStyle: 'dashed', bgcolor: alpha(theme.palette.primary.main, 0.05) }
+                  bgcolor: alpha(theme.palette.primary.main, 0.05),
+                  '&:hover': { 
+                    borderStyle: 'dashed', 
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    borderColor: theme.palette.primary.dark
+                  }
                 }}
               >
                 Demo Login (Admin)
@@ -419,10 +451,10 @@ const LoginRetailOS = () => {
                 <Button
                   fullWidth
                   variant="outlined"
-                  onClick={() => handleDemoLogin('Manager', '/pos/dashboard')}
+                  onClick={() => handleDemoLogin('MANAGER', '/pos/dashboard')}
                   startIcon={<BusinessCenterIcon />}
                   sx={{
-                    py: 1,
+                    py: 1.2,
                     borderRadius: 2,
                     fontWeight: 600,
                     textTransform: 'none',
@@ -437,10 +469,10 @@ const LoginRetailOS = () => {
                 <Button
                   fullWidth
                   variant="outlined"
-                  onClick={() => handleDemoLogin('Cashier', '/pos/dashboard')}
+                  onClick={() => handleDemoLogin('CASHIER', '/pos/dashboard')}
                   startIcon={<StorefrontIcon />}
                   sx={{
-                    py: 1,
+                    py: 1.2,
                     borderRadius: 2,
                     fontWeight: 600,
                     textTransform: 'none',
@@ -454,6 +486,15 @@ const LoginRetailOS = () => {
                 </Button>
               </Stack>
             </Stack>
+            <Button
+              fullWidth
+              variant="text"
+              size="small"
+              onClick={handleRegisterAdmin}
+              sx={{ mt: 2, color: 'text.disabled', fontSize: '0.75rem', '&:hover': { color: 'primary.main' } }}
+            >
+              Setup / Reset First Admin
+            </Button>
           </Box>
 
           {/* Footer help */}
@@ -469,7 +510,7 @@ const LoginRetailOS = () => {
           </Box>
           
           <Typography variant="caption" display="block" textAlign="center" sx={{ mt: 3, color: 'text.disabled' }}>
-            © 2023 RetailOS Inc. v2.4.1
+            © 2026 RetailOS Inc. v2.4.1
           </Typography>
 
         </Box>

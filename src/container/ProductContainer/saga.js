@@ -1,109 +1,191 @@
 import { takeEvery, call, put } from 'redux-saga/effects';
-import commonApi from '../api';
-import config from '../../config';
+import productService from '../../services/productService';
+import { toast } from 'react-toastify';
 import {
   fetchProducts, fetchProductsSuccess, fetchProductsFail,
   fetchProductById, fetchProductByIdSuccess, fetchProductByIdFail,
   createProduct, createProductSuccess, createProductFail,
   updateProduct, updateProductSuccess, updateProductFail,
   deleteProduct, deleteProductSuccess, deleteProductFail,
-  searchProducts, searchProductsSuccess, searchProductsFail
+  searchProducts, searchProductsSuccess, searchProductsFail,
+  bulkCreateProducts, bulkCreateProductsSuccess, bulkCreateProductsFail,
+  fetchProductStats, fetchProductStatsSuccess, fetchProductStatsFail,
+  adjustStock, adjustStockSuccess, adjustStockFail
 } from './slice';
 
 function* getProducts(action) {
   try {
-    const { companyId, page, limit } = action.payload;
+    const { page = 1, limit = 10, search, category, isActive } = action.payload || {};
+    
     const params = {
-      api: `${config.ip}/products?companyId=${companyId}&page=${page}&limit=${limit}`,
-      method: 'GET',
-      successAction: fetchProductsSuccess(),
-      failAction: fetchProductsFail(),
-      authourization: 'Bearer'
+      page,
+      limit,
+      ...(search && { search }),
+      ...(category && { category }),
+      ...(isActive !== undefined && { isActive })
     };
-    yield call(commonApi, params);
+
+    const response = yield call(productService.getProducts, params);
+    
+    if (response && response.data) {
+      yield put(fetchProductsSuccess({
+        data: response.data.products,
+        pagination: response.data.pagination
+      }));
+    }
   } catch (error) {
     console.error('Fetch products failed:', error);
+    yield put(fetchProductsFail(error.message));
+    toast.error(error.message || 'Failed to fetch products');
   }
 }
 
 function* getProductById(action) {
   try {
     const { id } = action.payload;
-    const params = {
-      api: `${config.ip}/products/${id}`,
-      method: 'GET',
-      successAction: fetchProductByIdSuccess(),
-      failAction: fetchProductByIdFail(),
-      authourization: 'Bearer'
-    };
-    yield call(commonApi, params);
+    const response = yield call(productService.getProductById, id);
+    
+    if (response && response.data) {
+      yield put(fetchProductByIdSuccess({ data: response.data }));
+    }
   } catch (error) {
     console.error('Fetch product by id failed:', error);
+    yield put(fetchProductByIdFail(error.message));
+    toast.error(error.message || 'Failed to fetch product');
   }
 }
 
 function* addProduct(action) {
   try {
-    const params = {
-      api: `${config.ip}/products`,
-      method: 'POST',
-      successAction: createProductSuccess(),
-      failAction: createProductFail(),
-      body: JSON.stringify(action.payload),
-      authourization: 'Bearer'
-    };
-    yield call(commonApi, params);
+    const response = yield call(productService.createProduct, action.payload);
+    
+    if (response && response.data) {
+      yield put(createProductSuccess());
+      toast.success('Product created successfully');
+      
+      // Optionally refetch products list
+      if (action.payload.refetch) {
+        yield put(fetchProducts({ page: 1, limit: 10 }));
+      }
+    }
   } catch (error) {
     console.error('Create product failed:', error);
+    yield put(createProductFail(error.message));
+    toast.error(error.message || 'Failed to create product');
   }
 }
 
 function* editProduct(action) {
   try {
     const { id, ...data } = action.payload;
-    const params = {
-      api: `${config.ip}/products/${id}`,
-      method: 'PUT',
-      successAction: updateProductSuccess(),
-      failAction: updateProductFail(),
-      body: JSON.stringify(data),
-      authourization: 'Bearer'
-    };
-    yield call(commonApi, params);
+    const response = yield call(productService.updateProduct, id, data);
+    
+    if (response && response.data) {
+      yield put(updateProductSuccess());
+      toast.success('Product updated successfully');
+      
+      // Optionally refetch products list
+      if (action.payload.refetch) {
+        yield put(fetchProducts({ page: 1, limit: 10 }));
+      }
+    }
   } catch (error) {
     console.error('Update product failed:', error);
+    yield put(updateProductFail(error.message));
+    toast.error(error.message || 'Failed to update product');
   }
 }
 
 function* removeProduct(action) {
   try {
     const { id } = action.payload;
-    const params = {
-      api: `${config.ip}/products/${id}`,
-      method: 'DELETE',
-      successAction: deleteProductSuccess(),
-      failAction: deleteProductFail(),
-      authourization: 'Bearer'
-    };
-    yield call(commonApi, params);
+    yield call(productService.deleteProduct, id);
+    
+    yield put(deleteProductSuccess());
+    toast.success('Product deleted successfully');
+    
+    // Refetch products list
+    yield put(fetchProducts({ page: 1, limit: 10 }));
+    yield put(fetchProductStats());
   } catch (error) {
     console.error('Delete product failed:', error);
+    yield put(deleteProductFail(error.message));
+    toast.error(error.message || 'Failed to delete product');
   }
 }
 
 function* findProducts(action) {
   try {
-    const { query } = action.payload;
+    const { query, ...otherParams } = action.payload;
+    
     const params = {
-      api: `${config.ip}/products/search?q=${query}`,
-      method: 'GET',
-      successAction: searchProductsSuccess(),
-      failAction: searchProductsFail(),
-      authourization: 'Bearer'
+      search: query,
+      ...otherParams
     };
-    yield call(commonApi, params);
+
+    const response = yield call(productService.getProducts, params);
+    
+    if (response && response.data) {
+      yield put(searchProductsSuccess({
+        data: response.data.products,
+        pagination: response.data.pagination
+      }));
+    }
   } catch (error) {
     console.error('Search products failed:', error);
+    yield put(searchProductsFail(error.message));
+    toast.error(error.message || 'Failed to search products');
+  }
+}
+
+function* bulkAddProducts(action) {
+  try {
+    const response = yield call(productService.bulkCreateProducts, action.payload.products);
+    
+    if (response && response.data) {
+      yield put(bulkCreateProductsSuccess());
+      toast.success(response.message || 'Products imported successfully');
+      
+      // Refetch products list
+      yield put(fetchProducts({ page: 1, limit: 10 }));
+      yield put(fetchProductStats());
+    }
+  } catch (error) {
+    console.error('Bulk create products failed:', error);
+    yield put(bulkCreateProductsFail(error.message));
+    toast.error(error.message || 'Failed to import products');
+  }
+}
+
+function* adjustStockSaga(action) {
+  try {
+    const { id, type, quantity, reason } = action.payload;
+    const response = yield call(productService.adjustStock, id, { type, quantity, reason });
+    
+    if (response && response.data) {
+      yield put(adjustStockSuccess());
+      toast.success('Stock adjusted successfully');
+      
+      // Refetch products to update UI
+      yield put(fetchProducts({ page: 1, limit: 10 }));
+      yield put(fetchProductStats());
+    }
+  } catch (error) {
+    console.error('Adjust stock failed:', error);
+    yield put(adjustStockFail(error.message));
+    toast.error(error.message || 'Failed to adjust stock');
+  }
+}
+
+function* getProductStatsSaga() {
+  try {
+    const response = yield call(productService.getProductStats);
+    if (response && response.data) {
+      yield put(fetchProductStatsSuccess({ data: response.data }));
+    }
+  } catch (error) {
+    console.error('Fetch product stats failed:', error);
+    yield put(fetchProductStatsFail(error.message));
   }
 }
 
@@ -114,4 +196,7 @@ export default function* ProductActionWatcher() {
   yield takeEvery(updateProduct.type, editProduct);
   yield takeEvery(deleteProduct.type, removeProduct);
   yield takeEvery(searchProducts.type, findProducts);
+  yield takeEvery(bulkCreateProducts.type, bulkAddProducts);
+  yield takeEvery(fetchProductStats.type, getProductStatsSaga);
+  yield takeEvery(adjustStock.type, adjustStockSaga);
 }

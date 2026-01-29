@@ -9,6 +9,7 @@ import employeeRoutes from './employee.routes.js';
 import inventoryRoutes from './inventory.routes.js';
 import paymentRoutes from './payment.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
+import shiftRoutes from './shift.routes.js';
 
 const router = express.Router();
 
@@ -32,5 +33,6 @@ router.use('/stores', storeRoutes);
 router.use('/employees', employeeRoutes);
 router.use('/inventory', inventoryRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/shifts', shiftRoutes);
 
 export default router;

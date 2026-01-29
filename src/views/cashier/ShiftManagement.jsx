@@ -21,10 +21,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Avatar
+  Avatar,
+  CircularProgress
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 import TablePagination from '@mui/material/TablePagination';
+import { useSelector } from 'react-redux';
+import shiftService from 'services/shiftService';
+import { toast } from 'react-toastify';
 
 // Icons
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
@@ -33,34 +37,23 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-// import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import LockClockOutlinedIcon from '@mui/icons-material/LockClockOutlined';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
-// import HistoryIcon from '@mui/icons-material/History';
-// import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import Lottie from 'lottie-react';
+import noDataAnimation from 'assets/animations/noDataLottie.json';
 
 const ShiftManagement = () => {
   const theme = useTheme();
+  const { user } = useSelector((state) => state.login);
   
   // State
-  const [isShiftOpen, setIsShiftOpen] = useState(() => {
-    return localStorage.getItem('isShiftOpen') === 'true';
-  });
-  const [shiftData, setShiftData] = useState(() => {
-    const saved = localStorage.getItem('shiftData');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  // Persist state to localStorage
-  useEffect(() => {
-    localStorage.setItem('isShiftOpen', isShiftOpen);
-    localStorage.setItem('shiftData', JSON.stringify(shiftData));
-  }, [isShiftOpen, shiftData]);
+  const [loading, setLoading] = useState(true);
+  const [shiftData, setShiftData] = useState(null);
   const [openingBalance, setOpeningBalance] = useState('');
   const [openEndShiftDialog, setOpenEndShiftDialog] = useState(false);
   
@@ -68,51 +61,99 @@ const ShiftManagement = () => {
   const [closingCash, setClosingCash] = useState('');
   const [closingCard, setClosingCard] = useState('');
   const [closingUpi, setClosingUpi] = useState('');
+  const [closingNotes, setClosingNotes] = useState('');
 
   // Pagination State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [viewHistory, setViewHistory] = useState(false);
+  const [historyData, setHistoryData] = useState({ shifts: [], total: 0 });
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Pay In / Pay Out State
-  const [payIns, setPayIns] = useState(0);
-  const [payOuts, setPayOuts] = useState(0);
   const [payDialog, setPayDialog] = useState({ open: false, type: 'IN', amount: '', reason: '' });
 
-  // Mock System Totals
-  const systemTotals = {
-    cash: 1250.00,
-    card: 3400.50,
-    upi: 890.00
+  // Fetch current shift on mount
+  useEffect(() => {
+    fetchCurrentShift();
+    fetchShiftHistory();
+  }, []);
+
+  const fetchShiftHistory = async () => {
+      try {
+          setHistoryLoading(true);
+          const res = await shiftService.getShiftHistory({ page: page + 1, limit: rowsPerPage });
+          if (res.data && res.data.shifts) {
+              setHistoryData({ shifts: res.data.shifts, total: res.data.pagination.total });
+          }
+      } catch (err) {
+          console.error("Failed to load history", err);
+      } finally {
+          setHistoryLoading(false);
+      }
   };
 
-  const calculateExpectedCash = () => {
-    if (!shiftData) return 0;
-    return shiftData.openingBalance + systemTotals.cash + payIns - payOuts; 
+  useEffect(() => {
+      fetchShiftHistory();
+  }, [page, rowsPerPage]);
+
+  const fetchCurrentShift = async () => {
+    try {
+      setLoading(true);
+      const res = await shiftService.getCurrentShift();
+      if (res.success && res.data) {
+        setShiftData(res.data);
+      } else {
+        setShiftData(null);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load shift status');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleStartShift = () => {
+  const handleStartShift = async () => {
     if (!openingBalance) return;
-    const now = new Date();
-    setShiftData({
-      startTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      startDate: now.toLocaleDateString(),
-      openingBalance: parseFloat(openingBalance),
-      user: 'Jane Doe',
-      shiftId: '#SH-2024-001',
-      itemsSold: 24 // Mocking some sales for the active shift demo
-    });
-    setIsShiftOpen(true);
+    try {
+        const res = await shiftService.startShift({ 
+            openingBalance: parseFloat(openingBalance),
+            storeId: user?.store?.id || user?.store?._id || user?.store 
+        });
+        if (res.success) {
+            setShiftData(res.data);
+            toast.success('Shift started successfully');
+        }
+    } catch (err) {
+        console.error(err);
+        toast.error(err.message || 'Failed to start shift');
+    }
   };
 
-  const handleEndShift = () => {
-    setIsShiftOpen(false);
-    setShiftData(null);
-    setOpenEndShiftDialog(false);
-    setOpeningBalance('');
-    setClosingCash('');
-    setClosingCard('');
-    setClosingUpi('');
+  const handleEndShift = async () => {
+    try {
+        const res = await shiftService.endShift({
+            actualCash: parseFloat(closingCash) || 0,
+            listActualCard: parseFloat(closingCard) || 0, // Note: Backend implementation might need adjustment if using list
+            listActualUpi: parseFloat(closingUpi) || 0,
+            notes: closingNotes
+        });
+        
+        if (res.success) {
+            setShiftData(null);
+            setOpenEndShiftDialog(false);
+            setOpeningBalance('');
+            setClosingCash('');
+            setClosingCard('');
+            setClosingUpi('');
+            setClosingNotes('');
+            toast.success('Shift ended successfully');
+            fetchShiftHistory(); // Refresh history
+        }
+    } catch (err) {
+        console.error(err);
+        toast.error(err.message || 'Failed to end shift');
+    }
   };
 
   const handleChangePage = (event, newPage) => {
@@ -128,58 +169,87 @@ const ShiftManagement = () => {
     setPayDialog({ open: true, type, amount: '', reason: '' });
   };
 
-  const handleProcessPayTransaction = () => {
+  const handleProcessPayTransaction = async () => {
     const amount = parseFloat(payDialog.amount);
     if (!amount || amount <= 0) return;
 
-    if (payDialog.type === 'IN') {
-        setPayIns(prev => prev + amount);
-    } else {
-        setPayOuts(prev => prev + amount);
+    try {
+        const res = await shiftService.addCashMovement({
+            type: payDialog.type,
+            amount,
+            reason: payDialog.reason
+        });
+        
+        if (res.success) {
+            setShiftData(res.data); // Update local state with new shift data (including movements)
+            setPayDialog({ ...payDialog, open: false });
+            toast.success(`Cash ${payDialog.type === 'IN' ? 'added' : 'removed'} successfully`);
+        }
+    } catch (err) {
+        toast.error('Failed to process cash movement');
     }
-
-    // Optional: Add to transaction log logic here in future
-    setPayDialog({ ...payDialog, open: false });
   };
 
-  // Mock Transaction Log Data
-  const TRANSACTIONS = [
-    { id: 'TRX-101', time: '09:15 AM', type: 'Sale', desc: 'Order #1001', amount: 120.00, method: 'Cash', status: 'Completed' },
-    { id: 'TRX-102', time: '09:45 AM', type: 'Sale', desc: 'Order #1002', amount: 450.50, method: 'Card', status: 'Completed' },
-    { id: 'TRX-103', time: '10:30 AM', type: 'Return', desc: 'Refund Order #998', amount: -45.00, method: 'Card', status: 'Refunded' },
-    { id: 'TRX-104', time: '11:00 AM', type: 'Pay Out', desc: 'Office Supplies', amount: -25.00, method: 'Cash', status: 'Expense' },
-    { id: 'TRX-105', time: '11:45 AM', type: 'Sale', desc: 'Order #1003', amount: 89.00, method: 'UPI', status: 'Completed' },
-    { id: 'TRX-106', time: '12:15 PM', type: 'Sale', desc: 'Order #1004', amount: 210.00, method: 'Card', status: 'Completed' },
-    { id: 'TRX-107', time: '12:30 PM', type: 'Sale', desc: 'Order #1005', amount: 35.00, method: 'Cash', status: 'Completed' },
-  ];
+  // Calculate totals from shift data
+  const calculateSystemTotals = () => {
+      if (!shiftData) return { cash: 0, card: 0, upi: 0 };
+      
+      // If paymentSummary exists (for closed shifts or established structure), use it
+      // But for active shifts, we might need realtime aggregation.
+      // For now, assuming paymentSummary might be updated or 0.
+      // The backend 'getCurrentShift' might not return live totals unless implemented.
+      // Let's rely on what the backend gives or default to existing structure.
+      
+      // Note: Backend 'getCurrentShift' currently returns static shift object. 
+      // To get live totals, the backend should aggregate orders.
+      // Assuming backend returns 'paymentSummary' even if partial, or we should request it.
+      // For this implementation, let's use what we have in shiftData.
+      
+      const cash = shiftData.paymentSummary?.cash || 0;
+      const card = shiftData.paymentSummary?.card || 0;
+      const upi = shiftData.paymentSummary?.upi || 0;
+      
+      return { cash, card, upi };
+  };
+  
+  const calculatePayInsOuts = () => {
+      if (!shiftData || !shiftData.cashMovements) return { ins: 0, outs: 0 };
+      let ins = 0;
+      let outs = 0;
+      shiftData.cashMovements.forEach(m => {
+          if (m.type === 'IN') ins += m.amount;
+          else outs += m.amount;
+      });
+      return { ins, outs };
+  };
 
-  const PREVIOUS_SHIFT_TRANSACTIONS = [
-    { id: 'TRX-098', time: '06:15 PM', type: 'Sale', desc: 'Order #998', amount: 210.00, method: 'Card', status: 'Completed' },
-    { id: 'TRX-097', time: '05:45 PM', type: 'Return', desc: 'Refund #990', amount: -25.00, method: 'Cash', status: 'Refunded' },
-    { id: 'TRX-096', time: '05:30 PM', type: 'Sale', desc: 'Order #995', amount: 89.00, method: 'UPI', status: 'Completed' },
-    { id: 'TRX-095', time: '04:15 PM', type: 'Sale', desc: 'Order #992', amount: 145.00, method: 'Card', status: 'Completed' },
-    { id: 'TRX-094', time: '03:00 PM', type: 'Sale', desc: 'Order #990', amount: 65.00, method: 'Cash', status: 'Completed' },
-  ];
+  const systemTotals = calculateSystemTotals();
+  const { ins: payIns, outs: payOuts } = calculatePayInsOuts();
 
-  const activeTransactions = viewHistory ? PREVIOUS_SHIFT_TRANSACTIONS : TRANSACTIONS;
+  const calculateExpectedCash = () => {
+    if (!shiftData) return 0;
+    return (shiftData.openingBalance || 0) + systemTotals.cash + payIns - payOuts; 
+  };
 
-  if (!isShiftOpen) {
+  if (loading) {
+      return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}><CircularProgress /></Box>;
+  }
+
+  if (!shiftData) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', p: 3 }}>
-        <Grid container spacing={4} sx={{ maxWidth: 1000 }}>
-            <Grid item xs={12} md={7}>
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+        <Grid container spacing={4}>
+            <Grid size={{ xs: 12, md: 7 }}>
                 <Paper
                 elevation={0}
                 sx={{
                     p: 5,
-                    height: '100%',
                     borderRadius: 4,
                     border: '1px solid',
                     borderColor: 'divider',
                     bgcolor: 'white',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'center',
                 }}
                 >
                     <Stack direction="row" spacing={2} sx={{ mb: 4 }} alignItems="center">
@@ -217,7 +287,7 @@ const ShiftManagement = () => {
                     </Button>
                 </Paper>
             </Grid>
-            <Grid item xs={12} md={5}>
+            <Grid size={{ xs: 12, md: 5 }}>
                 <Paper
                     elevation={0}
                     sx={{
@@ -226,17 +296,106 @@ const ShiftManagement = () => {
                         bgcolor: 'grey.50',
                         border: '1px solid',
                         borderColor: 'divider',
-                        height: '100%'
                     }}
                 >
-                    <Typography variant="h6" fontWeight={800} sx={{ mb: 3 }}>Previous Shift</Typography>
-                    <Stack spacing={2}>
-                        <DataRow label="Closed By" value="John Doe" />
-                        <DataRow label="End Time" value="Yesterday, 9:00 PM" />
-                        <Divider />
-                        <DataRow label="Total Sales" value="$4,530.50" bold />
-                        <DataRow label="Discrepancy" value="-$5.00" color="error.main" />
-                    </Stack>
+                    <Typography variant="h6" fontWeight={800} sx={{ mb: 3 }}>Previous Shifts</Typography>
+                    
+                    {historyLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
+                    ) : historyData.shifts.length > 0 ? (
+                        <>
+                            <Stack spacing={2}>
+                                {historyData.shifts.map((shift) => (
+                                    <Paper 
+                                        key={shift._id} 
+                                        elevation={0}
+                                        sx={{ 
+                                            p: 2.5, 
+                                            borderRadius: 3, 
+                                            bgcolor: 'white', 
+                                            border: '1px solid', 
+                                            borderColor: 'divider',
+                                            transition: 'transform 0.2s, box-shadow 0.2s',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                                borderColor: 'primary.light'
+                                            }
+                                        }}
+                                    >
+                                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                                            <Box>
+                                                <Typography variant="subtitle2" fontWeight={800} color="text.primary">
+                                                    {new Date(shift.endTime).toLocaleDateString()}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                                                    {new Date(shift.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(shift.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                </Typography>
+                                            </Box>
+                                            <Chip 
+                                                label="CLOSED" 
+                                                size="small" 
+                                                color="default"
+                                                sx={{ 
+                                                    fontWeight: 700, 
+                                                    borderRadius: 1.5, 
+                                                    height: 24,
+                                                    fontSize: '0.65rem',
+                                                    bgcolor: 'grey.100',
+                                                    color: 'text.secondary'
+                                                }} 
+                                            />
+                                        </Stack>
+                                        
+                                        <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
+                                        
+                                        <Grid container spacing={2}>
+                                            <Grid item xs={4}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" gutterBottom>
+                                                    OPENING
+                                                </Typography>
+                                                <Typography variant="body2" fontWeight={700} color="text.primary">
+                                                    ${(shift.openingBalance || 0).toFixed(2)}
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs={4}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" gutterBottom>
+                                                    CASH
+                                                </Typography>
+                                                <Typography variant="body2" fontWeight={700} color="success.main">
+                                                    ${(shift.paymentSummary?.cash || 0).toFixed(2)}
+                                                </Typography>
+                                            </Grid>
+                                            <Grid item xs={4} sx={{ textAlign: 'right' }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" gutterBottom>
+                                                    TOTAL
+                                                </Typography>
+                                                <Typography variant="body2" fontWeight={800} color="primary.main">
+                                                    ${((shift.paymentSummary?.cash || 0) + (shift.paymentSummary?.card || 0) + (shift.paymentSummary?.upi || 0)).toFixed(2)}
+                                                </Typography>
+                                            </Grid>
+                                        </Grid>
+                                    </Paper>
+                                ))}
+                            </Stack>
+                            <TablePagination
+                                component="div"
+                                count={historyData.total}
+                                page={page}
+                                onPageChange={handleChangePage}
+                                rowsPerPage={rowsPerPage}
+                                onRowsPerPageChange={handleChangeRowsPerPage}
+                                rowsPerPageOptions={[5, 10, 25]}
+                            />
+                        </>
+                    ) : (
+                        <Box sx={{ textAlign: 'center', py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: 0.7 }}>
+                            <Box sx={{ width: 180, mb: 1 }}>
+                                <Lottie animationData={noDataAnimation} loop={true} />
+                            </Box>
+                            <Typography color="text.secondary" fontWeight={600}>No shift history found.</Typography>
+                        </Box>
+                    )}
                 </Paper>
             </Grid>
         </Grid>
@@ -254,18 +413,18 @@ const ShiftManagement = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.lighter', color: 'primary.main' }}><PersonOutlineIcon /></Avatar>
                 <Box>
-                    <Typography variant="subtitle2" fontWeight={800} sx={{ lineHeight: 1.2 }}>{shiftData.user}</Typography>
+                    <Typography variant="subtitle2" fontWeight={800} sx={{ lineHeight: 1.2 }}>Shift Active</Typography>
                     <Typography variant="caption" color="text.secondary">Cashier</Typography>
                 </Box>
             </Box>
             <Divider orientation="vertical" flexItem sx={{ height: 24, alignSelf: 'center' }} />
             <Box>
                 <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>Shift ID</Typography>
-                <Typography variant="body2" fontWeight={700}>{shiftData.shiftId}</Typography>
+                <Typography variant="body2" fontWeight={700}>{shiftData._id.slice(-6).toUpperCase()}</Typography>
             </Box>
             <Box>
                  <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>Started</Typography>
-                 <Chip label={shiftData.startTime} size="small" color="success" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1, border: 'none', bgcolor: 'success.lighter' }} />
+                 <Chip label={new Date(shiftData.startTime).toLocaleTimeString()} size="small" color="success" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1, border: 'none', bgcolor: 'success.lighter' }} />
             </Box>
         </Stack>
         <Button 
@@ -279,26 +438,26 @@ const ShiftManagement = () => {
         </Button>
       </Paper>
 
-      {/* Sales Metrics Grid (Moved Here) */}
+      {/* Sales Metrics Grid */}
       <Grid container spacing={2} sx={{ mb: 3, width: '100%' }}>
-        <Grid item xs={12} sm={6} md={3} lg={3} xl={3} sx={{ flexGrow: 1 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} sx={{ flexGrow: 1 }}>
             <DetailCard title="Total Sales" value={systemTotals.cash + systemTotals.card + systemTotals.upi} icon={<ReceiptLongIcon sx={{ fontSize: 32 }} />} color="primary" />
         </Grid>
-        <Grid item xs={12} sm={6} md={3} lg={3} xl={3} sx={{ flexGrow: 1 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} sx={{ flexGrow: 1 }}>
             <DetailCard title="Card Sales" value={systemTotals.card} icon={<CreditCardIcon sx={{ fontSize: 32 }} />} color="info" />
         </Grid>
-        <Grid item xs={12} sm={6} md={3} lg={3} xl={3} sx={{ flexGrow: 1 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} sx={{ flexGrow: 1 }}>
             <DetailCard title="UPI / Digital" value={systemTotals.upi} icon={<QrCode2Icon sx={{ fontSize: 32 }} />} color="warning" />
         </Grid>
-        <Grid item xs={12} sm={6} md={3} lg={3} xl={3} sx={{ flexGrow: 1 }}>
-            <DetailCard title="Returns" value={45.00} icon={<HistoryIcon sx={{ fontSize: 32 }} />} color="error" isNegative />
+        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} sx={{ flexGrow: 1 }}>
+            <DetailCard title="Expected Cash" value={calculateExpectedCash()} icon={<AttachMoneyIcon sx={{ fontSize: 32 }} />} color="success" />
         </Grid>
       </Grid>
 
       <Grid container spacing={3} sx={{ width: '100%' }}>
         
         {/* 2. Left Column: Drawer Management */}
-        <Grid item xs={12} md={4} lg={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3 , flexGrow: 1}}>
+        <Grid size={{ xs: 12, md: 4, lg: 4 }} sx={{ display: 'flex', flexDirection: 'column', gap: 3 , flexGrow: 1}}>
             
             {/* Drawer Card */}
             <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider', height: '100%' }}>
@@ -320,12 +479,12 @@ const ShiftManagement = () => {
                 </Stack>
 
                 <Grid container spacing={2} sx={{ mt: 4 }}>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                         <Button fullWidth variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => handleOpenPayDialog('IN')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
                             Pay In
                         </Button>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                          <Button fullWidth variant="outlined" color="error" startIcon={<RemoveCircleOutlineIcon />} onClick={() => handleOpenPayDialog('OUT')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
                             Pay Out
                         </Button>
@@ -333,79 +492,57 @@ const ShiftManagement = () => {
                 </Grid>
             </Paper>
 
-            
-
         </Grid>
 
-        {/* 3. Right Column: Transaction Log */}
-        <Grid item xs={12} md={8} lg={8} sx={{ flexGrow: 1 }}>
+        {/* 3. Right Column: Transaction Log / Cash Movements */}
+        <Grid size={{ xs: 12, md: 8, lg: 8 }} sx={{ flexGrow: 1 }}>
             <Paper elevation={0} sx={{ height: '100%', borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                         <Typography variant="subtitle1" fontWeight={800}>{viewHistory ? 'Previous Shift Log' : 'Transaction Log'}</Typography>
-                         <Typography variant="caption" color="text.secondary">{viewHistory ? 'Yesterday, 9:00 PM - 5:00 PM' : 'Today, Current Shift'}</Typography>
+                         <Typography variant="subtitle1" fontWeight={800}>Cash Movements</Typography>
+                         <Typography variant="caption" color="text.secondary">Recent pay-ins and pay-outs</Typography>
                     </Box>
-                    <Button 
-                        size="small" 
-                        variant={viewHistory ? "contained" : "outlined"} 
-                        color={viewHistory ? "secondary" : "primary"}
-                        startIcon={viewHistory ? <AccessTimeIcon /> : <HistoryIcon />}
-                        onClick={() => { setViewHistory(!viewHistory); setPage(0); }}
-                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
-                    >
-                        {viewHistory ? 'Back to Current' : 'Load Previous'}
-                    </Button>
                 </Box>
                 <TableContainer sx={{ flexGrow: 1 }}>
                     <Table stickyHeader size="medium">
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Time</TableCell>
-                                <TableCell sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Description</TableCell>
-                                <TableCell sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Type</TableCell>
-                                <TableCell sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Method</TableCell>
-                                <TableCell align="right" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Amount</TableCell>
+                                <TableCell sx={{ fontWeight: 700, bgcolor: 'grey.50' }}>Time</TableCell>
+                                <TableCell sx={{ fontWeight: 700, bgcolor: 'grey.50' }}>Type</TableCell>
+                                <TableCell sx={{ fontWeight: 700, bgcolor: 'grey.50' }}>Reason</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 700, bgcolor: 'grey.50' }}>Amount</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {activeTransactions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
-                                <TableRow key={row.id} hover>
-                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 500 }}>{row.time}</TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={600}>{row.desc}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{row.id}</Typography>
+                            {shiftData.cashMovements && shiftData.cashMovements.length > 0 ? (
+                                shiftData.cashMovements.slice().reverse().map((row, index) => (
+                                <TableRow key={index} hover>
+                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                                        {new Date(row.timestamp).toLocaleTimeString()}
                                     </TableCell>
                                     <TableCell>
                                         <Chip 
                                             label={row.type} 
                                             size="small" 
-                                            sx={{ 
-                                                height: 24, 
-                                                fontWeight: 700, 
-                                                fontSize: '0.75rem', 
-                                                bgcolor: row.type === 'Sale' ? 'success.lighter' : (row.type === 'Return' ? 'error.lighter' : 'grey.100'),
-                                                color: row.type === 'Sale' ? 'success.main' : (row.type === 'Return' ? 'error.main' : 'text.secondary')
-                                            }} 
+                                            color={row.type === 'IN' ? 'success' : 'error'}
+                                            sx={{ fontWeight: 700, borderRadius: 1 }}
                                         />
                                     </TableCell>
-                                    <TableCell>{row.method}</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700, color: row.amount < 0 ? 'error.main' : 'inherit' }}>
-                                        {row.amount < 0 ? '-' : ''}${Math.abs(row.amount).toFixed(2)}
+                                    <TableCell>{row.reason || '-'}</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700 }}>
+                                        ${row.amount.toFixed(2)}
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            ))) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                                        No cash movements recorded.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </TableContainer>
-                <TablePagination
-                    rowsPerPageOptions={[5, 10, 25]}
-                    component="div"
-                    count={activeTransactions.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                />
             </Paper>
         </Grid>
 
@@ -424,7 +561,7 @@ const ShiftManagement = () => {
             <Box>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
                      <LockClockOutlinedIcon color="primary" sx={{ fontSize: 28 }} />
-                     <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: 0.5 }}>End Shift Reconciliation</Typography>
+                     <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: 0.5 }}>End Shift</Typography>
                 </Stack>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Verify system totals against actual cash.</Typography>
             </Box>
@@ -440,19 +577,13 @@ const ShiftManagement = () => {
                             onChange={setClosingCash}
                             icon={<AttachMoneyIcon />}
                         />
-                        <ReconciliationRow 
-                            label="Card Terminal" 
-                            system={systemTotals.card} 
-                            value={closingCard} 
-                            onChange={setClosingCard}
-                            icon={<CreditCardIcon />}
-                        />
-                        <ReconciliationRow 
-                            label="UPI / Digital" 
-                            system={systemTotals.upi} 
-                            value={closingUpi} 
-                            onChange={setClosingUpi}
-                            icon={<QrCode2Icon />}
+                        <TextField
+                            fullWidth
+                            label="Closing Notes / Discrepancy Reason"
+                            multiline
+                            rows={2}
+                            value={closingNotes}
+                            onChange={(e) => setClosingNotes(e.target.value)}
                         />
                     </Stack>
         </DialogContent>
@@ -529,7 +660,7 @@ const CalculationRow = ({ label, value, icon, color = 'text.primary' }) => (
             {icon}
             <Typography variant="body2" fontWeight={600} color="text.secondary">{label}</Typography>
         </Box>
-        <Typography variant="body1" fontWeight={700} color={color}>${value.toFixed(2)}</Typography>
+        <Typography variant="body1" fontWeight={700} color={color}>${(value || 0).toFixed(2)}</Typography>
     </Box>
 );
 

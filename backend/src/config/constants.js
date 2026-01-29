@@ -18,12 +18,14 @@ export const config = {
   },
   
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000'
+    origin: process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5173', 'http://localhost:3003', 'https://pos-7r2o.vercel.app', 'https://pos-backend-n0jq.onrender.com']
   },
   
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
+    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 10000
   },
   
   defaultAdmin: {

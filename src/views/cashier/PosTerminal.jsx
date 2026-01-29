@@ -67,6 +67,9 @@ import { fetchProducts } from 'container/ProductContainer/slice';
 import { fetchStores } from 'container/StoreContainer/slice';
 import { useSelector, useDispatch } from 'react-redux';
 import customerService from 'services/customerService';
+import shiftService from 'services/shiftService';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 // Helper to match ProductManagement color logic
 const stringToColor = (string) => {
     let hash = 0;
@@ -114,10 +117,10 @@ const ProductCard = ({ product, onAdd }) => (
               bgcolor: 'grey.50',
               position: 'relative'
               }}>
-              {product.image ? (
-                  <img 
-                    src={product.image} 
-                    alt={product.name} 
+                  {product.images && product.images.length > 0 ? (
+                      <img 
+                        src={product.images[0]} 
+                        alt={product.name} 
                     style={{ 
                         width: '100%', 
                         height: '100%', 
@@ -1064,12 +1067,42 @@ const PosTerminal = () => {
   const { user } = useSelector((state) => state.login);
   const { stores } = useSelector((state) => state.store);
 
-  // Initial Fetch logic
-  useEffect(() => {
-    dispatch(fetchStores());
-  }, [dispatch]);
+  // Shift Validation state
+  const [checkingShift, setCheckingShift] = useState(true);
+  const navigate = useNavigate();
 
+  // 1. Initial Verification & Setup (Runs Once)
   useEffect(() => {
+    const verifyAndSetup = async () => {
+        try {
+             // Verify Shift
+             const shiftRes = await shiftService.getCurrentShift();
+             if (!shiftRes.success || !shiftRes.data) {
+                 toast.warning('Active shift required to access POS');
+                 navigate('/pos/shift');
+                 return;
+             }
+             setCheckingShift(false);
+
+             // Validation: load stores if empty
+             dispatch(fetchStores()); 
+        } catch (err) {
+            console.error("POS Shift Check Error:", err);
+             if (err.message && err.message.includes('Network Error')) {
+                 toast.error('Backend connection failed');
+            } else {
+                 toast.error('Failed to verify shift');
+                 navigate('/pos/shift');
+            }
+        }
+    };
+    verifyAndSetup();
+  }, [dispatch, navigate]);
+
+  // 2. Load Products (Reacts to User/Store changes)
+  useEffect(() => {
+    if (checkingShift) return;
+
     // Determine warehouse filter
     let warehouseName = '';
     if (user?.store) {
@@ -1083,11 +1116,11 @@ const PosTerminal = () => {
 
     dispatch(fetchProducts({ 
         page: 1, 
-        limit: 1000, // Fetch large batch for POS 
+        limit: 1000, 
         warehouseName: warehouseName,
         isActive: true
     }));
-  }, [dispatch, user, stores]);
+  }, [dispatch, user, stores, checkingShift]);
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');

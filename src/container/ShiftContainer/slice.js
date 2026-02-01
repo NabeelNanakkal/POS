@@ -63,6 +63,32 @@ const shiftSlice = createSlice({
     fetchShiftSummaryFail: (state, action) => {
       state.loading = false;
       state.error = action.payload;
+    },
+
+    // Break actions
+    startBreak: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    startBreakSuccess: (state, action) => {
+      state.loading = false;
+      state.currentShift = action.payload.data;
+    },
+    startBreakFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+    endBreak: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    endBreakSuccess: (state, action) => {
+      state.loading = false;
+      state.currentShift = action.payload.data;
+    },
+    endBreakFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
     }
   }
 });
@@ -71,7 +97,9 @@ export const {
   openShift, openShiftSuccess, openShiftFail,
   closeShift, closeShiftSuccess, closeShiftFail,
   fetchCurrentShift, fetchCurrentShiftSuccess, fetchCurrentShiftFail,
-  fetchShiftSummary, fetchShiftSummarySuccess, fetchShiftSummaryFail
+  fetchShiftSummary, fetchShiftSummarySuccess, fetchShiftSummaryFail,
+  startBreak, startBreakSuccess, startBreakFail,
+  endBreak, endBreakSuccess, endBreakFail
 } = shiftSlice.actions;
 
 export default shiftSlice.reducer;

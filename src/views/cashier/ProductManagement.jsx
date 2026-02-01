@@ -768,7 +768,9 @@ const ProductManagement = () => {
                                     <Typography variant="caption" sx={{ fontFamily: 'Monospace', color: 'text.secondary', fontWeight: 600 }}>BC: {product.barcode}</Typography>
                                 </Stack>
                                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1.5 }}>
-                                    <Typography variant="h5" fontWeight={900} color="primary.main">${product.retailPrice.toFixed(2)}</Typography>
+                                    <Typography variant="h5" fontWeight={900} color="primary.main">
+                                      ${(product.retailPrice || 0).toFixed(2)}
+                                    </Typography>
                                     <Chip 
                                         label={product.stock < 5 ? 'Low Stock' : 'In Stock'} 
                                         size="small" 
@@ -972,7 +974,7 @@ const ProductManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="subtitle1" fontWeight={900} color="primary.main">
-                        ${product.retailPrice.toFixed(2)}
+                        ${(product.retailPrice || 0).toFixed(2)}
                       </Typography>
                     </TableCell>
                     <TableCell>

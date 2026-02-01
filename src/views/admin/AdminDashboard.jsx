@@ -268,12 +268,7 @@ const AdminDashboard = () => {
       >
         {/* Left Col: Chart */}
         <Box sx={{ width: '100%', minHeight: { xs: 300, sm: 380 } }}>
-          <Paper elevation={0} sx={{ p: 3, borderRadius: 4, height: '100%' }}>
-            <Typography variant="h4" fontWeight={700} sx={{ mb: 3 }}>Company Revenue Trend</Typography>
-            <Box sx={{ height: 350 }}>
-              <RevenueChart />
-            </Box>
-          </Paper>
+          <RevenueChart />
         </Box>
 
         {/* Right Col: Store Performance */}

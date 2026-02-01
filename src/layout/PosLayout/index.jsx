@@ -17,8 +17,16 @@ import {
   Button
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useGetMenuMaster, handlerDrawerOpen } from 'api/menu';
+import { useDispatch } from 'react-redux';
+import { openShift, closeShift, fetchCurrentShift } from 'container/ShiftContainer/slice';
+import ShiftStartModal from 'views/cashier/ShiftStartModal';
+import LockClockOutlinedIcon from '@mui/icons-material/LockClockOutlined';
+
+import { TextField, InputAdornment, Tooltip } from '@mui/material';
+import axios from 'axios';
+import config from 'config';
 
 // Icons
 import GridViewIcon from '@mui/icons-material/GridView';
@@ -35,6 +43,7 @@ const drawerWidth = 260;
 const miniDrawerWidth = 80;
 
 import menuItems from 'menu-items';
+import { tokenManager } from 'utils/tokenManager';
 import { filterRoutesByRole } from 'utils/filterRoutesByRole';
 
 const PosLayout = () => {
@@ -43,7 +52,55 @@ const PosLayout = () => {
   const { menuMaster } = useGetMenuMaster();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = user?.role || 'Cashier';
+  const dispatch = useDispatch();
+  
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [shiftEndDialogOpen, setShiftEndDialogOpen] = useState(false);
+  const [showShiftModal, setShowShiftModal] = useState(false);
+
+  const [activeShift, setActiveShift] = useState(null);
+
+  const isCashier = userRole.toUpperCase() === 'CASHIER';
+
+  useEffect(() => {
+    const checkShift = async () => {
+      if (isCashier) {
+        try {
+          const res = await axios.get(`${config.ip}/shifts/current`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+          });
+          if (res.data.success && res.data.data) {
+            setActiveShift(res.data.data);
+
+            localStorage.setItem('isShiftOpen', 'true');
+          } else {
+            setShowShiftModal(true);
+            localStorage.setItem('isShiftOpen', 'false');
+          }
+        } catch (err) {
+          console.error('Failed to check shift status', err);
+        }
+      }
+    };
+    checkShift();
+  }, [isCashier]);
+
+  const handleShiftStart = (balance) => {
+    const now = new Date();
+    const shiftData = {
+      startTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      startDate: now.toLocaleDateString(),
+      openingBalance: balance,
+      user: user?.name || 'Cashier',
+      shiftId: `#SH-${now.getTime()}`,
+      itemsSold: 0
+    };
+
+    localStorage.setItem('isShiftOpen', 'true');
+    localStorage.setItem('shiftData', JSON.stringify(shiftData));
+    dispatch(openShift({ openingBalance: balance }));
+    setShowShiftModal(false);
+  };
 
   // Get dynamic menu items filtered by role
   const filteredMenu = useMemo(() => {
@@ -58,11 +115,47 @@ const PosLayout = () => {
   
   const currentWidth = sidebarCollapsed ? miniDrawerWidth : drawerWidth;
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogoutClick = () => {
+    if (isCashier && localStorage.getItem('isShiftOpen') === 'true') {
+      setShiftEndDialogOpen(true);
+    } else {
+      setLogoutDialogOpen(true);
+    }
+  };
+
+  const handleLogoutConfirm = () => {
+    setLogoutDialogOpen(false);
+    if (isCashier && localStorage.getItem('isShiftOpen') === 'true') {
+      setShiftEndDialogOpen(true);
+    } else {
+      performLogout();
+    }
+  };
+
+  const performLogout = () => {
+    tokenManager.clearTokens();
     localStorage.removeItem('user');
+    localStorage.removeItem('isShiftOpen');
+    localStorage.removeItem('shiftData');
     window.location.replace('/login');
   };
+
+  const handleShiftEndLogout = () => {
+    localStorage.removeItem('isShiftOpen');
+    localStorage.removeItem('shiftData');
+    
+    dispatch(closeShift({ 
+      notes: `Shift closed automatically at logout.`
+    }));
+    
+    performLogout();
+  };
+
+  const handleJustLogout = () => {
+    performLogout();
+  };
+
+
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f3f4f6' }}>
@@ -264,7 +357,7 @@ const PosLayout = () => {
                   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
               }}
             >
-              {user.name ? user.name.charAt(0) : 'U'}
+              {(user.username || user.name) ? (user.username || user.name).split(/[\s_]+/).slice(0, 2).map(n => n[0]).join('').toUpperCase() : 'U'}
             </Avatar>
             {!sidebarCollapsed && (
               <>
@@ -276,12 +369,15 @@ const PosLayout = () => {
                     ID: {user.employeeId || (user.id || user._id || '0000').slice(-4).toUpperCase()}
                   </Typography>
                   <Typography variant="caption" fontWeight={700} sx={{ display: 'block', color: 'primary.main', fontSize: '0.65rem', mt: 0.3, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    {userRole}
+                  {userRole}
                   </Typography>
                 </Box>
+                
+
+
                 <IconButton 
                   size="small" 
-                  onClick={() => setLogoutDialogOpen(true)}
+                  onClick={handleLogoutClick}
                   sx={{ 
                       color: 'error.main', 
                       bgcolor: alpha(theme.palette.error.main, 0.08),
@@ -335,12 +431,73 @@ const PosLayout = () => {
                     fullWidth 
                     variant="contained" 
                     color="error" 
-                    onClick={handleLogout}
+                    onClick={handleLogoutConfirm}
                     sx={{ fontWeight: 700, borderRadius: 2, boxShadow: 'none' }}
                 >
                     Logout
                 </Button>
             </Stack>
+        </Box>
+      </Dialog>
+
+      <ShiftStartModal 
+        open={showShiftModal} 
+        onConfirm={handleShiftStart}
+        loading={false}
+      />
+
+      <Dialog
+        open={shiftEndDialogOpen}
+        onClose={() => setShiftEndDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <Box sx={{ p: 3 }}>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+            <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+              <LockClockOutlinedIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h5" fontWeight={800}>Shift End Options</Typography>
+              <Typography variant="caption" color="text.secondary">Ahmed, please choose an action</Typography>
+            </Box>
+          </Stack>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Would you like to end your active shift before logging out, or just logout and keep the shift open?
+          </Typography>
+          
+          <Stack spacing={2}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              onClick={handleShiftEndLogout}
+              startIcon={<LockClockOutlinedIcon />}
+              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+            >
+              End Shift & Logout
+            </Button>
+            
+            <Button
+              fullWidth
+              variant="outlined"
+              color="primary"
+              onClick={handleJustLogout}
+              startIcon={<LogoutIcon />}
+              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+            >
+              Logout (Keep Shift Open)
+            </Button>
+            <Button 
+              fullWidth 
+              onClick={() => setShiftEndDialogOpen(false)}
+              sx={{ fontWeight: 700, textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+          </Stack>
         </Box>
       </Dialog>
     </Box>

@@ -31,11 +31,13 @@ import { useOutletContext } from 'react-router-dom';
 
 // Animations
 import Lottie from 'lottie-react';
-import noDataAnimation from 'assets/animations/noDataLottie.json';
+import emptyCartAnimation from 'assets/animations/Shopping Cart Loader.json';
+import emptyProductsAnimation from 'assets/animations/empty.json';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
+import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -47,6 +49,8 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
 import HistoryIcon from '@mui/icons-material/History';
 import GridViewIcon from '@mui/icons-material/GridView';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import CancelIcon from '@mui/icons-material/Cancel'; // Ensure this is imported
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
@@ -57,7 +61,7 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn';
 import KeyboardOutlinedIcon from '@mui/icons-material/KeyboardOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import CancelIcon from '@mui/icons-material/Cancel';
+
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
@@ -67,9 +71,7 @@ import { fetchProducts } from 'container/ProductContainer/slice';
 import { fetchStores } from 'container/StoreContainer/slice';
 import { useSelector, useDispatch } from 'react-redux';
 import customerService from 'services/customerService';
-import shiftService from 'services/shiftService';
-import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import orderService from 'services/orderService';
 // Helper to match ProductManagement color logic
 const stringToColor = (string) => {
     let hash = 0;
@@ -117,10 +119,10 @@ const ProductCard = ({ product, onAdd }) => (
               bgcolor: 'grey.50',
               position: 'relative'
               }}>
-                  {product.images && product.images.length > 0 ? (
-                      <img 
-                        src={product.images[0]} 
-                        alt={product.name} 
+              {product.image ? (
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
                     style={{ 
                         width: '100%', 
                         height: '100%', 
@@ -1020,7 +1022,516 @@ const CameraScannerDialog = ({ open, onClose, onScan }) => {
     );
 };
 
-// Command Info Dialog
+
+// project imports
+import { toast } from 'react-toastify';
+
+// Checkout Dialog with Payment Keyboard
+const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtotal, tax, total, pricelistDiscountAmount, discountAmount, pricelist, onPaymentComplete, onDiscount, onNote, onHold, onMenuOpen, onUpdateItemPrice }) => {
+    const theme = useTheme();
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [recordedPayments, setRecordedPayments] = useState([]);
+    const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [editItem, setEditItem] = useState(null);
+    const [newPrice, setNewPrice] = useState('');
+    
+    useEffect(() => {
+        if (open) {
+            setPaymentAmount('');
+            setRecordedPayments([]);
+            setPaymentMethod('cash');
+        }
+    }, [open]);
+
+    const handleEditPrice = (item) => {
+        setEditItem(item);
+        setNewPrice(item.price.toString());
+    };
+
+    const saveNewPrice = () => {
+        if (editItem && newPrice && !isNaN(newPrice)) {
+            onUpdateItemPrice(editItem.id, parseFloat(newPrice));
+            setEditItem(null);
+            setNewPrice('');
+        }
+    };
+
+    const handleKeyPress = (value) => {
+        if (value === 'backspace') {
+            setPaymentAmount(prev => prev.slice(0, -1));
+        } else if (value === '.' && paymentAmount.includes('.')) {
+            return; // Don't allow multiple decimals
+        } else {
+            setPaymentAmount(prev => prev + value);
+        }
+    };
+
+    const handleQuickAmount = (amount) => {
+        if (amount === 'exact') {
+            setPaymentAmount(total.toFixed(2));
+        } else {
+            const current = parseFloat(paymentAmount || '0');
+            setPaymentAmount((current + amount).toFixed(2));
+        }
+    };
+
+    const currentInputAmount = parseFloat(paymentAmount || '0');
+    const totalPaid = recordedPayments.reduce((sum, p) => sum + p.amount, 0);
+    const remainingBalance = total - totalPaid;
+    const change = totalPaid - total;
+    const isValidPayment = totalPaid >= (total - 0.01); // Added tolerance for floating point precision
+
+    const handleAddPayment = (methodValue) => {
+        const amountToAdd = paymentAmount ? parseFloat(paymentAmount) : remainingBalance;
+        
+        if (amountToAdd <= 0) return;
+
+        // Prevent entering above total money
+        if (amountToAdd > (remainingBalance + 0.01)) { // Added 0.01 tolerance for float precision
+            toast.error(`Payment exceeds remaining balance of $${remainingBalance.toFixed(2)}`);
+            return;
+        }
+
+        setRecordedPayments(prev => [...prev, { method: methodValue, amount: amountToAdd }]);
+        setPaymentAmount('');
+    };
+
+    const handleRemovePayment = (index) => {
+        setRecordedPayments(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleCompletePayment = async () => {
+        if (!isValidPayment) {
+            alert('Insufficient payment amount!');
+            return;
+        }
+        
+        await onPaymentComplete(recordedPayments, totalPaid, change);
+        onClose();
+    };
+
+    return (
+        <Dialog 
+            open={open} 
+            // onClose={onClose} 
+            maxWidth="md" 
+            fullWidth
+            PaperProps={{ 
+                sx: { 
+                    borderRadius: 4, 
+                    height: '90vh',
+                    maxHeight: 800,
+                    overflow: 'hidden'
+                } 
+            }}
+        >
+            <DialogTitle sx={{ 
+                m: 0,
+                p: 0, // Reset to 0 and apply padding to children or sx
+                fontWeight: 800, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                borderBottom: '2px solid', 
+                borderColor: 'primary.light', 
+                py: 1.25, // Slightly reduced from 1.5
+                px: 2.5,
+                // bgcolor: alpha(theme.palette.primary.main, 0.04),
+                // background: `linear-gradient(to right, ${alpha(theme.palette.primary.main, 0.08)}, ${alpha(theme.palette.primary.main, 0.01)})`,
+                position: 'sticky',
+                top: 0,
+                zIndex: 1
+            }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                    <Box sx={{ 
+                        p: 0.8, 
+                        borderRadius: 2, 
+                        bgcolor: 'primary.main', 
+                        color: 'white',
+                        display: 'flex',
+                        boxShadow: '0 4px 10px ' + alpha(theme.palette.primary.main, 0.3)
+                    }}>
+                        <CreditCardOutlinedIcon sx={{ fontSize: '1.5rem' }} />
+                    </Box>
+                    {customer ? (
+                        <Box>
+                            <Typography variant="h4" fontWeight={900} color="text.primary" sx={{ lineHeight: 1.1, fontSize: '1.4rem', letterSpacing: '-0.02em' }}>
+                                {customer.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ mt: 0.1, letterSpacing: '0.01em', opacity: 0.9, fontSize: '0.875rem' }}>
+                                {customer.phone || 'No Phone Number'}
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <Typography variant="h4" fontWeight={900} color="text.primary" sx={{ fontSize: '1.4rem' }}>
+                            Checkout
+                        </Typography>
+                    )}
+                </Stack>
+                <IconButton onClick={onClose} size="small">
+                    <CancelIcon />
+                </IconButton>
+            </DialogTitle>
+            
+            <DialogContent sx={{ p: 0 }}>
+                <Grid container sx={{ height: '100%' }}>
+                    {/* Left Side - Cart Summary */}
+                    <Grid size={{ xs: 12, md: 6 }} sx={{ borderRight: { md: '1px solid' }, borderColor: 'divider', pt: 1.5, pb: 3, px: 3, display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="h6" fontWeight={700} gutterBottom>Order Summary</Typography>
+                        
+
+
+                        {/* Cart Items */}
+                        <Box sx={{ 
+                            maxHeight: 240,
+                            overflowY: 'auto', 
+                            mb: 2, 
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            bgcolor: 'grey.50',
+                            p: 1.5,
+                            '&::-webkit-scrollbar': { width: 4 } 
+                        }}>
+                            {cart.map((item, index) => (
+                                <Paper key={index} elevation={0} sx={{ 
+                                    p: 1.5, 
+                                    mb: 1.25, 
+                                    borderRadius: 2.5, 
+                                    bgcolor: 'white', 
+                                    border: '1px solid',
+                                    borderColor: item.isPriceOverridden ? 'primary.light' : 'grey.100',
+                                    transition: 'all 0.2s',
+                                    '&:hover': { borderColor: 'primary.light', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }
+                                }}>
+                                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                        <Box sx={{ flex: 1 }}>
+                                            <Stack direction="row" alignItems="center" spacing={1}>
+                                                <Typography variant="body1" fontWeight={700} color="text.primary" sx={{ fontSize: '0.9rem' }}>{item.name}</Typography>
+                                                {item.isPriceOverridden && (
+                                                    <Chip label="Price Adjusted" size="small" color="primary" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700 }} />
+                                                )}
+                                            </Stack>
+                                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25 }}>
+                                                 <Chip label={`x${item.quantity}`} size="small" sx={{ height: 18, bgcolor: 'primary.lighter', color: 'primary.main', fontWeight: 800, fontSize: '0.65rem' }} />
+                                                 <Stack direction="row" alignItems="center" spacing={0.5} onClick={() => handleEditPrice(item)} sx={{ cursor: 'pointer', '&:hover': { opacity: 0.7 } }}>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textDecoration: item.isPriceOverridden ? 'line-through' : 'none' }}>
+                                                        @ ${item.originalPrice ? parseFloat(item.originalPrice).toFixed(2) : item.price.toFixed(2)}
+                                                    </Typography>
+                                                    {item.isPriceOverridden && (
+                                                        <Typography variant="body2" color="primary.main" fontWeight={700} sx={{ fontSize: '0.75rem' }}>
+                                                            ${item.price.toFixed(2)}
+                                                        </Typography>
+                                                    )}
+                                                    <EditOutlinedIcon sx={{ fontSize: '0.8rem', color: 'text.disabled' }} />
+                                                 </Stack>
+                                            </Stack>
+                                        </Box>
+                                        <Typography variant="h6" fontWeight={800} color="primary.main" sx={{ fontSize: '0.95rem' }}>
+                                            ${(item.price * item.quantity).toFixed(2)}
+                                        </Typography>
+                                    </Stack>
+                                </Paper>
+                            ))}
+                        </Box>
+
+                        {/* Actions Grid */}
+                        <Grid container spacing={1.5} sx={{ mb: 3 }}>
+                            <Grid size={{ xs: 3 }}>
+                                <Button 
+                                    fullWidth 
+                                    variant={discount > 0 ? "contained" : "outlined"} 
+                                    onClick={onDiscount}
+                                    sx={{ 
+                                        borderRadius: 2, 
+                                        py: 0.5,
+                                        height: 38,
+                                        fontWeight: 800,
+                                        borderWidth: discount > 0 ? 0 : 2,
+                                        bgcolor: discount > 0 ? 'primary.main' : 'transparent',
+                                        '&:hover': { borderWidth: discount > 0 ? 0 : 2 }
+                                    }}
+                                >
+                                    <LocalOfferOutlinedIcon sx={{ fontSize: '1.2rem' }} />
+                                </Button>
+                            </Grid>
+                            <Grid size={{ xs: 3 }}>
+                                <Button 
+                                    fullWidth 
+                                    variant={note ? "contained" : "outlined"} 
+                                    onClick={onNote}
+                                    sx={{ 
+                                        borderRadius: 2, 
+                                        py: 0.5,
+                                        height: 38,
+                                        fontWeight: 800,
+                                        borderWidth: 2,
+                                        '&:hover': { borderWidth: 2 }
+                                    }}
+                                >
+                                    <NoteAltOutlinedIcon sx={{ fontSize: '1.2rem' }} />
+                                </Button>
+                            </Grid>
+                            <Grid size={{ xs: 3 }}>
+                                <Button 
+                                    fullWidth 
+                                    variant="outlined" 
+                                    onClick={onHold}
+                                    disabled={cart.length === 0}
+                                    sx={{ 
+                                        borderRadius: 2, 
+                                        py: 0.5, 
+                                        height: 38,
+                                        fontWeight: 800, 
+                                        borderWidth: 2,
+                                        '&:hover': { borderWidth: 2 }
+                                    }}
+                                >
+                                    <PauseCircleOutlineIcon sx={{ fontSize: '1.2rem' }} />
+                                </Button>
+                            </Grid>
+                            <Grid size={{ xs: 3 }}>
+                                <Button 
+                                    fullWidth 
+                                    variant="outlined" 
+                                    onClick={onMenuOpen}
+                                    sx={{ 
+                                        borderRadius: 2, 
+                                        py: 0.5, 
+                                        height: 38,
+                                        fontWeight: 800, 
+                                        borderWidth: 2,
+                                        '&:hover': { borderWidth: 2 }
+                                    }}
+                                >
+                                    <MoreVertIcon sx={{ fontSize: '1.2rem' }} />
+                                </Button>
+                            </Grid>
+                        </Grid>
+
+                        {/* Note Display (Optional, since button is clearer now) */}
+                        {note && (
+                            <Paper elevation={0} sx={{ p: 1.5, mb: 2, borderRadius: 2, bgcolor: alpha(theme.palette.warning.main, 0.05), border: '1px dashed', borderColor: alpha(theme.palette.warning.main, 0.2) }}>
+                                <Stack direction="row" spacing={1} alignItems="flex-start">
+                                    <NoteAltOutlinedIcon sx={{ fontSize: '1rem', color: 'warning.main', mt: 0.2 }} />
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                        {note}
+                                    </Typography>
+                                </Stack>
+                            </Paper>
+                        )}
+
+                        {/* Totals */}
+                        <Stack spacing={1.5}>
+
+                            <Stack direction="row" justifyContent="space-between">
+                                <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                                <Typography variant="body2" fontWeight={700}>${subtotal.toFixed(2)}</Typography>
+                            </Stack>
+                            {pricelist !== 'standard' && (
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="primary.main" fontWeight={600}>
+                                        {pricelist === 'wholesale' ? 'Wholesale Disc (5%)' : 'VIP Discount (10%)'}
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={700} color="primary.main">-${pricelistDiscountAmount.toFixed(2)}</Typography>
+                                </Stack>
+                            )}
+                            {discount > 0 && (
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="error.main" fontWeight={600}>Discount ({discount}%)</Typography>
+                                    <Typography variant="body2" fontWeight={700} color="error.main">-${discountAmount.toFixed(2)}</Typography>
+                                </Stack>
+                            )}
+                            <Stack direction="row" justifyContent="space-between">
+                                <Typography variant="body2" color="text.secondary">Tax (8%)</Typography>
+                                <Typography variant="body2" fontWeight={700}>${tax.toFixed(2)}</Typography>
+                            </Stack>
+                            <Divider />
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Typography variant="h6" fontWeight={800}>Total</Typography>
+                                <Typography variant="h4" fontWeight={900} color="primary.main">${total.toFixed(2)}</Typography>
+                            </Stack>
+                        </Stack>
+                    </Grid>
+
+                    {/* Right Side - Payment Keyboard */}
+                    <Grid size={{ xs: 12, md: 6 }} sx={{ pt: 1.5, pb: 3, px: 3, display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="h6" fontWeight={700} gutterBottom>Payment</Typography>
+                        
+                        {/* Payment Method Selection */}
+                        <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+                            {[
+                                { value: 'cash', label: 'Cash', icon: '💵' },
+                                { value: 'card', label: 'Card', icon: '💳' },
+                                { value: 'digital', label: 'Digital', icon: '📱' }
+                            ].map(method => (
+                                <Button
+                                    key={method.value}
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => handleAddPayment(method.value)}
+                                    sx={{ 
+                                        py: 1, 
+                                        borderRadius: 2,
+                                        fontWeight: 700,
+                                        fontSize: '0.85rem'
+                                    }}
+                                >
+                                    <Stack alignItems="center" spacing={0.25}>
+                                        <Typography sx={{ fontSize: '1.25rem' }}>{method.icon}</Typography>
+                                        <Typography 
+                                            variant="caption" 
+                                            fontWeight={700}
+                                            sx={{ fontSize: '0.7rem' }}
+                                        >
+                                            {method.label}
+                                        </Typography>
+                                    </Stack>
+                                </Button>
+                            ))}
+                        </Stack>
+
+                        {/* Amount Display */}
+                        <Paper elevation={0} sx={{ p: 2, mb: 1, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.05), border: '2px solid', borderColor: alpha(theme.palette.primary.main, 0.2) }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} gutterBottom display="block" sx={{ fontSize: '0.7rem' }}>
+                                Amount Tendered
+                            </Typography>
+                            <Typography variant="h4" fontWeight={900} color="primary.main" sx={{ mb: 1.5, minHeight: 40, fontSize: '1.75rem' }}>
+                                ${paymentAmount || '0.00'}
+                            </Typography>
+                            
+                            {/* Recorded Payments List */}
+                            {recordedPayments.length > 0 && (
+                                <Box sx={{ mt: 1, mb: 2, maxHeight: 100, overflowY: 'auto', p: 1, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 2 }}>
+                                    {recordedPayments.map((p, idx) => (
+                                        <Stack key={idx} direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                <Typography variant="caption" fontWeight={800} sx={{ textTransform: 'capitalize', color: 'text.primary' }}>
+                                                    {p.method}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    ${p.amount.toFixed(2)}
+                                                </Typography>
+                                            </Stack>
+                                            <IconButton size="small" onClick={() => handleRemovePayment(idx)} sx={{ p: 0.2 }}>
+                                                <CancelIcon sx={{ fontSize: '0.9rem', color: 'error.light' }} />
+                                            </IconButton>
+                                        </Stack>
+                                    ))}
+                                </Box>
+                            )}
+                            
+                            <Stack direction="row" justifyContent="space-between" sx={{ pt: 1.5, borderTop: '1px dashed', borderColor: 'divider' }}>
+                                <Typography variant="body2" fontWeight={600}>
+                                    {totalPaid >= total ? 'Change' : 'Balance Due'}
+                                </Typography>
+                                <Typography variant="h6" fontWeight={800} color={totalPaid >= total ? 'success.main' : 'error.main'}>
+                                    ${totalPaid >= total ? change.toFixed(2) : Math.abs(remainingBalance).toFixed(2)}
+                                </Typography>
+                            </Stack>
+                            
+                            {totalPaid > 0 && (
+                                <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Total Paid</Typography>
+                                    <Typography variant="caption" fontWeight={700}>${totalPaid.toFixed(2)}</Typography>
+                                </Stack>
+                            )}
+                        </Paper>
+
+                        {/* Numeric Keyboard */}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', mt: 1 }}>
+                            <Grid container spacing={1.5} sx={{ width: '100%' }}>
+                                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'backspace'].map((key) => (
+                                    <Grid size={{ xs: 4 }} key={key}>
+                                        <Button
+                                            fullWidth
+                                            variant="contained"
+                                            onClick={() => handleKeyPress(key)}
+                                            sx={{
+                                                height: '100%',
+                                                minHeight: 38, // Reduced from 55 to match action buttons
+                                                borderRadius: 2,
+                                                fontWeight: 800,
+                                                fontSize: '1rem', // Reduced from 1.25rem
+                                                bgcolor: key === 'backspace' ? 'error.main' : 'white',
+                                                color: key === 'backspace' ? 'white' : 'text.primary',
+                                                boxShadow: '0 2px 0 #e0e0e0', // Thinner shadow
+                                                border: '1px solid',
+                                                borderColor: key === 'backspace' ? 'error.dark' : 'grey.300',
+                                                transition: 'all 0.1s',
+                                                '&:active': {
+                                                    transform: 'translateY(2px)',
+                                                    boxShadow: 'none'
+                                                },
+                                                '&:hover': {
+                                                    bgcolor: key === 'backspace' ? 'error.dark' : 'grey.50',
+                                                    color: key === 'backspace' ? 'white' : 'text.primary'
+                                                }
+                                            }}
+                                        >
+                                            {key === 'backspace' ? <CancelIcon sx={{ fontSize: '1.2rem' }} /> : key}
+                                        </Button>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Box>
+
+                        {/* Clear Button */}
+                        <Button
+                            fullWidth
+                            variant="text"
+                            onClick={() => setPaymentAmount('')}
+                            color="error"
+                            sx={{ mt: 1, py: 1, borderRadius: 2, fontWeight: 700 }}
+                        >
+                            Reset Input
+                        </Button>
+                    </Grid>
+                </Grid>
+            </DialogContent>
+
+            <DialogActions sx={{ py: 1.25, px: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                <Button onClick={onClose} variant="outlined" sx={{ px: 3, py: 1, borderRadius: 2, fontWeight: 700, fontSize: '0.85rem' }}>
+                    Cancel
+                </Button>
+                <Button 
+                    onClick={handleCompletePayment} 
+                    variant="contained" 
+                    disabled={!isValidPayment}
+                    sx={{ px: 4, py: 1, borderRadius: 2, fontWeight: 800, fontSize: '0.9rem' }}
+                >
+                    Complete Payment
+                </Button>
+            </DialogActions>
+
+            {/* Price Edit Dialog */}
+            <Dialog open={!!editItem} onClose={() => setEditItem(null)} fullWidth maxWidth="xs">
+                <DialogTitle sx={{ fontWeight: 800 }}>Update Price</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ pt: 1 }}>
+                        <TextField 
+                            fullWidth 
+                            label="New Price" 
+                            type="number"
+                            value={newPrice} 
+                            onChange={(e) => setNewPrice(e.target.value)}
+                            autoFocus
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                sx: { fontWeight: 700, fontSize: '1.2rem' }
+                            }}
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => setEditItem(null)} color="inherit">Cancel</Button>
+                    <Button onClick={saveNewPrice} variant="contained" disabled={!newPrice}>Update Price</Button>
+                </DialogActions>
+            </Dialog>
+        </Dialog>
+    );
+};
+
 const InfoDialog = ({ open, onClose }) => {
     const theme = useTheme();
     return (
@@ -1067,42 +1578,12 @@ const PosTerminal = () => {
   const { user } = useSelector((state) => state.login);
   const { stores } = useSelector((state) => state.store);
 
-  // Shift Validation state
-  const [checkingShift, setCheckingShift] = useState(true);
-  const navigate = useNavigate();
-
-  // 1. Initial Verification & Setup (Runs Once)
+  // Initial Fetch logic
   useEffect(() => {
-    const verifyAndSetup = async () => {
-        try {
-             // Verify Shift
-             const shiftRes = await shiftService.getCurrentShift();
-             if (!shiftRes.success || !shiftRes.data) {
-                 toast.warning('Active shift required to access POS');
-                 navigate('/pos/shift');
-                 return;
-             }
-             setCheckingShift(false);
+    dispatch(fetchStores());
+  }, [dispatch]);
 
-             // Validation: load stores if empty
-             dispatch(fetchStores()); 
-        } catch (err) {
-            console.error("POS Shift Check Error:", err);
-             if (err.message && err.message.includes('Network Error')) {
-                 toast.error('Backend connection failed');
-            } else {
-                 toast.error('Failed to verify shift');
-                 navigate('/pos/shift');
-            }
-        }
-    };
-    verifyAndSetup();
-  }, [dispatch, navigate]);
-
-  // 2. Load Products (Reacts to User/Store changes)
   useEffect(() => {
-    if (checkingShift) return;
-
     // Determine warehouse filter
     let warehouseName = '';
     if (user?.store) {
@@ -1116,11 +1597,11 @@ const PosTerminal = () => {
 
     dispatch(fetchProducts({ 
         page: 1, 
-        limit: 1000, 
+        limit: 1000, // Fetch large batch for POS 
         warehouseName: warehouseName,
         isActive: true
     }));
-  }, [dispatch, user, stores, checkingShift]);
+  }, [dispatch, user, stores]);
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1146,6 +1627,7 @@ const PosTerminal = () => {
   const [isPricelistDialogOpen, setIsPricelistDialogOpen] = useState(false);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
+  const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
   const [pricelist, setPricelist] = useState('standard');
 
   // Hardware Scanner Hook
@@ -1260,6 +1742,22 @@ const PosTerminal = () => {
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
+  const updateItemPrice = (id, newPrice) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === id) {
+        // Store original price if not already stored
+        const originalPrice = item.originalPrice || item.price;
+        return {
+          ...item,
+          price: parseFloat(newPrice),
+          originalPrice: originalPrice,
+          isPriceOverridden: true
+        };
+      }
+      return item;
+    }));
+  };
+
   const handleHoldBill = () => {
     if (cart.length === 0) return;
     
@@ -1311,7 +1809,7 @@ const PosTerminal = () => {
     handleMenuClose();
   };
 
-  const handlePayment = async () => {
+  const handlePayment = () => {
     if (cart.length === 0) {
       alert('Cart is empty!');
       return;
@@ -1323,8 +1821,35 @@ const PosTerminal = () => {
       return;
     }
 
+    // Open checkout dialog
+    setIsCheckoutDialogOpen(true);
+  };
+
+  const handlePaymentComplete = async (payments, totalPaid, change) => {
     try {
-      // Update customer purchase history
+      // toast.info('Processing payment...');
+      
+      // 1. Create the Order in the database
+      const orderData = {
+        customer: customer._id || customer.id,
+        items: cart.map(item => ({
+          product: item._id || item.id,
+          quantity: item.quantity,
+          price: item.price,
+          discount: item.discount || 0
+        })),
+        total: total,
+        payments: payments.map(p => ({
+          method: p.method === 'digital' ? 'DIGITAL' : p.method.toUpperCase(),
+          amount: p.amount
+        })),
+        discount: discountAmount,
+        notes: note
+      };
+
+      await orderService.createOrder(orderData);
+
+      // 2. Update customer purchase history
       const response = await customerService.updatePurchaseHistory(
         customer._id || customer.id,
         total
@@ -1335,17 +1860,29 @@ const PosTerminal = () => {
         setCustomer(response.data);
       }
 
+      // Generate payment breakdown for the message
+      const paymentBreakdown = payments.map(p => `${p.method.toUpperCase()}: $${p.amount.toFixed(2)}`).join('\n');
+      const changeMsg = change > 0 ? `\n\nTotal Change: $${change.toFixed(2)}` : '';
+
       // Show success message
-      alert(`Payment of $${total.toFixed(2)} processed successfully for ${customer.name}!\n\nLast Purchase: $${total.toFixed(2)}\nTotal Spent: $${response.data?.totalSpent?.toFixed(2) || 'N/A'}`);
+      toast.success(`Payment of $${total.toFixed(2)} processed successfully!`, {
+        position: "top-center",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true
+      });
 
       // Clear cart and reset transaction
       setCart([]);
       setDiscount(0);
       setNote('');
+      setIsCheckoutDialogOpen(false);
       // Keep customer selected for next transaction
     } catch (error) {
       console.error('Error processing payment:', error);
-      alert('Failed to process payment. Please try again.');
+      toast.error('Failed to process payment. Please try again.');
     }
   };
 
@@ -1466,13 +2003,36 @@ const PosTerminal = () => {
             '&::-webkit-scrollbar': { width: 6 },
             '&::-webkit-scrollbar-thumb': { bgcolor: 'grey.300', borderRadius: 3 }
         }}>
-            <Grid container spacing={1.5}>
-                {filteredProducts.map(product => (
-                    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }} key={product.id}>
-                        <ProductCard product={product} onAdd={addToCart} />
-                    </Grid>
-                ))}
-            </Grid>
+            {filteredProducts.length === 0 ? (
+                <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    height: '100%',
+                    py: 8 
+                }}>
+                    <Box sx={{ width: 300, mb: 2 }}>
+                        <Lottie animationData={emptyProductsAnimation} loop={true} />
+                    </Box>
+                    <Typography variant="h6" color="text.secondary" fontWeight={700} gutterBottom>
+                        No Products Available
+                    </Typography>
+                    <Typography variant="body2" color="text.disabled" textAlign="center" sx={{ maxWidth: 400 }}>
+                        {searchQuery || selectedCategory !== 'all' 
+                            ? 'No products match your search or filter. Try adjusting your criteria.'
+                            : 'No products found in your store. Please add products to get started.'}
+                    </Typography>
+                </Box>
+            ) : (
+                <Grid container spacing={1.5}>
+                    {filteredProducts.map(product => (
+                        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }} key={product.id}>
+                            <ProductCard product={product} onAdd={addToCart} />
+                        </Grid>
+                    ))}
+                </Grid>
+            )}
         </Box>
       </Box>
 
@@ -1595,11 +2155,14 @@ const PosTerminal = () => {
         }}>
             {cart.length === 0 ? (
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.8, py: 4 }}>
-                    <Box sx={{ width: 140, mb: -2 }}>
-                        <Lottie animationData={noDataAnimation} loop={true} />
+                    <Box sx={{ width: 150, mb: 2 }}>
+                        <Lottie animationData={emptyCartAnimation} loop={true} />
                     </Box>
                     <Typography variant="body2" color="text.secondary" fontWeight={600}>
                         Your cart is empty
+                    </Typography>
+                    <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5 }}>
+                        Add items to get started
                     </Typography>
                 </Box>
             ) : (
@@ -1643,72 +2206,8 @@ const PosTerminal = () => {
             )}
         </Box>
 
-        {/* Actions */}
-        <Grid container spacing={1} sx={{ mt: 2, mb: 2.5 }}>
-            <Grid size={{ xs: 3.5 }}>
-                <Button 
-                    fullWidth 
-                    variant={discount > 0 ? "contained" : "outlined"} 
-                    onClick={() => setIsDiscountDialogOpen(true)}
-                    startIcon={<LocalOfferOutlinedIcon sx={{ display: { xs: 'none', lg: 'inline-flex' }, fontSize: '0.9rem !important' }} />} 
-                    sx={{ 
-                        borderRadius: 1.5, 
-                        py: 0.8, 
-                        fontSize: '0.65rem', 
-                        fontWeight: 800,
-                        bgcolor: discount > 0 ? alpha(theme.palette.primary.main, 1) : 'transparent',
-                        color: discount > 0 ? 'white' : 'primary.main'
-                    }}
-                >
-                    {discount > 0 ? `${discount}%` : '% Disc.'}
-                </Button>
-            </Grid>
-            <Grid size={{ xs: 3.5 }}>
-                <Button 
-                    fullWidth 
-                    variant={note ? "contained" : "outlined"} 
-                    onClick={() => setIsNoteDialogOpen(true)}
-                    startIcon={<NoteAltOutlinedIcon sx={{ display: { xs: 'none', lg: 'inline-flex' }, fontSize: '0.9rem !important' }} />} 
-                    sx={{ 
-                        borderRadius: 1.5, 
-                        py: 0.8, 
-                        fontSize: '0.65rem', 
-                        fontWeight: 800,
-                        bgcolor: note ? alpha(theme.palette.primary.main, 1) : 'transparent',
-                        color: note ? 'white' : 'primary.main'
-                    }}
-                >
-                    {note ? 'Edit Note' : 'Note'}
-                </Button>
-            </Grid>
-            <Grid size={{ xs: 3.5 }}>
-                <Button 
-                    fullWidth 
-                    variant="outlined" 
-                    onClick={handleHoldBill}
-                    disabled={cart.length === 0}
-                    startIcon={<PauseCircleOutlineIcon sx={{ display: { xs: 'none', lg: 'inline-flex' }, fontSize: '0.9rem !important' }} />} 
-                    sx={{ borderRadius: 1.5, py: 0.8, fontSize: '0.65rem', fontWeight: 800 }}
-                >
-                    Hold
-                </Button>
-            </Grid>
-            <Grid size={{ xs: 1.5 }}>
-                <IconButton 
-                    onClick={handleMenuOpen}
-                    sx={{ 
-                        borderRadius: 1.5, 
-                        border: '1px solid', 
-                        borderColor: 'divider',
-                        bgcolor: isMenuOpen ? alpha(theme.palette.primary.main, 0.05) : 'transparent',
-                        height: '100%',
-                        width: '100%'
-                    }}
-                >
-                    <MoreVertIcon sx={{ fontSize: '1.2rem' }} />
-                </IconButton>
-            </Grid>
-        </Grid>
+        {/* Actions Removed - Now in Checkout Modal */}
+        <Box sx={{ mb: 2 }} />
 
         <Menu
             anchorEl={anchorEl}
@@ -1754,63 +2253,50 @@ const PosTerminal = () => {
             </MenuItem>
         </Menu>
 
-        {/* Totals */}
-        <Stack spacing={1} sx={{ mb: 2.5 }}>
-            <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary" variant="body2">Subtotal</Typography>
-                <Typography fontWeight={700} variant="body2">${subtotal.toFixed(2)}</Typography>
-            </Stack>
-            {pricelist !== 'standard' && (
-                <Stack direction="row" justifyContent="space-between">
-                    <Typography color="primary.main" variant="body2" fontWeight={600}>
-                        {pricelist === 'wholesale' ? 'Wholesale Disc (5%)' : 'VIP Discount (10%)'}
-                    </Typography>
-                    <Typography fontWeight={700} variant="body2" color="primary.main">-${pricelistDiscountAmount.toFixed(2)}</Typography>
-                </Stack>
-            )}
-            {discount > 0 && (
-                <Stack direction="row" justifyContent="space-between">
-                    <Typography color="error.main" variant="body2" fontWeight={600}>Discount ({discount}%)</Typography>
-                    <Typography fontWeight={700} variant="body2" color="error.main">-${discountAmount.toFixed(2)}</Typography>
-                </Stack>
-            )}
-            <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary" variant="body2">Tax (8%)</Typography>
-                <Typography fontWeight={700} variant="body2">${tax.toFixed(2)}</Typography>
-            </Stack>
-            {note && (
-                <Paper elevation={0} sx={{ p: 1, borderRadius: 2, bgcolor: alpha(theme.palette.warning.main, 0.05), border: '1px dashed', borderColor: alpha(theme.palette.warning.main, 0.2) }}>
-                    <Stack direction="row" spacing={1} alignItems="flex-start">
-                        <NoteAltOutlinedIcon sx={{ fontSize: '1rem', color: 'warning.main', mt: 0.2 }} />
-                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', flex: 1 }}>
-                            {note}
-                        </Typography>
-                    </Stack>
-                </Paper>
-            )}
-            <Divider sx={{ my: 0.5 }} />
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="h5" fontWeight={800}>Total</Typography>
-                <Typography variant="h3" fontWeight={900} color="primary.main" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>${total.toFixed(2)}</Typography>
-            </Stack>
-        </Stack>
+        {/* Totals Section Removed - Now in Checkout Modal */}
+        <Box sx={{ mb: 2.5 }} />
 
-        <Button 
-            fullWidth 
-            variant="contained" 
-            size="large" 
-            onClick={handlePayment}
-            disabled={cart.length === 0}
-            endIcon={<KeyboardArrowDownIcon sx={{ transform: 'rotate(-90deg)' }} />}
-            sx={{ 
-                py: { xs: 1.5, sm: 1.8 }, 
-                borderRadius: 2.5, 
-                fontWeight: 800,
-                fontSize: { xs: '0.9rem', sm: '1rem' }
-            }}
-        >
-            Pay ${total.toFixed(2)}
-        </Button>
+        <Stack direction="row" spacing={1}>
+            <Tooltip title="Hold Bill (F8)">
+                <Button 
+                    variant="outlined" 
+                    onClick={handleHoldBill}
+                    disabled={cart.length === 0}
+                    sx={{ 
+                        borderRadius: 2, 
+                        minWidth: 48,
+                        px: 0,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        color: 'text.secondary',
+                        '&:hover': {
+                            borderColor: 'primary.main',
+                            color: 'primary.main',
+                            bgcolor: alpha(theme.palette.primary.main, 0.05)
+                        }
+                    }}
+                >
+                    <PauseCircleOutlineIcon />
+                </Button>
+            </Tooltip>
+            <Button 
+                fullWidth 
+                variant="contained" 
+                size="medium" 
+                onClick={handlePayment}
+                disabled={cart.length === 0}
+                endIcon={<KeyboardArrowDownIcon sx={{ transform: 'rotate(-90deg)' }} />}
+                sx={{ 
+                    py: 1, 
+                    borderRadius: 2, 
+                    fontWeight: 700,
+                    fontSize: { xs: '0.85rem', sm: '0.9rem' },
+                    flex: 1
+                }}
+            >
+                Checkout ${total.toFixed(2)}
+            </Button>
+        </Stack>
 
         <CustomerDialog 
             open={isCustomerDialogOpen} 
@@ -1875,9 +2361,31 @@ const PosTerminal = () => {
             externalScannedCode={lastScannedRefundCode}
         />
 
+
         <InfoDialog 
             open={isInfoDialogOpen}
             onClose={() => setIsInfoDialogOpen(false)}
+        />
+
+        <CheckoutDialog
+            open={isCheckoutDialogOpen}
+            onClose={() => setIsCheckoutDialogOpen(false)}
+            cart={cart}
+            customer={customer}
+            discount={discount}
+            note={note}
+            subtotal={subtotal}
+            tax={tax}
+            total={total}
+            pricelistDiscountAmount={pricelistDiscountAmount}
+            discountAmount={discountAmount}
+            pricelist={pricelist}
+            onPaymentComplete={handlePaymentComplete}
+            onDiscount={() => setIsDiscountDialogOpen(true)}
+            onNote={() => setIsNoteDialogOpen(true)}
+            onHold={handleHoldBill}
+            onMenuOpen={handleMenuOpen}
+            onUpdateItemPrice={updateItemPrice}
         />
       </Box>
     </Box>

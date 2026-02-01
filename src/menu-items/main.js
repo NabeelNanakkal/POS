@@ -68,7 +68,7 @@ const main = {
       type: 'item',
       url: '/pos/shift',
       icon: IconReceipt2,
-      permittedRoles: ['CASHIER'],
+      permittedRoles: ['MANAGER'],
       breadcrumbs: false
     },
     {

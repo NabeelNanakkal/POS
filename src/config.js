@@ -11,7 +11,8 @@ const config = {
   fontFamily: `'Roboto', sans-serif`,
   borderRadius: 4,
   env: import.meta.env.VITE_APP_ENV,
-  ip: import.meta.env.VITE_APP_API_ENDPOINT
+  ip: import.meta.env.VITE_APP_API_ENDPOINT || 'http://localhost:5000/api',
+  health: `${import.meta.env.VITE_APP_API_ENDPOINT || 'http://localhost:5000/api'}/health`
 };
 
 export default config;

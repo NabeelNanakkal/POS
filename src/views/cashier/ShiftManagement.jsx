@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Paper,
@@ -22,13 +23,20 @@ import {
   TableHead,
   TableRow,
   Avatar,
-  CircularProgress
+  List,
+  ListItem,
+  ListItemText,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Menu,
+  Tooltip
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 import TablePagination from '@mui/material/TablePagination';
-import { useSelector } from 'react-redux';
-import shiftService from 'services/shiftService';
-import { toast } from 'react-toastify';
+import axios from 'axios';
+import config from 'config';
 
 // Icons
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
@@ -37,123 +45,161 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SortIcon from '@mui/icons-material/Sort';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import CloseIcon from '@mui/icons-material/Close';
+import CoffeeIcon from '@mui/icons-material/Coffee';
 import LockClockOutlinedIcon from '@mui/icons-material/LockClockOutlined';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import HistoryIcon from '@mui/icons-material/History';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import CloseIcon from '@mui/icons-material/Close';
-import HistoryIcon from '@mui/icons-material/History';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import Lottie from 'lottie-react';
-import noDataAnimation from 'assets/animations/noDataLottie.json';
+import NoDataLottie from 'ui-component/NoDataLottie';
+import { startBreak, endBreak, fetchCurrentShift } from 'container/ShiftContainer/slice';
 
 const ShiftManagement = () => {
   const theme = useTheme();
-  const { user } = useSelector((state) => state.login);
+  const dispatch = useDispatch();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = (user?.role || 'CASHIER').toUpperCase();
+  const isManager = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TENANTADMIN'].includes(userRole);
+
+  const loginUser = useSelector((state) => state.shift.currentShift);
   
-  // State
+  const [shifts, setShifts] = useState([]);
+  const [totalShifts, setTotalShifts] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [shiftData, setShiftData] = useState(null);
-  const [openingBalance, setOpeningBalance] = useState('');
-  const [openEndShiftDialog, setOpenEndShiftDialog] = useState(false);
+  const [error, setError] = useState(null);
   
-  // Ending Shift State
+  // Advanced Filters
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'ALL',
+    startDate: '',
+    endDate: '',
+    sortBy: 'startTime',
+    sortOrder: 'desc'
+  });
+  
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const [isShiftOpen, setIsShiftOpen] = useState(() => {
+    return localStorage.getItem('isShiftOpen') === 'true';
+  });
+  const [shiftData, setShiftData] = useState(() => {
+    const saved = localStorage.getItem('shiftData');
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Effective shift data from Redux if available, otherwise fallback to local
+  const effectiveShift = loginUser || shiftData;
+
+  const [openingBalance, setOpeningBalance] = useState('');
+  const [payIns, setPayIns] = useState(0);
+  const [payOuts, setPayOuts] = useState(0);
+  const [payDialog, setPayDialog] = useState({ open: false, type: 'IN', amount: '', reason: '' });
+  const [openEndShiftDialog, setOpenEndShiftDialog] = useState(false);
   const [closingCash, setClosingCash] = useState('');
   const [closingCard, setClosingCard] = useState('');
   const [closingUpi, setClosingUpi] = useState('');
-  const [closingNotes, setClosingNotes] = useState('');
+  
+  // Break Details Dialog State
+  const [breakDetails, setBreakDetails] = useState({ open: false, list: [] });
 
-  // Pagination State
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [historyData, setHistoryData] = useState({ shifts: [], total: 0 });
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [viewHistory, setViewHistory] = useState(false);
 
-  // Pay In / Pay Out State
-  const [payDialog, setPayDialog] = useState({ open: false, type: 'IN', amount: '', reason: '' });
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setPage(0);
+  };
 
-  // Fetch current shift on mount
+  // Fetch shifts for Managers
   useEffect(() => {
-    fetchCurrentShift();
-    fetchShiftHistory();
-  }, []);
+    if (isManager) {
+      const fetchShifts = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const params = new URLSearchParams({
+             page: page + 1,
+             limit: rowsPerPage,
+             ...filters
+          });
+          
+          // Remove empty filters
+          if (!filters.search) params.delete('search');
+          if (filters.status === 'ALL') params.delete('status');
+          if (!filters.startDate) params.delete('startDate');
+          if (!filters.endDate) params.delete('endDate');
 
-  const fetchShiftHistory = async () => {
-      try {
-          setHistoryLoading(true);
-          const res = await shiftService.getShiftHistory({ page: page + 1, limit: rowsPerPage });
-          if (res.data && res.data.shifts) {
-              setHistoryData({ shifts: res.data.shifts, total: res.data.pagination.total });
+          const res = await axios.get(`${config.ip}/shifts/store?${params.toString()}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+            withCredentials: true
+          });
+          
+          if (res.data.success) {
+            // Check if response has new structure with pagination
+            if (res.data.data.shifts && res.data.data.pagination) {
+                setShifts(res.data.data.shifts);
+                setTotalShifts(res.data.data.pagination.total);
+            } else {
+                // Fallback for old structure (array only)
+                setShifts(Array.isArray(res.data.data) ? res.data.data : []);
+                setTotalShifts(Array.isArray(res.data.data) ? res.data.data.length : 0);
+            }
           }
-      } catch (err) {
-          console.error("Failed to load history", err);
-      } finally {
-          setHistoryLoading(false);
-      }
-  };
+        } catch (err) {
+          console.error('Failed to fetch shifts', err);
+          setError('Failed to load shift history. Please check your connection.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchShifts();
+    } else {
+        setLoading(false);
+    }
+  }, [isManager, page, rowsPerPage, filters]);
 
+  // Fetch current shift on mount for cashier
   useEffect(() => {
-      fetchShiftHistory();
-  }, [page, rowsPerPage]);
-
-  const fetchCurrentShift = async () => {
-    try {
-      setLoading(true);
-      const res = await shiftService.getCurrentShift();
-      if (res.success && res.data) {
-        setShiftData(res.data);
-      } else {
-        setShiftData(null);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to load shift status');
-    } finally {
-      setLoading(false);
+    if (!isManager) {
+      dispatch(fetchCurrentShift());
     }
-  };
+  }, [isManager]);
 
-  const handleStartShift = async () => {
+  const handleStartShift = () => {
     if (!openingBalance) return;
-    try {
-        const res = await shiftService.startShift({ 
-            openingBalance: parseFloat(openingBalance),
-            storeId: user?.store?.id || user?.store?._id || user?.store 
-        });
-        if (res.success) {
-            setShiftData(res.data);
-            toast.success('Shift started successfully');
-        }
-    } catch (err) {
-        console.error(err);
-        toast.error(err.message || 'Failed to start shift');
-    }
+    const now = new Date();
+    const newShift = {
+      startTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      startDate: now.toLocaleDateString(),
+      openingBalance: parseFloat(openingBalance),
+      user: user.username || user.name || 'Cashier',
+      shiftId: `#SH-${now.getTime()}`,
+      itemsSold: 0
+    };
+    setShiftData(newShift);
+    setIsShiftOpen(true);
+    localStorage.setItem('isShiftOpen', 'true');
+    localStorage.setItem('shiftData', JSON.stringify(newShift));
   };
 
-  const handleEndShift = async () => {
-    try {
-        const res = await shiftService.endShift({
-            actualCash: parseFloat(closingCash) || 0,
-            listActualCard: parseFloat(closingCard) || 0, // Note: Backend implementation might need adjustment if using list
-            listActualUpi: parseFloat(closingUpi) || 0,
-            notes: closingNotes
-        });
-        
-        if (res.success) {
-            setShiftData(null);
-            setOpenEndShiftDialog(false);
-            setOpeningBalance('');
-            setClosingCash('');
-            setClosingCard('');
-            setClosingUpi('');
-            setClosingNotes('');
-            toast.success('Shift ended successfully');
-            fetchShiftHistory(); // Refresh history
-        }
-    } catch (err) {
-        console.error(err);
-        toast.error(err.message || 'Failed to end shift');
-    }
+  const handleEndShift = () => {
+    setIsShiftOpen(false);
+    setShiftData(null);
+    setOpenEndShiftDialog(false);
+    localStorage.setItem('isShiftOpen', 'false');
+    localStorage.removeItem('shiftData');
   };
 
   const handleChangePage = (event, newPage) => {
@@ -165,91 +211,319 @@ const ShiftManagement = () => {
     setPage(0);
   };
 
+  const calculateExpectedCash = () => {
+    if (!shiftData) return 0;
+    return (shiftData.openingBalance || 0) + (systemTotals.cash || 0) + (payIns || 0) - (payOuts || 0); 
+  };
+
   const handleOpenPayDialog = (type) => {
     setPayDialog({ open: true, type, amount: '', reason: '' });
   };
 
-  const handleProcessPayTransaction = async () => {
+  const handleProcessPayTransaction = () => {
     const amount = parseFloat(payDialog.amount);
     if (!amount || amount <= 0) return;
 
-    try {
-        const res = await shiftService.addCashMovement({
-            type: payDialog.type,
-            amount,
-            reason: payDialog.reason
-        });
-        
-        if (res.success) {
-            setShiftData(res.data); // Update local state with new shift data (including movements)
-            setPayDialog({ ...payDialog, open: false });
-            toast.success(`Cash ${payDialog.type === 'IN' ? 'added' : 'removed'} successfully`);
-        }
-    } catch (err) {
-        toast.error('Failed to process cash movement');
+    if (payDialog.type === 'IN') {
+        setPayIns(prev => prev + amount);
+    } else {
+        setPayOuts(prev => prev + amount);
     }
+    setPayDialog({ ...payDialog, open: false });
   };
 
-  // Calculate totals from shift data
-  const calculateSystemTotals = () => {
-      if (!shiftData) return { cash: 0, card: 0, upi: 0 };
-      
-      // If paymentSummary exists (for closed shifts or established structure), use it
-      // But for active shifts, we might need realtime aggregation.
-      // For now, assuming paymentSummary might be updated or 0.
-      // The backend 'getCurrentShift' might not return live totals unless implemented.
-      // Let's rely on what the backend gives or default to existing structure.
-      
-      // Note: Backend 'getCurrentShift' currently returns static shift object. 
-      // To get live totals, the backend should aggregate orders.
-      // Assuming backend returns 'paymentSummary' even if partial, or we should request it.
-      // For this implementation, let's use what we have in shiftData.
-      
-      const cash = shiftData.paymentSummary?.cash || 0;
-      const card = shiftData.paymentSummary?.card || 0;
-      const upi = shiftData.paymentSummary?.upi || 0;
-      
-      return { cash, card, upi };
-  };
-  
-  const calculatePayInsOuts = () => {
-      if (!shiftData || !shiftData.cashMovements) return { ins: 0, outs: 0 };
-      let ins = 0;
-      let outs = 0;
-      shiftData.cashMovements.forEach(m => {
-          if (m.type === 'IN') ins += m.amount;
-          else outs += m.amount;
-      });
-      return { ins, outs };
+  // Mock System Totals for active shift
+  const systemTotals = {
+    cash: 1250.00,
+    card: 3400.50,
+    upi: 890.00
   };
 
-  const systemTotals = calculateSystemTotals();
-  const { ins: payIns, outs: payOuts } = calculatePayInsOuts();
+  const activeTransactions = []; // Mock to prevent crash if used
 
-  const calculateExpectedCash = () => {
-    if (!shiftData) return 0;
-    return (shiftData.openingBalance || 0) + systemTotals.cash + payIns - payOuts; 
+  const calculateTotalBreakTime = (breaks) => {
+    if (!breaks || !breaks.length) return '0 min';
+    let totalMs = 0;
+    let hasActive = false;
+    breaks.forEach(b => {
+      if (b.startTime && b.endTime) {
+        totalMs += new Date(b.endTime).getTime() - new Date(b.startTime).getTime();
+      } else if (b.startTime && !b.endTime) {
+        hasActive = true;
+        totalMs += new Date().getTime() - new Date(b.startTime).getTime();
+      }
+    });
+    const mins = Math.floor(totalMs / 60000);
+    if (hasActive) return `Active (${mins}m)`;
+    if (mins < 60) return `${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return `${hrs}h ${remainingMins}m`;
   };
 
   if (loading) {
-      return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}><CircularProgress /></Box>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <Typography variant="h5" color="text.secondary">Loading shift data...</Typography>
+      </Box>
+    );
+  }
+  if (isManager) {
+    return (
+      <Box sx={{ 
+          p: { xs: 2, md: 4 }, 
+          height: '100vh', 
+          overflowY: 'auto', 
+          bgcolor: '#f8fafc',
+          m: -3,
+          backgroundImage: `radial-gradient(at 0% 0%, ${alpha(theme.palette.primary.main, 0.03)} 0, transparent 50%), radial-gradient(at 50% 0%, ${alpha(theme.palette.primary.main, 0.05)} 0, transparent 50%)`,
+      }}>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+              p: 2, 
+              mb: 4, 
+              borderRadius: 4, 
+              border: '1px solid rgba(255, 255, 255, 0.3)', 
+              bgcolor: 'rgba(255, 255, 255, 0.7)',
+              backdropFilter: 'blur(20px)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.03)',
+          }}
+        >
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" sx={{ width: '100%' }}>
+            <Box sx={{ flex: 2.5, minWidth: { md: 300 } }}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search cashier name or ID..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                  sx: { borderRadius: 3, bgcolor: 'white', border: '1px solid #f1f5f9', '& fieldset': { border: 'none' } }
+                }}
+              />
+            </Box>
+            
+            <Box sx={{ flex: 1, minWidth: { md: 150 } }}>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  sx={{ borderRadius: 3, height: 40, bgcolor: 'white', border: '1px solid #f1f5f9', '& fieldset': { border: 'none' } }}
+                >
+                  <MenuItem value="ALL">All Status</MenuItem>
+                  <MenuItem value="OPEN">Open</MenuItem>
+                  <MenuItem value="CLOSED">Closed</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box sx={{ flex: 1.2, minWidth: { md: 160 } }}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => {
+                  handleFilterChange('startDate', e.target.value);
+                  handleFilterChange('endDate', e.target.value);
+                }}
+                InputProps={{
+                  sx: { borderRadius: 3, height: 40, bgcolor: 'white', border: '1px solid #f1f5f9', '& fieldset': { border: 'none' } }
+                }}
+              />
+            </Box>
+          </Stack>
+          {error && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'error.lighter', borderRadius: 2, border: '1px solid', borderColor: 'error.light' }}>
+              <Typography color="error.main" variant="body2" fontWeight={700}>{error}</Typography>
+            </Box>
+          )}
+        </Paper>
+
+        <Paper elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+          <TableContainer>
+            <Table>
+              <TableHead sx={{ bgcolor: 'grey.50' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Cashier</TableCell>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Opening</TableCell>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Start Time</TableCell>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>End Time</TableCell>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', textAlign: 'right' }}>Sales</TableCell>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', textAlign: 'right' }}>Cl. Bal</TableCell>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', textAlign: 'center' }}>Breaks</TableCell>
+                  <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {shifts.map((shift) => (
+                  <TableRow key={shift._id} hover>
+                    <TableCell>{new Date(shift.startTime).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.lighter', color: 'primary.main', fontSize: '0.875rem', fontWeight: 700 }}>
+                          {shift.user?.username?.substring(0, 2).toUpperCase() || 'US'}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={700}>{shift.user?.username || 'Unknown'}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                            {shift.employeeId || 'No ID'}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>${shift.openingBalance?.toFixed(2)}</TableCell>
+                    <TableCell>{new Date(shift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                    <TableCell>
+                      {shift.endTime ? new Date(shift.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700 }}>
+                      ${shift.totalSales?.toFixed(2) || '0.00'}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700 }}>
+                      {shift.status === 'CLOSED' 
+                        ? `$${(shift.closingBalance !== undefined ? shift.closingBalance : (shift.openingBalance + shift.totalSales)).toFixed(2)}` 
+                        : 'NA'}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Button 
+                        size="small" 
+                        startIcon={<CoffeeIcon fontSize="small" />}
+                        onClick={() => setBreakDetails({ open: true, list: shift.breaks || [] })}
+                        sx={{ 
+                          fontWeight: 700, 
+                          borderRadius: 2, 
+                          textTransform: 'none',
+                          color: shift.breaks?.length > 0 ? 'warning.main' : 'text.disabled',
+                          flexDirection: 'column',
+                          lineHeight: 1
+                        }}
+                      >
+                        <Typography variant="caption" fontWeight={800} sx={{ fontSize: '0.7rem' }}>
+                          {calculateTotalBreakTime(shift.breaks)}
+                        </Typography>
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={shift.status} 
+                        size="small" 
+                        color={shift.status === 'OPEN' ? 'success' : 'error'}
+                        variant="outlined"
+                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {shifts.length === 0 && !loading && (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center" sx={{ py: 5 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <NoDataLottie message="No shift history found for this store." size="15%" />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={totalShifts}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </Paper>
+
+        {/* Break Details Modal */}
+        <Dialog 
+          open={breakDetails.open} 
+          onClose={() => setBreakDetails({ ...breakDetails, open: false })}
+          maxWidth="xs"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 3 } }}
+        >
+          <DialogTitle sx={{ px: 3, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <CoffeeIcon color="warning" />
+              <Typography variant="h5" fontWeight={800}>Break List</Typography>
+            </Stack>
+            <IconButton onClick={() => setBreakDetails({ ...breakDetails, open: false })}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ p: 0 }}>
+            <List sx={{ pt: 0 }}>
+              {breakDetails.list.map((item, index) => (
+                <Box key={index}>
+                  <ListItem sx={{ py: 2 }}>
+                    <ListItemText
+                      primary={
+                        <Typography fontWeight={700} color="text.primary">
+                          {item.type || 'Other Break'}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box sx={{ mt: 0.5 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                             Start: {new Date(item.startTime).toLocaleTimeString()}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                             End: {item.endTime ? new Date(item.endTime).toLocaleTimeString() : 'Ongoing'}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <Chip 
+                      label={item.endTime ? "Finished" : "Active"} 
+                      size="small" 
+                      color={item.endTime ? "success" : "warning"}
+                      sx={{ fontWeight: 700, borderRadius: 1 }}
+                    />
+                  </ListItem>
+                  {index < breakDetails.list.length - 1 && <Divider />}
+                </Box>
+              ))}
+              {!breakDetails.list.length && (
+                <Box sx={{ pt: 0, pb: 4, textAlign: 'center' }}>
+                  <NoDataLottie message="No breaks recorded for this shift." size="130px" />
+                </Box>
+              )}
+            </List>
+          </DialogContent>
+        </Dialog>
+      </Box>
+    );
   }
 
-  if (!shiftData) {
+  // If not a manager and no shift is open, show "Open Shift" view
+  if (!isShiftOpen || !shiftData) {
     return (
-      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-        <Grid container spacing={4}>
-            <Grid size={{ xs: 12, md: 7 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', p: 3 }}>
+        <Grid container spacing={4} sx={{ maxWidth: 1000 }}>
+            <Grid item xs={12} md={7}>
                 <Paper
                 elevation={0}
                 sx={{
                     p: 5,
+                    height: '100%',
                     borderRadius: 4,
                     border: '1px solid',
                     borderColor: 'divider',
                     bgcolor: 'white',
                     display: 'flex',
                     flexDirection: 'column',
+                    justifyContent: 'center',
                 }}
                 >
                     <Stack direction="row" spacing={2} sx={{ mb: 4 }} alignItems="center">
@@ -287,7 +561,7 @@ const ShiftManagement = () => {
                     </Button>
                 </Paper>
             </Grid>
-            <Grid size={{ xs: 12, md: 5 }}>
+            <Grid item xs={12} md={5}>
                 <Paper
                     elevation={0}
                     sx={{
@@ -296,106 +570,17 @@ const ShiftManagement = () => {
                         bgcolor: 'grey.50',
                         border: '1px solid',
                         borderColor: 'divider',
+                        height: '100%'
                     }}
                 >
-                    <Typography variant="h6" fontWeight={800} sx={{ mb: 3 }}>Previous Shifts</Typography>
-                    
-                    {historyLoading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
-                    ) : historyData.shifts.length > 0 ? (
-                        <>
-                            <Stack spacing={2}>
-                                {historyData.shifts.map((shift) => (
-                                    <Paper 
-                                        key={shift._id} 
-                                        elevation={0}
-                                        sx={{ 
-                                            p: 2.5, 
-                                            borderRadius: 3, 
-                                            bgcolor: 'white', 
-                                            border: '1px solid', 
-                                            borderColor: 'divider',
-                                            transition: 'transform 0.2s, box-shadow 0.2s',
-                                            '&:hover': {
-                                                transform: 'translateY(-2px)',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                                                borderColor: 'primary.light'
-                                            }
-                                        }}
-                                    >
-                                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                                            <Box>
-                                                <Typography variant="subtitle2" fontWeight={800} color="text.primary">
-                                                    {new Date(shift.endTime).toLocaleDateString()}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                                                    {new Date(shift.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(shift.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                                </Typography>
-                                            </Box>
-                                            <Chip 
-                                                label="CLOSED" 
-                                                size="small" 
-                                                color="default"
-                                                sx={{ 
-                                                    fontWeight: 700, 
-                                                    borderRadius: 1.5, 
-                                                    height: 24,
-                                                    fontSize: '0.65rem',
-                                                    bgcolor: 'grey.100',
-                                                    color: 'text.secondary'
-                                                }} 
-                                            />
-                                        </Stack>
-                                        
-                                        <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
-                                        
-                                        <Grid container spacing={2}>
-                                            <Grid item xs={4}>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" gutterBottom>
-                                                    OPENING
-                                                </Typography>
-                                                <Typography variant="body2" fontWeight={700} color="text.primary">
-                                                    ${(shift.openingBalance || 0).toFixed(2)}
-                                                </Typography>
-                                            </Grid>
-                                            <Grid item xs={4}>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" gutterBottom>
-                                                    CASH
-                                                </Typography>
-                                                <Typography variant="body2" fontWeight={700} color="success.main">
-                                                    ${(shift.paymentSummary?.cash || 0).toFixed(2)}
-                                                </Typography>
-                                            </Grid>
-                                            <Grid item xs={4} sx={{ textAlign: 'right' }}>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" gutterBottom>
-                                                    TOTAL
-                                                </Typography>
-                                                <Typography variant="body2" fontWeight={800} color="primary.main">
-                                                    ${((shift.paymentSummary?.cash || 0) + (shift.paymentSummary?.card || 0) + (shift.paymentSummary?.upi || 0)).toFixed(2)}
-                                                </Typography>
-                                            </Grid>
-                                        </Grid>
-                                    </Paper>
-                                ))}
-                            </Stack>
-                            <TablePagination
-                                component="div"
-                                count={historyData.total}
-                                page={page}
-                                onPageChange={handleChangePage}
-                                rowsPerPage={rowsPerPage}
-                                onRowsPerPageChange={handleChangeRowsPerPage}
-                                rowsPerPageOptions={[5, 10, 25]}
-                            />
-                        </>
-                    ) : (
-                        <Box sx={{ textAlign: 'center', py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: 0.7 }}>
-                            <Box sx={{ width: 180, mb: 1 }}>
-                                <Lottie animationData={noDataAnimation} loop={true} />
-                            </Box>
-                            <Typography color="text.secondary" fontWeight={600}>No shift history found.</Typography>
-                        </Box>
-                    )}
+                    <Typography variant="h6" fontWeight={800} sx={{ mb: 3 }}>Previous Shift</Typography>
+                    <Stack spacing={2}>
+                        <DataRow label="Closed By" value="John Doe" />
+                        <DataRow label="End Time" value="Yesterday, 9:00 PM" />
+                        <Divider />
+                        <DataRow label="Total Sales" value="$4,530.50" bold />
+                        <DataRow label="Discrepancy" value="-$5.00" color="error.main" />
+                    </Stack>
                 </Paper>
             </Grid>
         </Grid>
@@ -413,19 +598,36 @@ const ShiftManagement = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.lighter', color: 'primary.main' }}><PersonOutlineIcon /></Avatar>
                 <Box>
-                    <Typography variant="subtitle2" fontWeight={800} sx={{ lineHeight: 1.2 }}>Shift Active</Typography>
+                    <Typography variant="subtitle2" fontWeight={800} sx={{ lineHeight: 1.2 }}>{effectiveShift?.user?.username || effectiveShift?.user}</Typography>
                     <Typography variant="caption" color="text.secondary">Cashier</Typography>
                 </Box>
             </Box>
             <Divider orientation="vertical" flexItem sx={{ height: 24, alignSelf: 'center' }} />
             <Box>
                 <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>Shift ID</Typography>
-                <Typography variant="body2" fontWeight={700}>{shiftData._id.slice(-6).toUpperCase()}</Typography>
+                <Typography variant="body2" fontWeight={700}>{effectiveShift?.shiftId || `#SH-${effectiveShift?._id?.substring(0,8)}`}</Typography>
             </Box>
             <Box>
                  <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>Started</Typography>
-                 <Chip label={new Date(shiftData.startTime).toLocaleTimeString()} size="small" color="success" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1, border: 'none', bgcolor: 'success.lighter' }} />
+                 <Chip label={effectiveShift?.startTime ? new Date(effectiveShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'} size="small" color="success" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1, border: 'none', bgcolor: 'success.lighter' }} />
             </Box>
+            <Divider orientation="vertical" flexItem sx={{ height: 24, alignSelf: 'center' }} />
+            <Button
+                variant="outlined"
+                color="warning"
+                startIcon={<CoffeeIcon />}
+                onClick={() => {
+                  const activeBreak = effectiveShift?.breaks?.find(b => !b.endTime);
+                  if (activeBreak) {
+                    dispatch(endBreak());
+                  } else {
+                    dispatch(startBreak({ type: 'OTHER', note: 'Break started from Shift Management' }));
+                  }
+                }}
+                sx={{ fontWeight: 700, borderRadius: 2 }}
+            >
+                {effectiveShift?.breaks?.find(b => !b.endTime) ? 'End Break' : 'Take Break'}
+            </Button>
         </Stack>
         <Button 
             variant="contained" 
@@ -438,26 +640,26 @@ const ShiftManagement = () => {
         </Button>
       </Paper>
 
-      {/* Sales Metrics Grid */}
+      {/* Sales Metrics Grid (Moved Here) */}
       <Grid container spacing={2} sx={{ mb: 3, width: '100%' }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} sx={{ flexGrow: 1 }}>
+        <Grid item xs={12} sm={6} md={3} lg={3} xl={3} sx={{ flexGrow: 1 }}>
             <DetailCard title="Total Sales" value={systemTotals.cash + systemTotals.card + systemTotals.upi} icon={<ReceiptLongIcon sx={{ fontSize: 32 }} />} color="primary" />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} sx={{ flexGrow: 1 }}>
+        <Grid item xs={12} sm={6} md={3} lg={3} xl={3} sx={{ flexGrow: 1 }}>
             <DetailCard title="Card Sales" value={systemTotals.card} icon={<CreditCardIcon sx={{ fontSize: 32 }} />} color="info" />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} sx={{ flexGrow: 1 }}>
+        <Grid item xs={12} sm={6} md={3} lg={3} xl={3} sx={{ flexGrow: 1 }}>
             <DetailCard title="UPI / Digital" value={systemTotals.upi} icon={<QrCode2Icon sx={{ fontSize: 32 }} />} color="warning" />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} sx={{ flexGrow: 1 }}>
-            <DetailCard title="Expected Cash" value={calculateExpectedCash()} icon={<AttachMoneyIcon sx={{ fontSize: 32 }} />} color="success" />
+        <Grid item xs={12} sm={6} md={3} lg={3} xl={3} sx={{ flexGrow: 1 }}>
+            <DetailCard title="Returns" value={45.00} icon={<HistoryIcon sx={{ fontSize: 32 }} />} color="error" isNegative />
         </Grid>
       </Grid>
 
       <Grid container spacing={3} sx={{ width: '100%' }}>
         
         {/* 2. Left Column: Drawer Management */}
-        <Grid size={{ xs: 12, md: 4, lg: 4 }} sx={{ display: 'flex', flexDirection: 'column', gap: 3 , flexGrow: 1}}>
+        <Grid item xs={12} md={4} lg={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3 , flexGrow: 1}}>
             
             {/* Drawer Card */}
             <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider', height: '100%' }}>
@@ -479,12 +681,12 @@ const ShiftManagement = () => {
                 </Stack>
 
                 <Grid container spacing={2} sx={{ mt: 4 }}>
-                    <Grid size={{ xs: 6 }}>
+                    <Grid item xs={6}>
                         <Button fullWidth variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => handleOpenPayDialog('IN')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
                             Pay In
                         </Button>
                     </Grid>
-                    <Grid size={{ xs: 6 }}>
+                    <Grid item xs={6}>
                          <Button fullWidth variant="outlined" color="error" startIcon={<RemoveCircleOutlineIcon />} onClick={() => handleOpenPayDialog('OUT')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
                             Pay Out
                         </Button>
@@ -492,57 +694,79 @@ const ShiftManagement = () => {
                 </Grid>
             </Paper>
 
+            
+
         </Grid>
 
-        {/* 3. Right Column: Transaction Log / Cash Movements */}
-        <Grid size={{ xs: 12, md: 8, lg: 8 }} sx={{ flexGrow: 1 }}>
+        {/* 3. Right Column: Transaction Log */}
+        <Grid item xs={12} md={8} lg={8} sx={{ flexGrow: 1 }}>
             <Paper elevation={0} sx={{ height: '100%', borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                         <Typography variant="subtitle1" fontWeight={800}>Cash Movements</Typography>
-                         <Typography variant="caption" color="text.secondary">Recent pay-ins and pay-outs</Typography>
+                         <Typography variant="subtitle1" fontWeight={800}>{viewHistory ? 'Previous Shift Log' : 'Transaction Log'}</Typography>
+                         <Typography variant="caption" color="text.secondary">{viewHistory ? 'Yesterday, 9:00 PM - 5:00 PM' : 'Today, Current Shift'}</Typography>
                     </Box>
+                    <Button 
+                        size="small" 
+                        variant={viewHistory ? "contained" : "outlined"} 
+                        color={viewHistory ? "secondary" : "primary"}
+                        startIcon={viewHistory ? <AccessTimeIcon /> : <HistoryIcon />}
+                        onClick={() => { setViewHistory(!viewHistory); setPage(0); }}
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+                    >
+                        {viewHistory ? 'Back to Current' : 'Load Previous'}
+                    </Button>
                 </Box>
                 <TableContainer sx={{ flexGrow: 1 }}>
                     <Table stickyHeader size="medium">
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{ fontWeight: 700, bgcolor: 'grey.50' }}>Time</TableCell>
-                                <TableCell sx={{ fontWeight: 700, bgcolor: 'grey.50' }}>Type</TableCell>
-                                <TableCell sx={{ fontWeight: 700, bgcolor: 'grey.50' }}>Reason</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 700, bgcolor: 'grey.50' }}>Amount</TableCell>
+                                <TableCell sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Time</TableCell>
+                                <TableCell sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Description</TableCell>
+                                <TableCell sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Type</TableCell>
+                                <TableCell sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Method</TableCell>
+                                <TableCell align="right" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', fontSize: '0.75rem', fontWeight: 700, bgcolor: 'grey.50' }}>Amount</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {shiftData.cashMovements && shiftData.cashMovements.length > 0 ? (
-                                shiftData.cashMovements.slice().reverse().map((row, index) => (
-                                <TableRow key={index} hover>
-                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                                        {new Date(row.timestamp).toLocaleTimeString()}
+                            {activeTransactions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
+                                <TableRow key={row.id} hover>
+                                    <TableCell sx={{ color: 'text.secondary', fontWeight: 500 }}>{row.time}</TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={600}>{row.desc}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{row.id}</Typography>
                                     </TableCell>
                                     <TableCell>
                                         <Chip 
                                             label={row.type} 
                                             size="small" 
-                                            color={row.type === 'IN' ? 'success' : 'error'}
-                                            sx={{ fontWeight: 700, borderRadius: 1 }}
+                                            sx={{ 
+                                                height: 24, 
+                                                fontWeight: 700, 
+                                                fontSize: '0.75rem', 
+                                                bgcolor: row.type === 'Sale' ? 'success.lighter' : (row.type === 'Return' ? 'error.lighter' : 'grey.100'),
+                                                color: row.type === 'Sale' ? 'success.main' : (row.type === 'Return' ? 'error.main' : 'text.secondary')
+                                            }} 
                                         />
                                     </TableCell>
-                                    <TableCell>{row.reason || '-'}</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700 }}>
-                                        ${row.amount.toFixed(2)}
+                                    <TableCell>{row.method}</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700, color: row.amount < 0 ? 'error.main' : 'inherit' }}>
+                                        {row.amount < 0 ? '-' : ''}${Math.abs(row.amount).toFixed(2)}
                                     </TableCell>
                                 </TableRow>
-                            ))) : (
-                                <TableRow>
-                                    <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                                        No cash movements recorded.
-                                    </TableCell>
-                                </TableRow>
-                            )}
+                            ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
+                <TablePagination
+                    rowsPerPageOptions={[5, 10, 25]}
+                    component="div"
+                    count={activeTransactions.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
             </Paper>
         </Grid>
 
@@ -561,7 +785,7 @@ const ShiftManagement = () => {
             <Box>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
                      <LockClockOutlinedIcon color="primary" sx={{ fontSize: 28 }} />
-                     <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: 0.5 }}>End Shift</Typography>
+                     <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: 0.5 }}>End Shift Reconciliation</Typography>
                 </Stack>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Verify system totals against actual cash.</Typography>
             </Box>
@@ -577,13 +801,19 @@ const ShiftManagement = () => {
                             onChange={setClosingCash}
                             icon={<AttachMoneyIcon />}
                         />
-                        <TextField
-                            fullWidth
-                            label="Closing Notes / Discrepancy Reason"
-                            multiline
-                            rows={2}
-                            value={closingNotes}
-                            onChange={(e) => setClosingNotes(e.target.value)}
+                        <ReconciliationRow 
+                            label="Card Terminal" 
+                            system={systemTotals.card} 
+                            value={closingCard} 
+                            onChange={setClosingCard}
+                            icon={<CreditCardIcon />}
+                        />
+                        <ReconciliationRow 
+                            label="UPI / Digital" 
+                            system={systemTotals.upi} 
+                            value={closingUpi} 
+                            onChange={setClosingUpi}
+                            icon={<QrCode2Icon />}
                         />
                     </Stack>
         </DialogContent>
@@ -660,7 +890,7 @@ const CalculationRow = ({ label, value, icon, color = 'text.primary' }) => (
             {icon}
             <Typography variant="body2" fontWeight={600} color="text.secondary">{label}</Typography>
         </Box>
-        <Typography variant="body1" fontWeight={700} color={color}>${(value || 0).toFixed(2)}</Typography>
+        <Typography variant="body1" fontWeight={700} color={color}>${value.toFixed(2)}</Typography>
     </Box>
 );
 

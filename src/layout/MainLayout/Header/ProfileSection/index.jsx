@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import Avatar from '@mui/material/Avatar';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -31,8 +31,12 @@ import useConfig from 'hooks/useConfig';
 import User1 from 'assets/images/users/user-round.svg';
 import { IconLogout, IconSearch, IconSettings, IconUser } from '@tabler/icons-react';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { userLogOut } from 'container/LoginContainer/slice';
+import { getUser } from 'utils/getUser';
+import { closeShift } from 'container/ShiftContainer/slice';
+import LockClockOutlinedIcon from '@mui/icons-material/LockClockOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 
 // ==============================|| PROFILE MENU ||============================== //
 
@@ -49,6 +53,7 @@ export default function ProfileSection() {
   const [selectedIndex] = useState(-1);
   const [open, setOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false); 
+  const [shiftEndDialogOpen, setShiftEndDialogOpen] = useState(false);
 
   const anchorRef = useRef(null);
 
@@ -62,7 +67,27 @@ export default function ProfileSection() {
 
   const handleLogoutConfirm = async () => {
     setLogoutDialogOpen(false);
-    dispatch(userLogOut())
+    
+    const user = getUser();
+    const isCashier = user?.role?.toUpperCase() === 'CASHIER';
+    if (isCashier && localStorage.getItem('isShiftOpen') === 'true') {
+      setShiftEndDialogOpen(true);
+    } else {
+      dispatch(userLogOut());
+    }
+  };
+
+  const handleShiftEndLogout = () => {
+    localStorage.removeItem('isShiftOpen');
+    localStorage.removeItem('shiftData');
+    dispatch(closeShift({}));
+    dispatch(userLogOut());
+    setShiftEndDialogOpen(false);
+  };
+
+  const handleJustLogout = () => {
+    dispatch(userLogOut());
+    setShiftEndDialogOpen(false);
   };
 
   const handleLogoutCancel = () => {
@@ -362,6 +387,54 @@ export default function ProfileSection() {
           >
             Logout
           </Button>
+        </DialogActions>
+      </Dialog>
+      
+      <Dialog
+        open={shiftEndDialogOpen}
+        onClose={() => setShiftEndDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ p: 1, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', display: 'flex' }}>
+            <LockClockOutlinedIcon />
+          </Box>
+          <Box>
+            <Typography variant="h5" fontWeight={800}>Shift End Options</Typography>
+            <Typography variant="caption" color="text.secondary">Select an action to continue logout</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, pt: 1 }}>
+          <DialogContentText sx={{ mb: 3 }}>
+            Would you like to end your active shift before logging out, or just logout and keep the shift open?
+          </DialogContentText>
+          <Stack spacing={2}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              onClick={handleShiftEndLogout}
+              startIcon={<LockClockOutlinedIcon />}
+              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+            >
+              End Shift & Logout
+            </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              color="primary"
+              onClick={handleJustLogout}
+              startIcon={<IconLogout size="1.2rem" />}
+              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+            >
+              Logout (Keep Shift Open)
+            </Button>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setShiftEndDialogOpen(false)} sx={{ fontWeight: 700, textTransform: 'none' }}>Cancel</Button>
         </DialogActions>
       </Dialog>
     </>

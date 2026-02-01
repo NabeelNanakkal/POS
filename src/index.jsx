@@ -32,6 +32,7 @@ const root = createRoot(container);
 import { store } from './store/index';
 import { Provider } from 'react-redux';
 import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 root.render(
   <Provider store={store}>

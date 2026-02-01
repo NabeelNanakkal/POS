@@ -66,6 +66,16 @@ const orderService = {
     const response = await api.get('/orders/stats', { params });
     return response;
   },
+
+  /**
+   * Get top 5 selling products in the last week
+   * @param {Object} params - Query parameters (store)
+   * @returns {Promise} Response with top products
+   */
+  async getTopSellingItems(params = {}) {
+    const response = await api.get('/orders/top-selling', { params });
+    return response;
+  },
 };
 
 export default orderService;

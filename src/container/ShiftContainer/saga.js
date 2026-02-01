@@ -5,7 +5,9 @@ import {
   openShift, openShiftSuccess, openShiftFail,
   closeShift, closeShiftSuccess, closeShiftFail,
   fetchCurrentShift, fetchCurrentShiftSuccess, fetchCurrentShiftFail,
-  fetchShiftSummary, fetchShiftSummarySuccess, fetchShiftSummaryFail
+  fetchShiftSummary, fetchShiftSummarySuccess, fetchShiftSummaryFail,
+  startBreak, startBreakSuccess, startBreakFail,
+  endBreak, endBreakSuccess, endBreakFail
 } from './slice';
 
 function* postOpenShift(action) {
@@ -71,9 +73,42 @@ function* getShiftSummary(action) {
   }
 }
 
+function* postStartBreak(action) {
+  try {
+    const params = {
+      api: `${config.ip}/shifts/break/start`,
+      method: 'POST',
+      successAction: startBreakSuccess(),
+      failAction: startBreakFail(),
+      body: JSON.stringify(action.payload),
+      authourization: 'Bearer'
+    };
+    yield call(commonApi, params);
+  } catch (error) {
+    console.error('Start break failed:', error);
+  }
+}
+
+function* postEndBreak() {
+  try {
+    const params = {
+      api: `${config.ip}/shifts/break/end`,
+      method: 'POST',
+      successAction: endBreakSuccess(),
+      failAction: endBreakFail(),
+      authourization: 'Bearer'
+    };
+    yield call(commonApi, params);
+  } catch (error) {
+    console.error('End break failed:', error);
+  }
+}
+
 export default function* ShiftActionWatcher() {
   yield takeEvery(openShift.type, postOpenShift);
   yield takeEvery(closeShift.type, postCloseShift);
   yield takeEvery(fetchCurrentShift.type, getCurrentShift);
   yield takeEvery(fetchShiftSummary.type, getShiftSummary);
+  yield takeEvery(startBreak.type, postStartBreak);
+  yield takeEvery(endBreak.type, postEndBreak);
 }

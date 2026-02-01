@@ -13,8 +13,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Stack,
-  Avatar
+  Avatar,
+  CircularProgress
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 // Icons
@@ -30,9 +32,15 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
+import dayjs from 'dayjs';
 
 // Components
 import RevenueChart from './components/RevenueChart';
+import NoDataLottie from 'ui-component/NoDataLottie';
+
+// Services
+import orderService from 'services/orderService';
+import dashboardService from 'services/dashboardService';
 
 const StatCard = ({ title, value, icon: Icon, color, trend }) => (
   <Paper
@@ -193,19 +201,89 @@ const MainDashboard = () => {
   const user = JSON.parse(localStorage.getItem('user'));
   const userRole = user?.role || 'Cashier';
 
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [topProducts, setTopProducts] = useState([]);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalTransactions: 0,
+    totalCustomers: 0,
+    activeProducts: 0,
+    revenueTrend: '+0%',
+    transactionsTrend: '+0%',
+    customersTrend: '+0%',
+    productsTrend: 'Stable'
+  });
+  const rowsPerPage = 5;
+
   useEffect(() => {
     const savedStatus = localStorage.getItem('isShiftOpen') === 'true';
     const savedData = localStorage.getItem('shiftData');
     setIsShiftOpen(savedStatus);
     if (savedData) setShiftData(JSON.parse(savedData));
-  }, []);
+    
+    loadOrders();
+    loadTopProducts();
+    loadStats();
+  }, [page]);
+
+  const loadOrders = async () => {
+    setIsLoading(true);
+    try {
+      const response = await orderService.getOrders({ 
+        page: page + 1, 
+        limit: rowsPerPage,
+        store: user?.store?._id || user?.store
+      });
+      if (response.data) {
+        setOrders(response.data.orders);
+        setTotalOrders(response.data.pagination?.total || 0);
+      }
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadTopProducts = async () => {
+    try {
+      const response = await orderService.getTopSellingItems({
+        store: user?.store?._id || user?.store
+      });
+      if (response.data) {
+        setTopProducts(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading top products:', error);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await dashboardService.getDashboardStats({
+        store: user?.store?._id || user?.store
+      });
+      if (response.data) {
+        setStats(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error);
+    }
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
 
   const isAdmin = userRole === 'TenantAdmin';
   const isManager = userRole === 'Manager';
   const isCashier = userRole === 'Cashier';
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 1600, mx: 'auto', px: { xs: 2, md: 3 }, py: 3 }}>
+    <Box sx={{ width: '100%', maxWidth: 1600, mx: 'auto', px: { xs: 2, md: 3 }, pt: 1, pb: 3 }}>
       {/* Overview Header */}
       <Box 
         sx={{ 
@@ -214,43 +292,11 @@ const MainDashboard = () => {
           justifyContent: 'space-between', 
           alignItems: { xs: 'flex-start', sm: 'center' }, 
           gap: 2,
-          mb: 3, 
+          mb: 1.5, 
           width: '100%' 
         }}
       >
         <Typography variant="h3" fontWeight={800} sx={{ display: { sm: 'none' } }}>Dashboard</Typography>
-        <Box sx={{ display: { xs: 'none', sm: 'block' } }} /> {/* Spacing placeholder */}
-        <Box sx={{ display: 'flex', gap: 1.5, width: { xs: '100%', sm: 'auto' } }}>
-           <Button 
-             variant="outlined" 
-             fullWidth={false}
-             startIcon={<CalendarTodayOutlinedIcon />}
-             sx={{ 
-                flex: { xs: 1, sm: 'none' },
-                bgcolor: 'white', 
-                border: '1px solid', 
-                borderColor: 'divider', 
-                color: 'text.secondary', 
-                borderRadius: 2,
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }
-             }}
-           >
-             Oct 24, 2025
-           </Button>
-           <Button 
-             variant="contained" 
-             fullWidth={false}
-             startIcon={<TuneOutlinedIcon />}
-             sx={{ 
-                flex: { xs: 1, sm: 'none' },
-                borderRadius: 2, 
-                boxShadow: 'none',
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }
-             }}
-           >
-             Customize
-           </Button>
-        </Box>
       </Box>
 
       {/* Stats Row */}
@@ -265,102 +311,35 @@ const MainDashboard = () => {
       >
         <StatCard 
           title="Total Revenue" 
-          value="$1,240.50" 
+          value={`$${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
           icon={AttachMoneyIcon} 
           color="success" 
-          trend="+12%" 
+          trend={stats.revenueTrend} 
         />
         <StatCard 
           title="Total Transactions" 
-          value="45" 
+          value={stats.totalTransactions.toString()} 
           icon={ReceiptLongIcon} 
           color="primary" 
-          trend="+5%" 
+          trend={stats.transactionsTrend} 
         />
         <StatCard 
           title="Total Customers" 
-          value="3,200" 
-          icon={StorefrontIcon} 
+          value={stats.totalCustomers.toLocaleString()} 
+          icon={TrendingUpIcon} 
           color="info" 
-          trend="+18%"
+          trend={stats.customersTrend} 
         />
         <StatCard 
           title="Active Products" 
-          value="1,203" 
-          icon={InventoryIcon} 
+          value={stats.activeProducts.toLocaleString()} 
+          icon={Inventory2OutlinedIcon} 
           color="warning" 
+          trend={stats.productsTrend} 
         />
       </Box>
 
-      {/* Quick Actions Row */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight={700} sx={{ mb: 2 }}>Quick Access</Typography>
-        <Box 
-            sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { 
-                    xs: 'repeat(2, 1fr)', 
-                    md: 'repeat(4, 1fr)' 
-                }, 
-                gap: { xs: 1.5, sm: 2 } 
-            }}
-        >
-            {(isCashier || isManager || isAdmin) && (
-                <QuickActionCard 
-                    title="Terminal Checkout" 
-                    subtitle={isShiftOpen ? `${shiftData?.itemsSold || 0} Items Sold This Shift` : "Opening shift required"}
-                    icon={PointOfSaleIcon} 
-                    color="secondary"
-                    onClick={() => navigate('/pos/terminal')}
-                />
-            )}
-            {(isCashier || isManager || isAdmin) && (
-                <QuickActionCard 
-                    title={isShiftOpen ? "End Shift" : "Start Shift"} 
-                    subtitle={isShiftOpen ? `Started at ${shiftData?.startTime}` : "Click to check-in"}
-                    icon={EventAvailableIcon} 
-                    color={isShiftOpen ? "error" : "success"}
-                    onClick={() => navigate('/pos/shift')}
-                />
-            )}
-            {(isManager || isAdmin) && (
-                <>
-                    <QuickActionCard 
-                        title="Inventory Hub" 
-                        subtitle="Manage your stocks"
-                        icon={Inventory2OutlinedIcon} 
-                        color="info"
-                        onClick={() => navigate('/pos/products')}
-                    />
-                    <QuickActionCard 
-                        title="Business Insights" 
-                        subtitle="View sales reports"
-                        icon={AssessmentOutlinedIcon} 
-                        color="primary"
-                        onClick={() => navigate('/pos/reports')}
-                    />
-                </>
-            )}
-            {isAdmin && (
-                <>
-                    <QuickActionCard 
-                        title="Store Management" 
-                        subtitle="Manage locations"
-                        icon={StorefrontIcon} 
-                        color="warning"
-                        onClick={() => navigate('/admin/stores')}
-                    />
-                    <QuickActionCard 
-                        title="Employee Hub" 
-                        subtitle="Staff & Permissions"
-                        icon={InventoryIcon} 
-                        color="secondary"
-                        onClick={() => navigate('/admin/employees')}
-                    />
-                </>
-            )}
-        </Box>
-      </Box>
+
 
       {/* Content Grid */}
       <Box 
@@ -382,14 +361,19 @@ const MainDashboard = () => {
                 <Typography variant="h4" fontWeight={700} sx={{ mb: 3 }}>Top Selling Items</Typography>
                 
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <TopProductRow name="Wireless Headphones" sales="24" />
-                    <TopProductRow name="Smart Watch Gen 3" sales="18" />
-                    <TopProductRow name="Bluetooth Speaker" sales="12" />
-                    <TopProductRow name="Mechanical Keyboard" sales="10" />
-                    <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-                        <TopProductRow name="USB-C Hub" sales="9" />
-                        <TopProductRow name="Gaming Mouse" sales="8" />
-                    </Box>
+                    {topProducts.length > 0 ? (
+                      topProducts.map((product) => (
+                        <TopProductRow 
+                          key={product._id}
+                          name={product.name} 
+                          sales={`${product.totalSold} sold this week`} 
+                        />
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                        No items sold this week
+                      </Typography>
+                    )}
                 </Box>
 
                 <Button 
@@ -405,15 +389,8 @@ const MainDashboard = () => {
       </Box>
 
       {/* Recent Transactions Header */}
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ mb: 2 }}>
         <Typography variant="h4" fontWeight={700}>Recent Transactions</Typography>
-        <Button 
-            endIcon={<ArrowForwardIcon />} 
-            onClick={() => navigate('/pos/reports')}
-            sx={{ textTransform: 'none' }}
-        >
-            View All Orders
-        </Button>
       </Box>
             <Paper elevation={0} sx={{ borderRadius: 4, overflow: 'hidden' }}>
               <TableContainer>
@@ -423,80 +400,117 @@ const MainDashboard = () => {
                       <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11 }}>ORDER ID</TableCell>
                       <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11, display: { xs: 'none', sm: 'table-cell' } }}>DATE & TIME</TableCell>
                       <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11 }}>CUSTOMER</TableCell>
-                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11, display: { xs: 'none', lg: 'table-cell' } }}>PAYMENT</TableCell>
-                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11 }}>AMOUNT</TableCell>
+                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11 }}>TOTAL</TableCell>
+                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11, display: { xs: 'none', lg: 'table-cell' } }}>CASH</TableCell>
+                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11, display: { xs: 'none', lg: 'table-cell' } }}>CARD</TableCell>
+                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11, display: { xs: 'none', lg: 'table-cell' } }}>DIGITAL</TableCell>
                       <TableCell sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11 }}>STATUS</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {[
-                      { id: '#ORD-00245', time: 'Oct 24, 10:42 AM', customer: 'Walk-in Customer', payment: 'Cash', amount: '$42.50', status: 'Completed', color: 'success' },
-                      { id: '#ORD-00244', time: 'Oct 24, 10:15 AM', customer: 'Sarah Miller', payment: 'Credit Card', amount: '$120.00', status: 'Completed', color: 'success' },
-                      { id: '#ORD-00243', time: 'Oct 24, 09:55 AM', customer: 'Michael Johnson', payment: 'E-Wallet', amount: '$15.00', status: 'Pending', color: 'warning' },
-                      { id: '#ORD-00242', time: 'Oct 24, 09:30 AM', customer: 'Walk-in', payment: 'Cash', amount: '$8.50', status: 'Completed', color: 'success' },
-                      { id: '#ORD-00241', time: 'Oct 24, 09:12 AM', customer: 'James Smith', payment: 'Credit Card', amount: '$65.20', status: 'Refunded', color: 'error' },
-                    ].map((row) => {
-                      const custStyle = getCustomerColor(row.customer);
-                      return (
-                        <TableRow 
-                          key={row.id} 
-                          hover
-                          sx={{ 
-                            backgroundImage: `linear-gradient(to right, ${theme.palette.divider} 80%, rgba(255,255,255,0) 0%)`,
-                            backgroundPosition: 'bottom',
-                            backgroundSize: '12px 2px',
-                            backgroundRepeat: 'repeat-x',
-                            '&:last-of-type': { backgroundImage: 'none' },
-                            transition: 'all 0.2s',
-                            '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) }
-                          }}
-                        >
-                          <TableCell sx={{ fontWeight: 700, color: custStyle.text, py: 2.5 }}>{row.id}</TableCell>
-                          <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{row.time}</TableCell>
-                          <TableCell>
-                              <Stack direction="row" spacing={1.5} alignItems="center">
-                                  <Avatar 
-                                    sx={{ 
-                                        width: 32, 
-                                        height: 32, 
-                                        fontSize: 12, 
-                                        fontWeight: 800,
-                                        bgcolor: custStyle.bg, 
-                                        color: custStyle.text,
-                                        display: { xs: 'none', sm: 'flex' },
-                                        border: '1px solid',
-                                        borderColor: alpha(custStyle.text, 0.1)
-                                    }}
-                                  >
-                                    {row.customer.charAt(0)}
-                                  </Avatar>
-                                  <Typography variant="body2" fontWeight={600}>{row.customer}</Typography>
-                              </Stack>
-                          </TableCell>
-                          <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>{row.payment}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{row.amount}</TableCell>
-                          <TableCell>
-                            <Chip 
-                              size="small" 
-                              label={row.status} 
-                              color={row.color} 
-                              variant="outlined"
-                              sx={{ 
-                                  fontWeight: 700,
-                                  borderRadius: 1.5,
-                                  border: '1px solid',
-                                  borderColor: `${row.color}.main`,
-                                  bgcolor: `${row.color}.lighter`,
-                                  fontSize: { xs: '0.65rem', sm: '0.75rem' }
-                              }} 
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
+                          <CircularProgress size={40} />
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>Loading transactions...</Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : orders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
+                          <NoDataLottie message="No transactions found" size="150px" />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      orders.map((row) => {
+                        const customerName = row.customer?.name || 'Walk-in Customer';
+                        const custStyle = getCustomerColor(customerName);
+                        
+                        // Extract payment parts
+                        const cashAmount = row.payments?.find(p => p.method === 'CASH')?.amount;
+                        const cardAmount = row.payments?.find(p => p.method === 'CARD')?.amount;
+                        const digitalAmount = row.payments?.find(p => p.method === 'DIGITAL')?.amount;
+
+                        return (
+                          <TableRow 
+                            key={row._id} 
+                            hover
+                            sx={{ 
+                              backgroundImage: `linear-gradient(to right, ${theme.palette.divider} 80%, rgba(255,255,255,0) 0%)`,
+                              backgroundPosition: 'bottom',
+                              backgroundSize: '12px 2px',
+                              backgroundRepeat: 'repeat-x',
+                              '&:last-of-type': { backgroundImage: 'none' },
+                              transition: 'all 0.2s',
+                              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) }
+                            }}
+                          >
+                            <TableCell sx={{ fontWeight: 700, color: custStyle.text, py: 2.5 }}>{row.orderNumber}</TableCell>
+                            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                              {dayjs(row.createdAt).format('MMM D, h:mm A')}
+                            </TableCell>
+                            <TableCell>
+                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                    <Avatar 
+                                      sx={{ 
+                                          width: 32, 
+                                          height: 32, 
+                                          fontSize: 12, 
+                                          fontWeight: 800,
+                                          bgcolor: custStyle.bg, 
+                                          color: custStyle.text,
+                                          display: { xs: 'none', sm: 'flex' },
+                                          border: '1px solid',
+                                          borderColor: alpha(custStyle.text, 0.1)
+                                      }}
+                                    >
+                                      {customerName.charAt(0)}
+                                    </Avatar>
+                                    <Typography variant="body2" fontWeight={600}>{customerName}</Typography>
+                                </Stack>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>${row.total?.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, color: 'text.secondary', fontSize: '0.8rem' }}>
+                              {cashAmount ? `$${cashAmount.toFixed(2)}` : '$0.00'}
+                            </TableCell>
+                            <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, color: 'text.secondary', fontSize: '0.8rem' }}>
+                              {cardAmount ? `$${cardAmount.toFixed(2)}` : '$0.00'}
+                            </TableCell>
+                            <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, color: 'text.secondary', fontSize: '0.8rem' }}>
+                              {digitalAmount ? `$${digitalAmount.toFixed(2)}` : '$0.00'}
+                            </TableCell>
+                            <TableCell>
+                              <Chip 
+                                size="small" 
+                                label={row.status} 
+                                color={row.status === 'COMPLETED' ? 'success' : (row.status === 'PENDING' ? 'warning' : 'error')} 
+                                variant="outlined"
+                                sx={{ 
+                                    fontWeight: 700,
+                                    borderRadius: 1.5,
+                                    fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                                }} 
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
+              <TablePagination
+                rowsPerPageOptions={[5]}
+                component="div"
+                count={totalOrders}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                sx={{
+                  borderTop: '1px solid',
+                  borderColor: 'divider'
+                }}
+              />
             </Paper>
 
     </Box>

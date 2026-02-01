@@ -1,6 +1,6 @@
 import React from "react";
 import Lottie from "lottie-react";
-import animationData from "assets/animations/noDataLottie.json";
+import animationData from "assets/animations/Blocks loading.json";
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 

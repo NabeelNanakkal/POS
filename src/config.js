@@ -4,8 +4,8 @@ export const DEFAULT_THEME_MODE = 'system';
 export const CSS_VAR_PREFIX = '';
 
 const config = {
-  orgName: "Company Pvt Ltd",
-  orgWebsite: "www.company.com",
+  orgName: "RetailOS",
+  orgWebsite: "www.retailos.com",
   basename: '/',
   defaultPath: '/main/home',
   fontFamily: `'Roboto', sans-serif`,

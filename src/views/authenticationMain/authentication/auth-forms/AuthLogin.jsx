@@ -209,26 +209,6 @@ const AuthLogin = ({ ...others }) => {
               </Button>
             </AnimateButton>
           </Stack>
-          <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1}>
-            <Typography
-              ariant="caption"
-              sx={{
-                color: theme.palette.primary.main,
-                textDecoration: 'none',
-                ml: '4px',
-                '&:hover': {
-                  textDecoration: 'underline'
-                },
-                cursor: 'pointer',
-                marginTop: '10px !important',
-                fontSize: { xs: '8px', sm: '10px', md: '12px' }
-              }}
-              component={Link}
-              to="/forgot-password"
-            >
-              Forgot Password ?
-            </Typography>
-          </Stack>
         </Box>
       )}
     </Formik>

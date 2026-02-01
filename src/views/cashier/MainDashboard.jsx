@@ -199,7 +199,7 @@ const MainDashboard = () => {
   const [isShiftOpen, setIsShiftOpen] = useState(false);
   const [shiftData, setShiftData] = useState(null);
   const user = JSON.parse(localStorage.getItem('user'));
-  const userRole = user?.role || 'Cashier';
+  const userRole = (user?.role || 'CASHIER').toUpperCase();
 
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -278,9 +278,9 @@ const MainDashboard = () => {
     setPage(newPage);
   };
 
-  const isAdmin = userRole === 'TenantAdmin';
-  const isManager = userRole === 'Manager';
-  const isCashier = userRole === 'Cashier';
+  const isAdmin = userRole === 'TENANTADMIN';
+  const isManager = userRole === 'MANAGER';
+  const isCashier = userRole === 'CASHIER';
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1600, mx: 'auto', px: { xs: 2, md: 3 }, pt: 1, pb: 3 }}>
@@ -376,14 +376,16 @@ const MainDashboard = () => {
                     )}
                 </Box>
 
-                <Button 
-                    fullWidth 
-                    variant="outlined" 
-                    onClick={() => navigate('/pos/products')}
-                    sx={{ mt: 2, borderRadius: 2 }}
-                >
-                    View All Products
-                </Button>
+                {!isCashier && (
+                  <Button 
+                      fullWidth 
+                      variant="outlined" 
+                      onClick={() => navigate('/pos/products')}
+                      sx={{ mt: 2, borderRadius: 2 }}
+                  >
+                      View All Products
+                  </Button>
+                )}
             </Paper>
         </Box>
       </Box>

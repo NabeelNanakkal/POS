@@ -248,17 +248,6 @@ const LoginRetailOS = () => {
                 <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
                   Password
                 </Typography>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'primary.main', 
-                    fontWeight: 600, 
-                    cursor: 'pointer',
-                    '&:hover': { textDecoration: 'underline' }
-                  }}
-                >
-                  Forgot Password?
-                </Typography>
               </Box>
               <TextField
                 fullWidth

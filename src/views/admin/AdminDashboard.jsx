@@ -241,7 +241,7 @@ const AdminDashboard = () => {
             />
             <QuickActionCard 
                 title="Global Reports" 
-                subtitle="Company metrics"
+                subtitle="RetailOS metrics"
                 icon={AssessmentOutlinedIcon} 
                 color="info"
                 onClick={() => navigate('/pos/reports')}

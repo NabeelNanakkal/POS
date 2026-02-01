@@ -20,7 +20,7 @@ import { useTheme, alpha } from '@mui/material/styles';
 import { useState, useMemo, useEffect } from 'react';
 import { useGetMenuMaster, handlerDrawerOpen } from 'api/menu';
 import { useDispatch } from 'react-redux';
-import { openShift, closeShift, fetchCurrentShift } from 'container/ShiftContainer/slice';
+import { openShift, closeShift, fetchCurrentShift, startBreak, endBreak } from 'container/ShiftContainer/slice';
 import ShiftStartModal from 'views/cashier/ShiftStartModal';
 import LockClockOutlinedIcon from '@mui/icons-material/LockClockOutlined';
 
@@ -38,6 +38,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
+import CoffeeIcon from '@mui/icons-material/Coffee';
 
 const drawerWidth = 260;
 const miniDrawerWidth = 80;
@@ -59,6 +60,8 @@ const PosLayout = () => {
   const [showShiftModal, setShowShiftModal] = useState(false);
 
   const [activeShift, setActiveShift] = useState(null);
+  const [breakReason, setBreakReason] = useState('OTHER');
+  const [showBreakResumeModal, setShowBreakResumeModal] = useState(false);
 
   const isCashier = userRole.toUpperCase() === 'CASHIER';
 
@@ -71,6 +74,12 @@ const PosLayout = () => {
           });
           if (res.data.success && res.data.data) {
             setActiveShift(res.data.data);
+            
+            // Check for active break
+            const hasActiveBreak = res.data.data.breaks?.some(b => !b.endTime);
+            if (hasActiveBreak) {
+              setShowBreakResumeModal(true);
+            }
 
             localStorage.setItem('isShiftOpen', 'true');
           } else {
@@ -151,8 +160,21 @@ const PosLayout = () => {
     performLogout();
   };
 
-  const handleJustLogout = () => {
+  const handleJustLogout = async () => {
+    try {
+      await axios.post(`${config.ip}/shifts/break/start`, 
+        { type: breakReason, note: 'Break started automatically at logout (Keep Shift Open)' },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }
+      );
+    } catch (e) {
+      console.error("Failed to record break on logout", e);
+    }
     performLogout();
+  };
+
+  const handleEndBreak = () => {
+    dispatch(endBreak());
+    setShowBreakResumeModal(false);
   };
 
 
@@ -460,26 +482,36 @@ const PosLayout = () => {
             </Avatar>
             <Box>
               <Typography variant="h5" fontWeight={800}>Shift End Options</Typography>
-              <Typography variant="caption" color="text.secondary">Ahmed, please choose an action</Typography>
+              <Typography variant="caption" color="text.secondary">{user?.username || 'User'}, please choose an action</Typography>
             </Box>
           </Stack>
           
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Would you like to end your active shift before logging out, or just logout and keep the shift open?
           </Typography>
+
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Break Reason (if keeping shift open)</Typography>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              value={breakReason}
+              onChange={(e) => setBreakReason(e.target.value)}
+              slotProps={{
+                select: {
+                  native: true,
+                },
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            >
+              <option value="LUNCH">LUNCH</option>
+              <option value="SHORT">SHORT</option>
+              <option value="OTHER">OTHER</option>
+            </TextField>
+          </Box>
           
           <Stack spacing={2}>
-            <Button
-              fullWidth
-              variant="contained"
-              color="primary"
-              onClick={handleShiftEndLogout}
-              startIcon={<LockClockOutlinedIcon />}
-              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
-            >
-              End Shift & Logout
-            </Button>
-            
             <Button
               fullWidth
               variant="outlined"
@@ -490,6 +522,17 @@ const PosLayout = () => {
             >
               Logout (Keep Shift Open)
             </Button>
+
+            <Button
+              fullWidth
+              variant="contained"
+              color="error"
+              onClick={handleShiftEndLogout}
+              startIcon={<LockClockOutlinedIcon />}
+              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, textTransform: 'none', boxShadow: 'none' }}
+            >
+              End Shift & Logout
+            </Button>
             <Button 
               fullWidth 
               onClick={() => setShiftEndDialogOpen(false)}
@@ -498,6 +541,59 @@ const PosLayout = () => {
               Cancel
             </Button>
           </Stack>
+        </Box>
+      </Dialog>
+
+      {/* Break Resume Modal */}
+      <Dialog
+        open={showBreakResumeModal}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4, px: 1, py: 2 } }}
+      >
+        <Box sx={{ textAlign: 'center', p: 2 }}>
+          <Avatar 
+            sx={{ 
+              width: 70, 
+              height: 70, 
+              bgcolor: alpha(theme.palette.warning.main, 0.1), 
+              color: 'warning.main',
+              mx: 'auto',
+              mb: 3
+            }}
+          >
+            <CoffeeIcon sx={{ fontSize: 35 }} />
+          </Avatar>
+          
+          <Typography variant="h3" fontWeight={900} gutterBottom>
+            Welcome Back!
+          </Typography>
+          
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, px: 2 }}>
+            You were on a break. Would you like to end your break and resume your shift now?
+          </Typography>
+
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            color="warning"
+            onClick={handleEndBreak}
+            sx={{ 
+              py: 1.8, 
+              borderRadius: 3, 
+              fontWeight: 800, 
+              fontSize: '1rem',
+              boxShadow: `0 8px 24px ${alpha(theme.palette.warning.main, 0.25)}`,
+              '&:hover': {
+                bgcolor: 'warning.dark',
+                transform: 'translateY(-2px)'
+              },
+              transition: 'all 0.2s'
+            }}
+          >
+            End Break & Resume Work
+          </Button>
         </Box>
       </Dialog>
     </Box>

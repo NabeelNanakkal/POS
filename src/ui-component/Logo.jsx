@@ -1,6 +1,6 @@
 // material-ui
 import { useTheme } from '@mui/material/styles';
-import logo from 'assets/images/Logos/company_logo.png';
+import logo from 'assets/images/Logos/retailos_logo.png';
 // import logo2 from 'assets/images/logo2.svg';
 
 // project imports

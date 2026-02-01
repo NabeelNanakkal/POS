@@ -27,7 +27,7 @@ export default function LogoSection() {
           mt: 1
         }}
       >
-        BIZOWICE  
+        RetailOS  
       </Typography>
     </Link>
   );

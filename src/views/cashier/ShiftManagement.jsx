@@ -657,48 +657,7 @@ const ShiftManagement = () => {
       </Grid>
 
       <Grid container spacing={3} sx={{ width: '100%' }}>
-        
-        {/* 2. Left Column: Drawer Management */}
-        <Grid item xs={12} md={4} lg={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3 , flexGrow: 1}}>
-            
-            {/* Drawer Card */}
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider', height: '100%' }}>
-                <Typography variant="h6" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AccountBalanceWalletIcon color="primary" /> Drawer Management
-                </Typography>
-                <Divider sx={{ mb: 3, mt: 1 }} />
-
-                <Box sx={{ textAlign: 'center', py: 2, bgcolor: 'primary.lighter', borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}>
-                    <Typography variant="body2" fontWeight={700} color="primary.main" gutterBottom>EXPECTED CASH IN DRAWER</Typography>
-                    <Typography variant="h2" fontWeight={900} color="primary.main">${calculateExpectedCash().toFixed(2)}</Typography>
-                </Box>
-
-                <Stack spacing={2} sx={{ mt: 4 }}>
-                    <CalculationRow label="Opening Balance" value={shiftData.openingBalance} />
-                    <CalculationRow label="Cash Sales" value={systemTotals.cash} icon={<AddCircleOutlineIcon fontSize="small" color="success" />} />
-                    <CalculationRow label="Pay Ins" value={payIns} icon={<AddCircleOutlineIcon fontSize="small"  />} />
-                    <CalculationRow label="Pay Outs" value={payOuts} icon={<RemoveCircleOutlineIcon fontSize="small" />} color="error.main" />
-                </Stack>
-
-                <Grid container spacing={2} sx={{ mt: 4 }}>
-                    <Grid item xs={6}>
-                        <Button fullWidth variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => handleOpenPayDialog('IN')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
-                            Pay In
-                        </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                         <Button fullWidth variant="outlined" color="error" startIcon={<RemoveCircleOutlineIcon />} onClick={() => handleOpenPayDialog('OUT')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
-                            Pay Out
-                        </Button>
-                    </Grid>
-                </Grid>
-            </Paper>
-
-            
-
-        </Grid>
-
-        {/* 3. Right Column: Transaction Log */}
+        {/* 2. Left Column: Transaction Log (Moved to Left) */}
         <Grid item xs={12} md={8} lg={8} sx={{ flexGrow: 1 }}>
             <Paper elevation={0} sx={{ height: '100%', borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ p: 2, bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -769,6 +728,43 @@ const ShiftManagement = () => {
                 />
             </Paper>
         </Grid>
+
+        {/* 3. Right Column: Drawer Management (Moved to Right) */}
+        <Grid item xs={12} md={4} lg={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3 , flexGrow: 1}}>
+            {/* Drawer Card */}
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+                <Typography variant="h6" fontWeight={800} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <AccountBalanceWalletIcon color="primary" /> Drawer Management
+                </Typography>
+                <Divider sx={{ mb: 3, mt: 1 }} />
+
+                <Box sx={{ textAlign: 'center', py: 2, bgcolor: 'primary.lighter', borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}>
+                    <Typography variant="body2" fontWeight={700} color="primary.main" gutterBottom>EXPECTED CASH IN DRAWER</Typography>
+                    <Typography variant="h2" fontWeight={900} color="primary.main">${calculateExpectedCash().toFixed(2)}</Typography>
+                </Box>
+
+                <Stack spacing={2} sx={{ mt: 4 }}>
+                    <CalculationRow label="Opening Balance" value={shiftData.openingBalance} />
+                    <CalculationRow label="Cash Sales" value={systemTotals.cash} icon={<AddCircleOutlineIcon fontSize="small" color="success" />} />
+                    <CalculationRow label="Pay Ins" value={payIns} icon={<AddCircleOutlineIcon fontSize="small"  />} />
+                    <CalculationRow label="Pay Outs" value={payOuts} icon={<RemoveCircleOutlineIcon fontSize="small" />} color="error.main" />
+                </Stack>
+
+                <Grid container spacing={2} sx={{ mt: 4 }}>
+                    <Grid item xs={6}>
+                        <Button fullWidth variant="outlined" startIcon={<AddCircleOutlineIcon />} onClick={() => handleOpenPayDialog('IN')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
+                            Pay In
+                        </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                         <Button fullWidth variant="outlined" color="error" startIcon={<RemoveCircleOutlineIcon />} onClick={() => handleOpenPayDialog('OUT')} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}>
+                            Pay Out
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Paper>
+        </Grid>
+
 
       </Grid>
 

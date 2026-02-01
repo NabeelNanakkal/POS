@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import authService from 'services/authService';
 import { tokenManager } from 'utils/tokenManager';
 import { useTheme, alpha } from '@mui/material/styles';
 import {
@@ -11,7 +10,6 @@ import {
   IconButton,
   InputAdornment,
   TextField,
-  Paper,
   ButtonBase,
   CircularProgress,
   Alert
@@ -20,8 +18,6 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import StorefrontIcon from '@mui/icons-material/Storefront';
-import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined';
 import CheckIcon from '@mui/icons-material/Check';
@@ -36,32 +32,7 @@ import config from 'config';
 
 // ==============================|| RETAIL OS LOGIN ||============================== //
 
-const RoleButton = ({ role, icon: Icon, selected, onClick }) => (
-  <ButtonBase
-    onClick={() => onClick(role)}
-    sx={{
-      flex: 1,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 1,
-      py: 1.5,
-      borderRadius: 2,
-      backgroundColor: selected ? '#fff' : 'transparent',
-      boxShadow: selected ? '0px 2px 4px rgba(0,0,0,0.05)' : 'none',
-      color: selected ? 'primary.main' : 'text.secondary',
-      transition: 'all 0.2s',
-      '&:hover': {
-        backgroundColor: selected ? '#fff' : 'rgba(0,0,0,0.02)',
-      }
-    }}
-  >
-    <Icon fontSize="small" />
-    <Typography variant="body2" fontWeight={500}>
-      {role}
-    </Typography>
-  </ButtonBase>
-);
+
 
 const KeypadButton = ({ value, onClick, isAction, ...other }) => (
   <ButtonBase
@@ -102,7 +73,7 @@ const LoginRetailOS = () => {
 
 
 
-  const [role, setRole] = useState('Cashier');
+
   // Redirect if already logged in
   useEffect(() => {
     const token = tokenManager.getAccessToken();
@@ -161,47 +132,7 @@ const LoginRetailOS = () => {
     dispatch(userLogin(payload));
   };
 
-  const handleDemoLogin = (userRole, path, customUser = null) => {
-    localStorage.clear();
-    
-    // If we have real credentials, dispatch a real login
-    if (customUser && customUser.email && customUser.password) {
-      const payload = {
-        email: customUser.email,
-        password: customUser.password,
-        navigate: navigate
-      };
-      dispatch(userLogin(payload));
-      return;
-    }
 
-    // Fallback for mock demo logins
-    const defaultUser = {
-      role: userRole,
-      name: userRole === 'TenantAdmin' || userRole === 'ADMIN' ? 'Admin Demo' : userRole === 'Manager' ? 'Manager Demo' : 'Cashier Demo'
-    };
-    const userToStore = customUser || defaultUser;
-    localStorage.setItem('user', JSON.stringify(userToStore));
-    localStorage.setItem('token', 'mock-token');
-    window.location.replace(path);
-  };
-
-
-
-  const handleRegisterAdmin = async () => {
-    try {
-      const response = await authService.setupAdmin();
-      
-      if (response && response.success) {
-        alert('Default Admin setup successfully!\nEmail: admin@pos.com\nPassword: Admin@123\n\nPlease use these credentials to login.');
-      } else {
-        alert(`Setup failed: ${response?.message || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('Setup admin error:', error);
-      alert(`Connection failed: ${error.message || 'Check server connection'}`);
-    }
-  };
 
   return (
     <Grid container sx={{ minHeight: '100vh', overflow: 'hidden' }}>
@@ -360,6 +291,34 @@ const LoginRetailOS = () => {
             </Box>
           </Stack>
 
+          {error && (
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+              {error.message || 'Login failed. Please check your credentials.'}
+            </Alert>
+          )}
+
+          {/* Submit Button */}
+{/* <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            disabled={loading}
+            onClick={handleSubmit}
+            endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ArrowForwardIcon />}
+            sx={{
+              py: 1.5,
+              borderRadius: 2,
+              fontWeight: 600,
+              fontSize: '1rem',
+              textTransform: 'none',
+              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+              mb: 4
+            }}
+          >
+            {loading ? 'Authenticating...' : 'Access Terminal'}
+          </Button> */}
+
+
           {/* Keypad */}
           <Grid container spacing={1.5} sx={{ mb: 4 }}>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
@@ -387,115 +346,8 @@ const LoginRetailOS = () => {
             </Grid>
           </Grid>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-              {error.message || 'Login failed. Please check your credentials.'}
-            </Alert>
-          )}
 
-          {/* Submit Button */}
-          <Button
-            fullWidth
-            variant="contained"
-            size="large"
-            disabled={loading}
-            onClick={handleSubmit}
-            endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ArrowForwardIcon />}
-            sx={{
-              py: 1.5,
-              borderRadius: 2,
-              fontWeight: 600,
-              fontSize: '1rem',
-              textTransform: 'none',
-              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
-            }}
-          >
-            {loading ? 'Authenticating...' : 'Access Terminal'}
-          </Button>
 
-          {/* Demo Login Options */}
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 600, mb: 1, display: 'block', textAlign: 'center' }}>
-              ENVIRONMENT DEMO ACCESS
-            </Typography>
-            <Stack spacing={1.5}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => handleDemoLogin('ADMIN', '/admin/dashboard', {
-                  email: "admin@pos.com",
-                  password: "Admin@123",
-                  name: "Admin User",
-                  role: "ADMIN"
-                })}
-                startIcon={<AdminPanelSettingsIcon />}
-                sx={{
-                  py: 1.5,
-                  borderRadius: 2.5,
-                  fontWeight: 800,
-                  textTransform: 'none',
-                  borderStyle: 'dashed',
-                  borderColor: theme.palette.primary.main,
-                  color: 'primary.main',
-                  bgcolor: alpha(theme.palette.primary.main, 0.05),
-                  '&:hover': { 
-                    borderStyle: 'dashed', 
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    borderColor: theme.palette.primary.dark
-                  }
-                }}
-              >
-                Demo Login (Admin)
-              </Button>
-              <Stack direction="row" spacing={1.5}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={() => handleDemoLogin('MANAGER', '/pos/dashboard')}
-                  startIcon={<BusinessCenterIcon />}
-                  sx={{
-                    py: 1.2,
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    borderStyle: 'dashed',
-                    color: 'success.main',
-                    borderColor: 'success.light',
-                    '&:hover': { borderStyle: 'dashed', bgcolor: alpha(theme.palette.success.main, 0.05), borderColor: 'success.main' }
-                  }}
-                >
-                  Manager
-                </Button>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={() => handleDemoLogin('CASHIER', '/pos/dashboard')}
-                  startIcon={<StorefrontIcon />}
-                  sx={{
-                    py: 1.2,
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    borderStyle: 'dashed',
-                    color: 'info.main',
-                    borderColor: 'info.light',
-                    '&:hover': { borderStyle: 'dashed', bgcolor: alpha(theme.palette.info.main, 0.05), borderColor: 'info.main' }
-                  }}
-                >
-                  Cashier
-                </Button>
-              </Stack>
-            </Stack>
-            <Button
-              fullWidth
-              variant="text"
-              size="small"
-              onClick={handleRegisterAdmin}
-              sx={{ mt: 2, color: 'text.disabled', fontSize: '0.75rem', '&:hover': { color: 'primary.main' } }}
-            >
-              Setup / Reset First Admin
-            </Button>
-          </Box>
 
           {/* Footer help */}
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 3, color: 'text.secondary' }}>

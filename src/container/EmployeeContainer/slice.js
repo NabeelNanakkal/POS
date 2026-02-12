@@ -15,19 +15,39 @@ const employeeSlice = createSlice({
     },
     fetchEmployeesSuccess: (state, action) => {
       state.loading = false;
-      state.employees = action.payload.data.map(emp => ({
-        id: emp._id,
-        employeeId: emp.employeeId || 'N/A',
-        position: emp.position || 'N/A',
-        department: emp.department || 'N/A',
-        name: emp.user?.username || 'N/A',
-        email: emp.user?.email || 'N/A',
-        role: emp.user?.role || 'N/A',
-        storeId: emp.store?._id,
-        storeName: emp.store?.name,
-        status: emp.user?.isActive ? 'Online' : 'Offline',
-        active: emp.user?.isActive
-      })) || [];
+      // Handle both old format (array) and new format (object with employees and pagination)
+      const data = action.payload.data;
+      if (Array.isArray(data)) {
+        // Old format: direct array
+        state.employees = data.map(emp => ({
+          id: emp._id,
+          employeeId: emp.employeeId || 'N/A',
+          position: emp.position || 'N/A',
+          department: emp.department || 'N/A',
+          name: emp.user?.username || 'N/A',
+          email: emp.user?.email || 'N/A',
+          role: emp.user?.role || 'N/A',
+          storeId: emp.store?._id,
+          storeName: emp.store?.name,
+          status: emp.user?.isActive ? 'Online' : 'Offline',
+          active: emp.user?.isActive
+        })) || [];
+      } else {
+        // New format: object with employees and pagination
+        state.employees = (data.employees || []).map(emp => ({
+          id: emp._id,
+          employeeId: emp.employeeId || 'N/A',
+          position: emp.position || 'N/A',
+          department: emp.department || 'N/A',
+          name: emp.user?.username || 'N/A',
+          email: emp.user?.email || 'N/A',
+          role: emp.user?.role || 'N/A',
+          storeId: emp.store?._id,
+          storeName: emp.store?.name,
+          status: emp.user?.isActive ? 'Online' : 'Offline',
+          active: emp.user?.isActive
+        })) || [];
+      }
     },
     fetchEmployeesFail: (state, action) => {
       state.loading = false;

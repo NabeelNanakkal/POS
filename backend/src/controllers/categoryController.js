@@ -9,7 +9,14 @@ import asyncHandler from '../utils/asyncHandler.js';
  * @access  Private
  */
 export const getCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find().populate('parent', 'name').sort({ name: 1 });
+  const query = {};
+  
+  // Filter by store
+  if (req.storeId) {
+    query.store = req.storeId;
+  }
+  
+  const categories = await Category.find(query).populate('parent', 'name').sort({ name: 1 });
 
   res.json(ApiResponse.success(categories));
 });
@@ -20,7 +27,14 @@ export const getCategories = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const getCategoryById = asyncHandler(async (req, res) => {
-  const category = await Category.findById(req.params.id).populate('parent', 'name description');
+  const query = { _id: req.params.id };
+  
+  // Filter by store
+  if (req.storeId) {
+    query.store = req.storeId;
+  }
+  
+  const category = await Category.findOne(query).populate('parent', 'name description');
 
   if (!category) {
     throw ApiError.notFound('Category not found');

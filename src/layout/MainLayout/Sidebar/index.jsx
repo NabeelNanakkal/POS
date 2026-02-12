@@ -12,7 +12,7 @@ import Avatar from '@mui/material/Avatar';
 import PerfectScrollbar from 'react-perfect-scrollbar';
 
 // project imports
-import MenuList from './MenuList';
+import MenuList from './MenuList'; // Importing menu list component for sidebar
 import LogoSection from '../LogoSection';
 import MiniDrawerStyled from './MiniDrawerStyled';
 

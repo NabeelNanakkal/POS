@@ -26,7 +26,8 @@ import {
   TableSortLabel,
   Switch,
   Grid,
-  Divider
+  Divider,
+  TablePagination
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 
@@ -114,7 +115,11 @@ const DeleteConfirmationDialog = ({ open, onClose, onConfirm, name }) => {
     return (
         <Dialog 
             open={open} 
-            onClose={onClose}
+            onClose={(event, reason) => {
+                if (reason !== 'backdropClick') {
+                    onClose();
+                }
+            }}
             PaperProps={{ 
                 sx: { 
                     borderRadius: 5, 
@@ -193,11 +198,18 @@ const EmployeeManagement = () => {
   const [filterStore, setFilterStore] = useState('All');
   const [orderBy, setOrderBy] = useState('name');
   const [order, setOrder] = useState('asc');
+  
+  // Pagination State
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
-    dispatch(fetchEmployees());
+    dispatch(fetchEmployees(filterStore));
+    dispatch(fetchStats(filterStore));
+  }, [dispatch, filterStore]);
+
+  useEffect(() => {
     dispatch(fetchStores());
-    dispatch(fetchStats());
   }, [dispatch]);
 
   const apiStats = stats || {
@@ -220,14 +232,9 @@ const EmployeeManagement = () => {
       );
     }
 
-    // Filter Role
+    // Role filter and search are still handled on the frontend for responsiveness
     if (filterRole !== 'All') {
       result = result.filter(e => e.role === filterRole);
-    }
-
-    // Filter Store
-    if (filterStore !== 'All') {
-      result = result.filter(e => e.storeId === filterStore);
     }
 
     // Sort
@@ -303,7 +310,7 @@ const EmployeeManagement = () => {
 
   const getRoleColor = (role) => {
     switch (role) {
-      case 'ADMIN': return theme.palette.error.main;
+      case 'ACCOUNTANT': return theme.palette.error.main;
       case 'MANAGER': return theme.palette.warning.main;
       case 'CASHIER': return theme.palette.success.main;
       default: return theme.palette.primary.main;
@@ -387,7 +394,7 @@ const EmployeeManagement = () => {
                 sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: '#f8fafc', '& fieldset': { border: 'none' } } }}
               >
                   <MenuItem value="All">All Roles</MenuItem>
-                  <MenuItem value="ADMIN">Accountant</MenuItem>
+                  <MenuItem value="ACCOUNTANT">Accountant</MenuItem>
                   <MenuItem value="MANAGER">Manager</MenuItem>
                   <MenuItem value="CASHIER">Cashier</MenuItem>
               </TextField>
@@ -490,11 +497,13 @@ const EmployeeManagement = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredAndSortedEmployees.map((emp, index) => (
+              {filteredAndSortedEmployees
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((emp, index) => (
                 <TableRow key={emp.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                   <TableCell>
                       <Typography variant="body2" color="text.secondary" fontWeight={600}>
-                        {String(index + 1).padStart(2, '0')}
+                        {String(page * rowsPerPage + index + 1).padStart(2, '0')}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -510,7 +519,7 @@ const EmployeeManagement = () => {
                   </TableCell>
                   <TableCell>
                     <Chip 
-                        label={emp.role === 'ADMIN' ? 'Accountant' : emp.role.charAt(0) + emp.role.slice(1).toLowerCase()} 
+                        label={emp.role === 'ACCOUNTANT' ? 'Accountant' : emp.role.charAt(0) + emp.role.slice(1).toLowerCase()} 
                         size="small" 
                             sx={{ 
                                 fontWeight: 700, 
@@ -630,12 +639,35 @@ const EmployeeManagement = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={filteredAndSortedEmployees.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            '.MuiTablePagination-select': {
+              borderRadius: 2
+            }
+          }}
+        />
       </Paper>
 
       {/* Modern Dialog */}
       <Dialog 
         open={open} 
-        onClose={handleClose} 
+        onClose={(event, reason) => {
+            if (reason !== 'backdropClick') {
+                handleClose();
+            }
+        }} 
         fullWidth 
         maxWidth="xs"
         PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
@@ -677,7 +709,7 @@ const EmployeeManagement = () => {
             >
               <MenuItem value="CASHIER">Cashier</MenuItem>
               <MenuItem value="MANAGER">Manager</MenuItem>
-              <MenuItem value="ADMIN">Account</MenuItem>
+              <MenuItem value="ACCOUNTANT">Accountant</MenuItem>
             </TextField>
             {!currentEmployee && (
               <TextField
@@ -736,9 +768,11 @@ const EmployeeManagement = () => {
       {/* Password Reset Dialog */}
       <Dialog 
         open={resetPasswordData.open} 
-        onClose={() => {
-          setResetPasswordData({ ...resetPasswordData, open: false });
-          setShowResetPassword(false);
+        onClose={(event, reason) => {
+            if (reason !== 'backdropClick') {
+              setResetPasswordData({ ...resetPasswordData, open: false });
+              setShowResetPassword(false);
+            }
         }} 
         maxWidth="xs" 
         fullWidth

@@ -28,7 +28,8 @@ import {
   Switch,
   Grid,
   Divider,
-  TablePagination
+  TablePagination,
+  Autocomplete
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 
@@ -51,8 +52,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import NoDataLottie from 'ui-component/NoDataLottie';
 import BulkImportModal from 'ui-component/BulkImportModal';
 
-import { fetchStores, createStore, updateStore, deleteStore, toggleStoreStatus, bulkCreateStore } from 'container/StoreContainer/slice';
+import { fetchStores, createStore, updateStore, deleteStore, toggleStoreStatus, bulkCreateStore, fetchPaymentModes } from 'container/StoreContainer/slice';
 import { exportToExcel } from 'utils/excelUtils';
+import countryApi from 'services/countryApi';
 
 const StatCard = ({ title, value, icon: Icon, color, trend }) => {
   const theme = useTheme();
@@ -119,7 +121,11 @@ const DeleteConfirmationDialog = ({ open, onClose, onConfirm, name }) => {
     return (
         <Dialog 
             open={open} 
-            onClose={onClose}
+            onClose={(event, reason) => {
+                if (reason !== 'backdropClick') {
+                    onClose();
+                }
+            }}
             PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
         >
             <Box sx={{ p: 2, textAlign: 'center' }}>
@@ -139,7 +145,8 @@ const DeleteConfirmationDialog = ({ open, onClose, onConfirm, name }) => {
 const StoreManagement = () => {
   const theme = useTheme();
   const dispatch = useDispatch();
-  const { stores, pagination, stats, loading } = useSelector((state) => state.store);
+  const { stores, pagination, stats, loading, paymentModes } = useSelector((state) => state.store);
+  console.log('StoreManagement paymentModes:', paymentModes);
   
   const primaryColor = '#f05a30'; // The orange-red from the image
   
@@ -149,8 +156,11 @@ const StoreManagement = () => {
   const [storeToDelete, setStoreToDelete] = useState(null);
   const [currentStore, setCurrentStore] = useState(null);
   const [formData, setFormData] = useState({ 
-    name: '', code: '', address: '', phone: '', email: '', status: 'Open' 
+    name: '', code: '', address: '', phone: '', email: '', status: 'Open', country: null, currency: { code: '', symbol: '', name: '' },
+    allowedPaymentModes: []
   });
+  const [countries, setCountries] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -170,6 +180,24 @@ const StoreManagement = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [dispatch, page, rowsPerPage, searchTerm, filterStatus]);
+
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const response = await countryApi.getAllCountries();
+        console.log('Countries response:', response);
+        // api interceptor returns response.data, so response IS the data body
+        // If the body is { success: true, data: [...] }, we need properly extract it
+        // Check if response itself is array or inside .data
+        const countryList = Array.isArray(response) ? response : (response.data || []);
+        setCountries(countryList);
+      } catch (error) {
+        console.error('Error loading countries:', error);
+      }
+    };
+    loadCountries();
+    dispatch(fetchPaymentModes());
+  }, [dispatch]);
 
   const sortedStores = useMemo(() => {
     let result = [...(stores || [])];
@@ -197,13 +225,23 @@ const StoreManagement = () => {
   const handleOpen = (store = null) => {
     if (store) {
       setCurrentStore(store);
+      const storeCountry = store.country ? countries.find(c => c._id === store.country._id || c._id === store.country) : null;
+      setSelectedCountry(storeCountry || null);
       setFormData({ 
         name: store.name || '', code: store.code || '', address: store.address || '', 
-        phone: store.phone || '', email: store.email || '', status: store.status || 'Open'
+        phone: store.phone || '', email: store.email || '', status: store.status || 'Open',
+        country: store.country?._id || store.country || null,
+        currency: store.currency || { code: '', symbol: '', name: '' },
+        allowedPaymentModes: store.allowedPaymentModes?.map(pm => pm._id || pm) || []
       });
     } else {
       setCurrentStore(null);
-      setFormData({ name: '', code: '', address: '', phone: '', email: '', status: 'Open' });
+      setSelectedCountry(null);
+      setFormData({ 
+        name: '', code: '', address: '', phone: '', email: '', status: 'Open', 
+        country: null, currency: { code: '', symbol: '', name: '' },
+        allowedPaymentModes: []
+      });
     }
     setOpen(true);
   };
@@ -501,7 +539,11 @@ const StoreManagement = () => {
       {/* Modern Dialog */}
       <Dialog 
         open={open} 
-        onClose={handleClose} 
+        onClose={(event, reason) => {
+            if (reason !== 'backdropClick') {
+                handleClose();
+            }
+        }} 
         fullWidth 
         maxWidth="xs"
         PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
@@ -510,13 +552,170 @@ const StoreManagement = () => {
           <Typography variant="h3" fontWeight={800}>{currentStore ? 'Edit Store' : 'Add New Store'}</Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
-          <Stack spacing={2.5}>
-            <TextField fullWidth label="Store Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-            <TextField fullWidth label="Store Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-            <TextField fullWidth label="Email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-            <TextField fullWidth label="Phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-            <TextField fullWidth multiline rows={2} label="Address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-            <TextField select fullWidth label="Status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
+          <Stack spacing={2.5} sx={{ mt: 1 }}>
+            <TextField 
+                fullWidth 
+                label="Store Code" 
+                value={formData.code} 
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })} 
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                InputLabelProps={{ shrink: true }}
+                placeholder="e.g. ST-001"
+            />
+            <TextField 
+                fullWidth 
+                label="Store Name" 
+                value={formData.name} 
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                InputLabelProps={{ shrink: true }}
+                placeholder="e.g. Downtown Branch"
+            />
+            <TextField 
+                fullWidth 
+                label="Email" 
+                value={formData.email} 
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                InputLabelProps={{ shrink: true }}
+                placeholder="e.g. store@company.com"
+            />
+            <TextField 
+                fullWidth 
+                label="Phone" 
+                value={formData.phone} 
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                InputLabelProps={{ shrink: true }}
+                placeholder="e.g. +1 234 567 8900"
+            />
+            <TextField 
+                fullWidth 
+                multiline 
+                rows={2} 
+                label="Address" 
+                value={formData.address} 
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })} 
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                InputLabelProps={{ shrink: true }}
+                placeholder="e.g. 123 Main St, City, Country"
+            />
+            <Autocomplete
+              fullWidth
+              options={countries}
+              value={selectedCountry}
+              onChange={(event, newValue) => {
+                setSelectedCountry(newValue);
+                if (newValue) {
+                  setFormData({ 
+                    ...formData, 
+                    country: newValue._id,
+                    currency: {
+                      code: newValue.currency.code,
+                      symbol: newValue.currency.symbol,
+                      name: newValue.currency.name
+                    }
+                  });
+                } else {
+                  setFormData({ ...formData, country: null, currency: { code: '', symbol: '', name: '' } });
+                }
+              }}
+              getOptionLabel={(option) => `${option.country}`}
+              renderOption={(props, option) => (
+                <Box component="li" {...props}>
+                  <img 
+                    loading="lazy"
+                    width="20"
+                    src={`https://flagcdn.com/w40/${option.iso2?.toLowerCase()}.png`}
+                    srcSet={`https://flagcdn.com/w80/${option.iso2?.toLowerCase()}.png 2x`}
+                    alt=""
+                    style={{ marginRight: 10 }}
+                  />
+                  <Typography>{option.country}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+                    {option.currency.code} ({option.currency.symbol})
+                  </Typography>
+                </Box>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Country"
+                  placeholder="Select country"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  InputLabelProps={{ shrink: true }}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                        {selectedCountry && selectedCountry.iso2 && (
+                          <Box
+                            component="img"
+                            src={`https://flagcdn.com/w40/${selectedCountry.iso2?.toLowerCase()}.png`}
+                            sx={{ width: 24, mr: 1, ml: 0.5 }}
+                            alt=""
+                          />
+                        )}
+                        {params.InputProps.startAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+            {formData.currency.code && (
+              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
+                <Typography variant="caption" color="text.secondary" gutterBottom>Currency</Typography>
+                <Typography variant="body1" fontWeight={700}>
+                  {formData.currency.symbol} {formData.currency.name} ({formData.currency.code})
+                </Typography>
+              </Box>
+            )}
+            <Autocomplete
+              multiple
+              fullWidth
+              options={paymentModes || []}
+              getOptionLabel={(option) => option.name}
+              value={paymentModes?.filter(pm => formData.allowedPaymentModes.includes(pm._id || pm.id)) || []}
+              onChange={(event, newValue) => {
+                setFormData({
+                  ...formData,
+                  allowedPaymentModes: newValue.map(item => item._id || item.id)
+                });
+              }}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  label="Payment Modes" 
+                  placeholder="Select payment modes"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              )}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                   const { key, ...tagProps } = getTagProps({ index });
+                   return (
+                    <Chip 
+                        key={key}
+                        label={option.name} 
+                        {...tagProps}
+                        size="small"
+                        sx={{ borderRadius: 1.5 }}
+                    />
+                   );
+                })
+              }
+            />
+            <TextField 
+                select 
+                fullWidth 
+                label="Status" 
+                value={formData.status} 
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })} 
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} 
+                InputLabelProps={{ shrink: true }}
+            >
               <MenuItem value="Open">Open</MenuItem>
               <MenuItem value="Closed">Closed</MenuItem>
               <MenuItem value="Maintenance">Maintenance</MenuItem>

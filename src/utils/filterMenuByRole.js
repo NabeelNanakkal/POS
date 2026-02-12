@@ -1,13 +1,21 @@
 export const filterMenuByRole = (items, userRole) => {
+    // Top level debug log
+    console.log('[filterMenuByRole] CALLED', { 
+        itemCount: items?.length, 
+        userRole, 
+        timestamp: new Date().toISOString() 
+    });
 
     if (!items) return [];
 
+    // Temporarily keeping logic simple but verbose to debug
     return items
         .filter(item => {
             const prs = item.permittedRoles;
             if (prs === undefined) return false;
-            if (!Array.isArray(prs) || prs.length === 0) return false;
+            // if (!Array.isArray(prs) || prs.length === 0) return false;
 
+            // Simple check logic
             // Exclusions are specified with a leading '!' or 'not:' prefix
             const exclusions = prs
                 .filter(p => typeof p === 'string' && (p.startsWith('!') || p.startsWith('not:')))
@@ -31,10 +39,21 @@ export const filterMenuByRole = (items, userRole) => {
         .map(item => {
             if (item.children) {
                 const filteredChildren = filterMenuByRole(item.children, userRole);
+                
+                if (item.id === 'master-data') {
+                    console.log('[filterMenuByRole] DEBUG Master Data:', {
+                        original: item.children.length,
+                        filtered: filteredChildren.length,
+                        type: item.type, // Check if this is 'collapse'
+                        filteredChildren
+                    });
+                }
+
                 if (filteredChildren.length === 0 && !item.element) {
                     return null;
                 }
 
+                // Explicitly preserving all properties including 'type'
                 return { ...item, children: filteredChildren };
             }
             return item;

@@ -8,8 +8,8 @@ const router = express.Router();
 // All dashboard routes need authentication
 router.use(verifyToken);
 
-router.get('/stats', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'CASHIER'), getDashboardStats);
-router.get('/activity', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'CASHIER'), getActivityCounts);
-router.get('/employee-stats', authorize('SUPER_ADMIN', 'ADMIN', 'MANAGER'), getEmployeeStats);
+router.get('/stats', authorize('STORE_ADMIN', 'MANAGER', 'CASHIER'), getDashboardStats);
+router.get('/activity', authorize('STORE_ADMIN', 'MANAGER', 'CASHIER'), getActivityCounts);
+router.get('/employee-stats', authorize('STORE_ADMIN', 'MANAGER'), getEmployeeStats);
 
 export default router;

@@ -44,11 +44,18 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   };
 
   // Parallel execution for performance
+  const statsQuery = {};
+  if (store) {
+    statsQuery.store = new mongoose.Types.ObjectId(store);
+  } else if (req.storeId) {
+    statsQuery.store = req.storeId;
+  }
+
   const [todayStats, yesterdayStats, customerCount, productCount] = await Promise.all([
     getStatsForRange(todayStart),
     getStatsForRange(yesterdayStart, yesterdayEnd),
-    Customer.countDocuments({}),
-    Product.countDocuments({ isActive: true })
+    Customer.countDocuments(statsQuery),
+    Product.countDocuments({ ...statsQuery, isActive: true })
   ]);
 
   const calculateTrend = (current, previous) => {
@@ -149,11 +156,28 @@ export const getActivityCounts = asyncHandler(async (req, res) => {
  * @access  Private (Admin/Manager)
  */
 export const getEmployeeStats = asyncHandler(async (req, res) => {
-  // Get all user IDs that have an associated Employee record
-  const employeeUserIds = await Employee.find().distinct('user');
+  const { store } = req.query;
+  const storeFilter = {};
+  
+  if (req.user.role === 'STORE_ADMIN') {
+    if (store && store !== 'All') {
+      storeFilter.store = store;
+    } else {
+      // Fetch all stores owned by this admin
+      const ownedStores = await Store.find({ owner: req.user._id }).distinct('_id');
+      storeFilter.store = { $in: ownedStores };
+    }
+  } else if (req.user.role !== 'SUPER_ADMIN') {
+    storeFilter.store = req.storeId || req.user.store;
+  } else if (store && store !== 'All') {
+    storeFilter.store = store;
+  }
+
+  // Get all user IDs that have an associated Employee record for this store
+  const employeeUserIds = await Employee.find(storeFilter).distinct('user');
 
   const totalStaff = employeeUserIds.length;
-  const admins = await User.countDocuments({ _id: { $in: employeeUserIds }, role: 'ADMIN' });
+  const admins = await User.countDocuments({ _id: { $in: employeeUserIds }, role: 'ACCOUNTANT' });
   const managers = await User.countDocuments({ _id: { $in: employeeUserIds }, role: 'MANAGER' });
   const cashiers = await User.countDocuments({ _id: { $in: employeeUserIds }, role: 'CASHIER' });
 
@@ -175,11 +199,11 @@ export const getEmployeeStats = asyncHandler(async (req, res) => {
   const stats = {
     totalBox: {
       value: totalStaff,
-      trend: await getGrowth(Employee)
+      trend: await getGrowth(Employee, storeFilter)
     },
     accountBox: {
       value: admins,
-      trend: await getGrowth(User, { _id: { $in: employeeUserIds }, role: 'ADMIN' })
+      trend: await getGrowth(User, { _id: { $in: employeeUserIds }, role: 'ACCOUNTANT' })
     },
     managerBox: {
       value: managers,

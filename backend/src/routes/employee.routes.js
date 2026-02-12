@@ -17,15 +17,15 @@ const router = express.Router();
 router.use(verifyToken);
 
 // All employee routes require Manager, Admin, or Super Admin role
-router.use(authorize('MANAGER', 'ADMIN', 'SUPER_ADMIN'));
+router.use(authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'));
 
 // Employee routes
 router.get('/', getEmployees);
 router.get('/:id', getEmployeeById);
-router.post('/', authorize('ADMIN', 'SUPER_ADMIN'), createEmployee);
-router.post('/bulk', authorize('ADMIN', 'SUPER_ADMIN'), bulkCreateEmployees);
-router.put('/action/reset-password/:id', authorize('ADMIN', 'SUPER_ADMIN'), resetEmployeePassword);
-router.put('/:id', authorize('ADMIN', 'SUPER_ADMIN'), updateEmployee);
-router.delete('/:id', authorize('ADMIN', 'SUPER_ADMIN'), deleteEmployee);
+router.post('/', authorize('STORE_ADMIN', 'SUPER_ADMIN'), createEmployee);
+router.post('/bulk', authorize('STORE_ADMIN', 'SUPER_ADMIN'), bulkCreateEmployees);
+router.put('/action/reset-password/:id', authorize('STORE_ADMIN', 'SUPER_ADMIN'), resetEmployeePassword);
+router.put('/:id', authorize('STORE_ADMIN', 'SUPER_ADMIN'), updateEmployee);
+router.delete('/:id', authorize('STORE_ADMIN', 'SUPER_ADMIN'), deleteEmployee);
 
 export default router;

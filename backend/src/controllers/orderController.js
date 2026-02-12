@@ -87,7 +87,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const createOrder = asyncHandler(async (req, res) => {
-  const { customer, items, discount, payments, store, notes } = req.body;
+  const { customer, items, discount, discountDetails, payments, store, notes } = req.body;
 
   // Validate and calculate order totals
   let subtotal = 0;
@@ -120,6 +120,8 @@ export const createOrder = asyncHandler(async (req, res) => {
       sku: product.sku,
       quantity: item.quantity,
       price: itemPrice,
+      originalPrice: item.originalPrice || product.price,
+      isPriceOverridden: item.isPriceOverridden || false,
       discount: itemDiscount,
       tax: itemTax,
       subtotal: itemSubtotal,
@@ -128,8 +130,8 @@ export const createOrder = asyncHandler(async (req, res) => {
     subtotal += itemPrice * item.quantity;
     totalTax += itemTax;
 
-    // Increment committed stock, do NOT deduct on-hand stock yet
-    product.committed = (product.committed || 0) + item.quantity;
+    // Since POS orders are created as COMPLETED, deduct stock immediately
+    product.stock = Math.max(0, product.stock - item.quantity);
     await product.save();
   }
 
@@ -151,6 +153,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     paymentStatus: 'PAID',
     cashier: req.user._id,
     store: store || req.user.store,
+    discountDetails,
     notes,
   });
 

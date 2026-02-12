@@ -4,17 +4,32 @@ const paymentSlice = createSlice({
   name: 'payment',
   initialState: {
     payments: [],
-    statistics: null,
+    stats: null,
     loading: false,
     error: null
   },
   reducers: {
+    // Fetch all payments
+    fetchPayments: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    fetchPaymentsSuccess: (state, action) => {
+      state.loading = false;
+      state.payments = Array.isArray(action.payload.data?.payments) ? action.payload.data.payments : (Array.isArray(action.payload.data) ? action.payload.data : []);
+      state.pagination = action.payload.data?.pagination;
+    },
+    fetchPaymentsFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
     // Process payment
     processPayment: (state) => {
       state.loading = true;
       state.error = null;
     },
-    processPaymentSuccess: (state, action) => {
+    processPaymentSuccess: (state) => {
       state.loading = false;
     },
     processPaymentFail: (state, action) => {
@@ -42,7 +57,7 @@ const paymentSlice = createSlice({
     },
     fetchPaymentsByOrderSuccess: (state, action) => {
       state.loading = false;
-      state.payments = action.payload.data;
+      state.payments = Array.isArray(action.payload.data) ? action.payload.data : (action.payload.data?.payments || []);
     },
     fetchPaymentsByOrderFail: (state, action) => {
       state.loading = false;
@@ -50,15 +65,15 @@ const paymentSlice = createSlice({
     },
 
     // Fetch payment statistics
-    fetchPaymentStatistics: (state) => {
+    fetchPaymentStats: (state) => {
       state.loading = true;
       state.error = null;
     },
-    fetchPaymentStatisticsSuccess: (state, action) => {
+    fetchPaymentStatsSuccess: (state, action) => {
       state.loading = false;
-      state.statistics = action.payload.data;
+      state.stats = action.payload.data;
     },
-    fetchPaymentStatisticsFail: (state, action) => {
+    fetchPaymentStatsFail: (state, action) => {
       state.loading = false;
       state.error = action.payload;
     }
@@ -66,10 +81,11 @@ const paymentSlice = createSlice({
 });
 
 export const {
+  fetchPayments, fetchPaymentsSuccess, fetchPaymentsFail,
   processPayment, processPaymentSuccess, processPaymentFail,
   refundPayment, refundPaymentSuccess, refundPaymentFail,
   fetchPaymentsByOrder, fetchPaymentsByOrderSuccess, fetchPaymentsByOrderFail,
-  fetchPaymentStatistics, fetchPaymentStatisticsSuccess, fetchPaymentStatisticsFail
+  fetchPaymentStats, fetchPaymentStatsSuccess, fetchPaymentStatsFail
 } = paymentSlice.actions;
 
 export default paymentSlice.reducer;

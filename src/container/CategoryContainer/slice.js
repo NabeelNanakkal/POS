@@ -27,10 +27,43 @@ const categorySlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    createCategorySuccess: (state) => {
+    createCategorySuccess: (state, action) => {
       state.loading = false;
+      if (action.payload?.data) {
+        state.categories.push(action.payload.data);
+      }
     },
     createCategoryFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
+    // Update category
+    updateCategory: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    updateCategorySuccess: (state, action) => {
+      state.loading = false;
+      state.categories = state.categories.map(c => 
+        (c._id === action.payload.data._id || c.id === action.payload.data.id) ? action.payload.data : c
+      );
+    },
+    updateCategoryFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
+    // Delete category
+    deleteCategory: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    deleteCategorySuccess: (state, action) => {
+      state.loading = false;
+      state.categories = state.categories.filter(c => c._id !== action.payload.data._id);
+    },
+    deleteCategoryFail: (state, action) => {
       state.loading = false;
       state.error = action.payload;
     }
@@ -39,7 +72,9 @@ const categorySlice = createSlice({
 
 export const {
   fetchCategories, fetchCategoriesSuccess, fetchCategoriesFail,
-  createCategory, createCategorySuccess, createCategoryFail
+  createCategory, createCategorySuccess, createCategoryFail,
+  updateCategory, updateCategorySuccess, updateCategoryFail,
+  deleteCategory, deleteCategorySuccess, deleteCategoryFail
 } = categorySlice.actions;
 
 export default categorySlice.reducer;

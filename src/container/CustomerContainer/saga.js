@@ -6,7 +6,9 @@ import {
   fetchCustomers, fetchCustomersSuccess, fetchCustomersFail,
   fetchCustomerById, fetchCustomerByIdSuccess, fetchCustomerByIdFail,
   fetchCustomerByPhone, fetchCustomerByPhoneSuccess, fetchCustomerByPhoneFail,
-  searchCustomers, searchCustomersSuccess, searchCustomersFail
+  searchCustomers, searchCustomersSuccess, searchCustomersFail,
+  deleteCustomer, deleteCustomerSuccess, deleteCustomerFail,
+  updateCustomer, updateCustomerSuccess, updateCustomerFail
 } from './slice';
 
 function* postCustomer(action) {
@@ -27,9 +29,13 @@ function* postCustomer(action) {
 
 function* getCustomers(action) {
   try {
-    const { page, limit } = action.payload || { page: 1, limit: 10 };
+    const { page, limit, startDate, endDate } = action.payload || { page: 1, limit: 10 };
+    let apiUrl = `${config.ip}/customers?page=${page}&limit=${limit}`;
+    if (startDate) apiUrl += `&startDate=${startDate}`;
+    if (endDate) apiUrl += `&endDate=${endDate}`;
+
     const params = {
-      api: `${config.ip}/customers?page=${page}&limit=${limit}`,
+      api: apiUrl,
       method: 'GET',
       successAction: fetchCustomersSuccess(),
       failAction: fetchCustomersFail(),
@@ -85,7 +91,41 @@ function* findCustomers(action) {
     };
     yield call(commonApi, params);
   } catch (error) {
+
     console.error('Search customers failed:', error);
+  }
+}
+
+function* removeCustomer(action) {
+  try {
+    const { id } = action.payload;
+    const params = {
+      api: `${config.ip}/customers/${id}`,
+      method: 'DELETE',
+      successAction: deleteCustomerSuccess(action.payload), // Pass payload back to remove from list
+      failAction: deleteCustomerFail(),
+      authourization: 'Bearer'
+    };
+    yield call(commonApi, params);
+  } catch (error) {
+    console.error('Delete customer failed:', error);
+  }
+}
+
+function* editCustomer(action) {
+  try {
+    const { id } = action.payload;
+    const params = {
+      api: `${config.ip}/customers/${id}`,
+      method: 'PUT',
+      successAction: updateCustomerSuccess(),
+      failAction: updateCustomerFail(),
+      body: JSON.stringify(action.payload),
+      authourization: 'Bearer'
+    };
+    yield call(commonApi, params);
+  } catch (error) {
+    console.error('Update customer failed:', error);
   }
 }
 
@@ -95,4 +135,6 @@ export default function* CustomerActionWatcher() {
   yield takeEvery(fetchCustomerById.type, getCustomerById);
   yield takeEvery(fetchCustomerByPhone.type, getCustomerByPhone);
   yield takeEvery(searchCustomers.type, findCustomers);
+  yield takeEvery(deleteCustomer.type, removeCustomer);
+  yield takeEvery(updateCustomer.type, editCustomer);
 }

@@ -65,11 +65,13 @@ function* commonApi(value) {
       } else {
         const resJSON = yield response.json();
 
+        const payload = Array.isArray(resJSON) 
+          ? { data: resJSON, metaPayLoad: value?.metaPayLoad }
+          : { ...resJSON, metaPayLoad: value?.metaPayLoad };
+
         yield put({
           type: `${value.successAction.type}`,
-          // payload: resJSON
-          payload: { metaPayLoad: value?.metaPayLoad, ...resJSON }
-
+          payload: payload
         });
         return resJSON;
       }

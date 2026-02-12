@@ -16,9 +16,6 @@ const MenuList = () => {
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
 
 
-  const user1 = getUser();
-  const role = user1?.role;
-
   // Debug the user and menu filtering on render/refresh to diagnose missing menus
   if (import.meta.env.DEV) console.debug('[MenuList] user:', user1, 'role:', role, 'menuMaster:', menuMaster);
 
@@ -41,7 +38,13 @@ const MenuList = () => {
     }
   });
 
-  return <Box {...(drawerOpen && { sx: { mt: 1.5 } })}>{navItems}</Box>;
+  // Force log to verify file load - REMOVED
+
+  return (
+    <Box {...(drawerOpen && { sx: { mt: 1.5 } })}>
+      {navItems}
+    </Box>
+  );
 };
 
 export default MenuList;

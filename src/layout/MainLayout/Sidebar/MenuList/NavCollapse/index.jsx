@@ -76,8 +76,7 @@ export default function NavCollapse({ menu, level, parentId }) {
 
   // menu collapse for sub-levels
   useEffect(() => {
-    setOpen(false);
-    openMini ? setAnchorEl(null) : setSelected(null);
+    // Only open if on path, don't force close on route change (let user close it)
     if (menu.children) {
       menu.children.forEach((item) => {
         if (item.children?.length) {
@@ -94,7 +93,7 @@ export default function NavCollapse({ menu, level, parentId }) {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, menu.children]);
+  }, [pathname]);
 
   const [hoverStatus, setHover] = useState(false);
 

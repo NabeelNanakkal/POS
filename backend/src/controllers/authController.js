@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Store from '../models/Store.js';
 import RefreshToken from '../models/RefreshToken.js';
 import Employee from '../models/Employee.js';
 import ApiError from '../utils/ApiError.js';
@@ -81,8 +82,8 @@ export const register = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  // Find user and include password
-  const user = await User.findOne({ email }).select('+password');
+  // Find user and include password, populate store
+  const user = await User.findOne({ email }).select('+password').populate('store', 'name code currency');
 
   if (!user) {
     throw ApiError.unauthorized('Invalid email or password');
@@ -91,6 +92,15 @@ export const login = asyncHandler(async (req, res) => {
   // Check if user is active
   if (!user.isActive) {
     throw ApiError.forbidden('Your account has been deactivated. Please contact administrator.');
+  }
+
+  // Check if store admin is active (for non-super-admins)
+  if (user.role !== 'SUPER_ADMIN' && user.store) {
+    const store = await Store.findById(user.store).populate('owner', 'isActive');
+    
+    if (store && store.owner && !store.owner.isActive) {
+      throw ApiError.forbidden('Your store administrator account has been deactivated. Please contact support.');
+    }
   }
 
   // Verify password
@@ -256,7 +266,7 @@ export const changePassword = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const getMe = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).populate('store', 'name code');
+  const user = await User.findById(req.user._id).populate('store', 'name code currency');
   const employee = await Employee.findOne({ user: req.user._id });
 
   const userData = user.toObject();
@@ -279,6 +289,16 @@ export const setupAdmin = asyncHandler(async (req, res) => {
     throw ApiError.internal('Default admin credentials not successfully configured in server environment');
   }
 
+  // Validate password is numeric only
+  if (!/^\d+$/.test(DEFAULT_ADMIN_PASSWORD)) {
+    throw ApiError.internal('Super admin password must contain only numbers (PIN format). Please update DEFAULT_ADMIN_PASSWORD in .env file');
+  }
+
+  // Validate password length
+  if (DEFAULT_ADMIN_PASSWORD.length < 4) {
+    throw ApiError.internal('Super admin password must be at least 4 digits. Please update DEFAULT_ADMIN_PASSWORD in .env file');
+  }
+
   // Check if admin exists by email
   let admin = await User.findOne({ email: DEFAULT_ADMIN_EMAIL });
 
@@ -286,21 +306,21 @@ export const setupAdmin = asyncHandler(async (req, res) => {
     // Reset password if exists
     admin.password = DEFAULT_ADMIN_PASSWORD;
     admin.username = DEFAULT_ADMIN_USERNAME;
-    admin.role = 'ADMIN'; // Ensure role is ADMIN
+    admin.role = 'SUPER_ADMIN'; // Ensure role is SUPER_ADMIN
     admin.isActive = true;
     await admin.save();
 
-    res.json(ApiResponse.success(null, 'Default admin account reset successfully'));
+    res.json(ApiResponse.success(null, 'Default super admin account reset successfully'));
   } else {
     // Create new admin
     admin = await User.create({
       username: DEFAULT_ADMIN_USERNAME,
       email: DEFAULT_ADMIN_EMAIL,
       password: DEFAULT_ADMIN_PASSWORD,
-      role: 'ADMIN',
+      role: 'SUPER_ADMIN',
       isActive: true,
     });
 
-    res.status(201).json(ApiResponse.created(null, 'Default admin account created successfully'));
+    res.status(201).json(ApiResponse.created(null, 'Default super admin account created successfully'));
   }
 });

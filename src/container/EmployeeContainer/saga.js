@@ -12,10 +12,12 @@ import {
   fetchStats, fetchStatsSuccess, fetchStatsFail
 } from './slice';
 
-function* getEmployees() {
+function* getEmployees(action) {
   try {
+    const store = action.payload;
+    const api = store && store !== 'All' ? `${config.ip}/employees?store=${store}` : `${config.ip}/employees`;
     const params = {
-      api: `${config.ip}/employees`,
+      api,
       method: 'GET',
       successAction: fetchEmployeesSuccess(),
       failAction: fetchEmployeesFail(),
@@ -137,10 +139,12 @@ function* resetPasswordSaga(action) {
   }
 }
 
-function* fetchStatsSaga() {
+function* fetchStatsSaga(action) {
   try {
+    const store = action.payload;
+    const api = store && store !== 'All' ? `${config.ip}/dashboard/employee-stats?store=${store}` : `${config.ip}/dashboard/employee-stats`;
     const params = {
-      api: `${config.ip}/dashboard/employee-stats`,
+      api,
       method: 'GET',
       successAction: fetchStatsSuccess(),
       failAction: fetchStatsFail(),

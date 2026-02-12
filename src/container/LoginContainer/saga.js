@@ -3,7 +3,7 @@ import { tokenManager } from '../../utils/tokenManager';
 import 'react-toastify/dist/ReactToastify.css';
 import { loginSuccess, loginFail } from './slice';
 import { takeEvery, call, put } from 'redux-saga/effects';
-import { roleBasedRedirects } from 'constants/roleBasedRedirects';
+import { getRoleBasedRedirect } from 'constants/roleBasedRedirects';
 
 function* login(action) {
   try {
@@ -27,12 +27,13 @@ function* login(action) {
       // Handle redirect
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
       const userRole = user?.role;
+      const storeCode = user?.store?.code || 'store';
 
       if (redirectUrl && redirectUrl.startsWith(window.location.origin)) {
         yield localStorage.removeItem('redirectAfterLogin');
         window.location.href = redirectUrl;
       } else {
-        const targetUrl = roleBasedRedirects[userRole] || '/main/admin';
+        const targetUrl = getRoleBasedRedirect(userRole, storeCode);
         // Hard reload to rebuild routes/menu with new user role
         yield call(() => window.location.replace(targetUrl));
       }

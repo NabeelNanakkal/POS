@@ -27,7 +27,8 @@ import {
   ListItemText
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useParams } from 'react-router-dom';
+import axios from 'axios';
 
 // Animations
 import Lottie from 'lottie-react';
@@ -45,6 +46,8 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import NoteAltOutlinedIcon from '@mui/icons-material/NoteAltOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
 import HistoryIcon from '@mui/icons-material/History';
@@ -52,7 +55,6 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CancelIcon from '@mui/icons-material/Cancel'; // Ensure this is imported
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -69,9 +71,12 @@ import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 // Mock Data
 import { fetchProducts } from 'container/ProductContainer/slice';
 import { fetchStores } from 'container/StoreContainer/slice';
+import { fetchDiscounts } from 'container/DiscountContainer/slice';
 import { useSelector, useDispatch } from 'react-redux';
 import customerService from 'services/customerService';
 import orderService from 'services/orderService';
+import config from 'config';
+import { formatAmountWithComma, getCurrencySymbol } from 'utils/formatAmount';
 // Helper to match ProductManagement color logic
 const stringToColor = (string) => {
     let hash = 0;
@@ -208,7 +213,7 @@ const ProductCard = ({ product, onAdd }) => (
                     Price
                 </Typography>
                 <Typography variant="subtitle1" fontWeight={900} color="primary.main" sx={{ fontSize: '1rem' }}>
-                    ${(product.retailPrice || product.price || 0).toFixed(2)}
+                    {formatAmountWithComma(product.retailPrice || product.price || 0)}
                 </Typography>
               </Box>
               <IconButton
@@ -496,17 +501,6 @@ const HeldBillsDialog = ({ open, onClose, heldBills, onResume, onDelete }) => {
                                 }}
                             >
                                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                    <Box>
-                                        <Typography variant="subtitle2" fontWeight={800}>
-                                            {bill.customer ? bill.customer.name : 'Guest'}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" display="block">
-                                            {bill.items.length} items • ${bill.total.toFixed(2)}
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                                            {new Date(bill.timestamp).toLocaleTimeString()}
-                                        </Typography>
-                                    </Box>
                                     <Stack direction="row" spacing={1}>
                                         <Button 
                                             size="small" 
@@ -539,68 +533,132 @@ const HeldBillsDialog = ({ open, onClose, heldBills, onResume, onDelete }) => {
 };
 
 // Discount Dialog
-const DiscountDialog = ({ open, onClose, discount, onApply }) => {
-    const [value, setValue] = useState(discount || 0);
-    const QUICK_DISCOUNTS = [0, 5, 10, 15, 18, 20, 25, 50];
+const DiscountDialog = ({ open, onClose, discounts, currentDiscount, onApply, subtotal }) => {
+    const [selectedId, setSelectedId] = useState(currentDiscount?._id || null);
+    const [manualPercent, setManualPercent] = useState(currentDiscount?.type === 'PERCENTAGE' && !currentDiscount?._id ? currentDiscount.value : 0);
+
+    const handleApply = () => {
+        if (selectedId) {
+            const disc = discounts.find(d => d._id === selectedId);
+            
+            // Check minimum purchase amount
+            if (disc.minPurchaseAmount && subtotal < disc.minPurchaseAmount) {
+                toast.error(`Minimum purchase of ${formatAmountWithComma(disc.minPurchaseAmount)} required for this discount.`);
+                return;
+            }
+            
+            onApply(disc);
+        } else if (manualPercent > 0) {
+            onApply({
+                name: 'Manual Discount',
+                type: 'PERCENTAGE',
+                value: manualPercent,
+                isManual: true
+            });
+        } else {
+            onApply(null);
+        }
+        onClose();
+    };
 
     return (
         <Dialog 
             open={open} 
             onClose={onClose}
             PaperProps={{
-                sx: { borderRadius: 4, width: '100%', maxWidth: 400, p: 1 }
+                sx: { borderRadius: 4, width: '100%', maxWidth: 500, p: 1 }
             }}
         >
             <DialogTitle sx={{ fontWeight: 800, pb: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <LocalOfferOutlinedIcon color="primary" />
-                Apply Discount
+                Select Discount
             </DialogTitle>
             <DialogContent>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Enter a percentage-based discount to apply to the subtotal.
+                    Choose a pre-configured discount or enter a manual percentage.
                 </Typography>
                 
                 <Stack spacing={3}>
                     <Box>
-                        <Typography variant="caption" fontWeight={700} color="primary" gutterBottom>
-                            DISCOUNT PERCENTAGE: {value}%
+                        <Typography variant="caption" fontWeight={700} color="primary" sx={{ mb: 1, display: 'block' }}>
+                            AVAILABLE DISCOUNTS
                         </Typography>
+                        <Grid container spacing={1.5}>
+                            <Grid size={{ xs: 12 }}>
+                                <Button
+                                    fullWidth
+                                    variant={!selectedId && manualPercent === 0 ? 'contained' : 'outlined'}
+                                    onClick={() => { setSelectedId(null); setManualPercent(0); }}
+                                    sx={{ borderRadius: 2, fontWeight: 700, justifyContent: 'flex-start', px: 2 }}
+                                >
+                                    None / Clear Discount
+                                </Button>
+                            </Grid>
+                            {discounts.map((d) => (
+                                <Grid size={{ xs: 12 }} key={d._id}>
+                                    <Paper
+                                        onClick={() => { setSelectedId(d._id); setManualPercent(0); }}
+                                        sx={{
+                                            p: 2,
+                                            borderRadius: 3,
+                                            cursor: 'pointer',
+                                            border: '2px solid',
+                                            borderColor: selectedId === d._id ? 'primary.main' : 'transparent',
+                                            bgcolor: selectedId === d._id ? alpha('#2563eb', 0.05) : '#f8fafc',
+                                            transition: 'all 0.2s',
+                                            '&:hover': { bgcolor: alpha('#2563eb', 0.08) }
+                                        }}
+                                    >
+                                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                            <Box>
+                                                <Typography variant="subtitle2" fontWeight={800}>{d.name}</Typography>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                    Code: {d.code} • {d.type === 'PERCENTAGE' ? `${d.value}% Off` : `${formatAmountWithComma(d.value)} Off`}
+                                                </Typography>
+                                                {d.minPurchaseAmount > 0 && (
+                                                    <Typography variant="caption" color="primary.main" fontWeight={700} display="block" sx={{ mt: 0.5 }}>
+                                                        Min. Purchase: {formatAmountWithComma(d.minPurchaseAmount)}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                            {selectedId === d._id && <CheckCircleIcon color="primary" />}
+                                        </Stack>
+                                    </Paper>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Box>
+
+                    <Divider>
+                        <Typography variant="caption" fontWeight={700} color="text.disabled">OR MANUAL PERCENTAGE</Typography>
+                    </Divider>
+
+                    <Box>
                         <TextField
                             fullWidth
                             type="number"
-                            value={value}
-                            onChange={(e) => setValue(Math.min(100, Math.max(0, Number(e.target.value))))}
+                            label="Manual Discount %"
+                            value={manualPercent}
+                            onChange={(e) => {
+                                setManualPercent(Math.min(100, Math.max(0, Number(e.target.value))));
+                                setSelectedId(null);
+                            }}
                             InputProps={{
                                 endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                                sx: { borderRadius: 2.5, fontWeight: 800, fontSize: '1.2rem' }
+                                sx: { borderRadius: 2.5, fontWeight: 800 }
                             }}
                         />
                     </Box>
-
-                    <Grid container spacing={1}>
-                        {QUICK_DISCOUNTS.map((d) => (
-                            <Grid size={{ xs: 4, sm: 3 }} key={d}>
-                                <Button
-                                    fullWidth
-                                    variant={value === d ? 'contained' : 'outlined'}
-                                    onClick={() => setValue(d)}
-                                    sx={{ borderRadius: 2, fontWeight: 700 }}
-                                >
-                                    {d === 0 ? 'None' : `${d}%`}
-                                </Button>
-                            </Grid>
-                        ))}
-                    </Grid>
                 </Stack>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
                 <Button onClick={onClose} sx={{ fontWeight: 700 }}>Cancel</Button>
                 <Button 
                     variant="contained" 
-                    onClick={() => { onApply(value); onClose(); }} 
+                    onClick={handleApply} 
                     sx={{ borderRadius: 2, px: 4, fontWeight: 800 }}
                 >
-                    Apply
+                    Apply Discount
                 </Button>
             </DialogActions>
         </Dialog>
@@ -714,7 +772,7 @@ const RewardDialog = ({ open, onClose, customer }) => {
                         <Box sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 3, border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.2), textAlign: 'center' }}>
                             <Typography variant="body2" color="text.secondary" fontWeight={600}>Available Points</Typography>
                             <Typography variant="h2" fontWeight={900} color="primary.main">1,250</Typography>
-                            <Typography variant="caption" color="text.secondary">Equivalent to <b>$12.50</b> credit</Typography>
+                            <Typography variant="caption" color="text.secondary">Equivalent to <b>{formatAmountWithComma(12.50)}</b> credit</Typography>
                         </Box>
                         <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 1 }}>Recent Transactions</Typography>
                         {[1, 2].map(i => (
@@ -1027,7 +1085,7 @@ const CameraScannerDialog = ({ open, onClose, onScan }) => {
 import { toast } from 'react-toastify';
 
 // Checkout Dialog with Payment Keyboard
-const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtotal, tax, total, pricelistDiscountAmount, discountAmount, pricelist, onPaymentComplete, onDiscount, onNote, onHold, onMenuOpen, onUpdateItemPrice }) => {
+const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtotal, tax, total, pricelistDiscountAmount, discountAmount, pricelist, onPaymentComplete, onDiscount, onNote, onHold, onMenuOpen, onUpdateItemPrice, allowedPaymentModes }) => {
     const theme = useTheme();
     const [paymentAmount, setPaymentAmount] = useState('');
     const [recordedPayments, setRecordedPayments] = useState([]);
@@ -1049,10 +1107,15 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
     };
 
     const saveNewPrice = () => {
-        if (editItem && newPrice && !isNaN(newPrice)) {
-            onUpdateItemPrice(editItem.id, parseFloat(newPrice));
-            setEditItem(null);
-            setNewPrice('');
+        if (editItem && newPrice !== '' && !isNaN(newPrice)) {
+            const val = parseFloat(newPrice);
+            if (val >= 0) {
+                onUpdateItemPrice(editItem.id, val);
+                setEditItem(null);
+                setNewPrice('');
+            } else {
+                toast.error('Price cannot be negative');
+            }
         }
     };
 
@@ -1088,7 +1151,7 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
 
         // Prevent entering above total money
         if (amountToAdd > (remainingBalance + 0.01)) { // Added 0.01 tolerance for float precision
-            toast.error(`Payment exceeds remaining balance of $${remainingBalance.toFixed(2)}`);
+            toast.error(`Payment exceeds remaining balance of ${formatAmountWithComma(remainingBalance)}`);
             return;
         }
 
@@ -1125,7 +1188,7 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                 } 
             }}
         >
-            <DialogTitle sx={{ 
+            <DialogTitle component="div" sx={{ 
                 m: 0,
                 p: 0, // Reset to 0 and apply padding to children or sx
                 fontWeight: 800, 
@@ -1215,12 +1278,12 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                                             <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25 }}>
                                                  <Chip label={`x${item.quantity}`} size="small" sx={{ height: 18, bgcolor: 'primary.lighter', color: 'primary.main', fontWeight: 800, fontSize: '0.65rem' }} />
                                                  <Stack direction="row" alignItems="center" spacing={0.5} onClick={() => handleEditPrice(item)} sx={{ cursor: 'pointer', '&:hover': { opacity: 0.7 } }}>
-                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textDecoration: item.isPriceOverridden ? 'line-through' : 'none' }}>
-                                                        @ ${item.originalPrice ? parseFloat(item.originalPrice).toFixed(2) : item.price.toFixed(2)}
+                                                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textDecoration: item.isPriceOverridden ? 'line-through' : 'none' }}>
+                                                        @ {formatAmountWithComma(item.originalPrice || item.price)}
                                                     </Typography>
                                                     {item.isPriceOverridden && (
                                                         <Typography variant="body2" color="primary.main" fontWeight={700} sx={{ fontSize: '0.75rem' }}>
-                                                            ${item.price.toFixed(2)}
+                                                            {formatAmountWithComma(item.price)}
                                                         </Typography>
                                                     )}
                                                     <EditOutlinedIcon sx={{ fontSize: '0.8rem', color: 'text.disabled' }} />
@@ -1228,7 +1291,7 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                                             </Stack>
                                         </Box>
                                         <Typography variant="h6" fontWeight={800} color="primary.main" sx={{ fontSize: '0.95rem' }}>
-                                            ${(item.price * item.quantity).toFixed(2)}
+                                            {formatAmountWithComma(item.price * item.quantity)}
                                         </Typography>
                                     </Stack>
                                 </Paper>
@@ -1326,30 +1389,30 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
 
                             <Stack direction="row" justifyContent="space-between">
                                 <Typography variant="body2" color="text.secondary">Subtotal</Typography>
-                                <Typography variant="body2" fontWeight={700}>${subtotal.toFixed(2)}</Typography>
+                                <Typography variant="body2" fontWeight={700}>{formatAmountWithComma(subtotal)}</Typography>
                             </Stack>
                             {pricelist !== 'standard' && (
                                 <Stack direction="row" justifyContent="space-between">
                                     <Typography variant="body2" color="primary.main" fontWeight={600}>
                                         {pricelist === 'wholesale' ? 'Wholesale Disc (5%)' : 'VIP Discount (10%)'}
                                     </Typography>
-                                    <Typography variant="body2" fontWeight={700} color="primary.main">-${pricelistDiscountAmount.toFixed(2)}</Typography>
+                                    <Typography variant="body2" fontWeight={700} color="primary.main">-{formatAmountWithComma(pricelistDiscountAmount)}</Typography>
                                 </Stack>
                             )}
                             {discount > 0 && (
                                 <Stack direction="row" justifyContent="space-between">
                                     <Typography variant="body2" color="error.main" fontWeight={600}>Discount ({discount}%)</Typography>
-                                    <Typography variant="body2" fontWeight={700} color="error.main">-${discountAmount.toFixed(2)}</Typography>
+                                    <Typography variant="body2" fontWeight={700} color="error.main">-{formatAmountWithComma(discountAmount)}</Typography>
                                 </Stack>
                             )}
                             <Stack direction="row" justifyContent="space-between">
                                 <Typography variant="body2" color="text.secondary">Tax (8%)</Typography>
-                                <Typography variant="body2" fontWeight={700}>${tax.toFixed(2)}</Typography>
+                                <Typography variant="body2" fontWeight={700}>{formatAmountWithComma(tax)}</Typography>
                             </Stack>
                             <Divider />
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                                 <Typography variant="h6" fontWeight={800}>Total</Typography>
-                                <Typography variant="h4" fontWeight={900} color="primary.main">${total.toFixed(2)}</Typography>
+                                <Typography variant="h4" fontWeight={900} color="primary.main">{formatAmountWithComma(total)}</Typography>
                             </Stack>
                         </Stack>
                     </Grid>
@@ -1360,35 +1423,52 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                         
                         {/* Payment Method Selection */}
                         <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
-                            {[
-                                { value: 'cash', label: 'Cash', icon: '💵' },
-                                { value: 'card', label: 'Card', icon: '💳' },
-                                { value: 'digital', label: 'Digital', icon: '📱' }
-                            ].map(method => (
-                                <Button
-                                    key={method.value}
-                                    fullWidth
-                                    variant="outlined"
-                                    onClick={() => handleAddPayment(method.value)}
-                                    sx={{ 
-                                        py: 1, 
-                                        borderRadius: 2,
-                                        fontWeight: 700,
-                                        fontSize: '0.85rem'
-                                    }}
-                                >
-                                    <Stack alignItems="center" spacing={0.25}>
-                                        <Typography sx={{ fontSize: '1.25rem' }}>{method.icon}</Typography>
-                                        <Typography 
-                                            variant="caption" 
-                                            fontWeight={700}
-                                            sx={{ fontSize: '0.7rem' }}
+                            {(!allowedPaymentModes || allowedPaymentModes.length === 0) ? (
+                                <Box sx={{ p: 2, textAlign: 'center', width: '100%', border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                                        No payment methods configured for this store.
+                                    </Typography>
+                                </Box>
+                            ) : (
+                                allowedPaymentModes.map(pm => {
+                                    // Handle both object (from population) and string (if not populated)
+                                    const method = typeof pm === 'object' ? {
+                                        value: pm.value,
+                                        label: pm.name,
+                                        icon: pm.icon || '💰'
+                                    } : {
+                                        value: pm,
+                                        label: pm.charAt(0).toUpperCase() + pm.slice(1),
+                                        icon: pm === 'cash' ? '💵' : pm === 'card' ? '💳' : '💰'
+                                    };
+                                    
+                                    return (
+                                        <Button
+                                            key={method.value}
+                                            fullWidth
+                                            variant="outlined"
+                                            onClick={() => handleAddPayment(method.value)}
+                                            sx={{ 
+                                                py: 1, 
+                                                borderRadius: 2,
+                                                fontWeight: 700,
+                                                fontSize: '0.85rem'
+                                            }}
                                         >
-                                            {method.label}
-                                        </Typography>
-                                    </Stack>
-                                </Button>
-                            ))}
+                                            <Stack alignItems="center" spacing={0.25}>
+                                                <Typography sx={{ fontSize: '1.25rem' }}>{method.icon}</Typography>
+                                                <Typography 
+                                                    variant="caption" 
+                                                    fontWeight={700}
+                                                    sx={{ fontSize: '0.7rem' }}
+                                                >
+                                                    {method.label}
+                                                </Typography>
+                                            </Stack>
+                                        </Button>
+                                    );
+                                })
+                            )}
                         </Stack>
 
                         {/* Amount Display */}
@@ -1397,7 +1477,7 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                                 Amount Tendered
                             </Typography>
                             <Typography variant="h4" fontWeight={900} color="primary.main" sx={{ mb: 1.5, minHeight: 40, fontSize: '1.75rem' }}>
-                                ${paymentAmount || '0.00'}
+                                {getCurrencySymbol()} {paymentAmount || '0.00'}
                             </Typography>
                             
                             {/* Recorded Payments List */}
@@ -1410,7 +1490,7 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                                                     {p.method}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
-                                                    ${p.amount.toFixed(2)}
+                                                    {formatAmountWithComma(p.amount)}
                                                 </Typography>
                                             </Stack>
                                             <IconButton size="small" onClick={() => handleRemovePayment(idx)} sx={{ p: 0.2 }}>
@@ -1426,14 +1506,14 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                                     {totalPaid >= total ? 'Change' : 'Balance Due'}
                                 </Typography>
                                 <Typography variant="h6" fontWeight={800} color={totalPaid >= total ? 'success.main' : 'error.main'}>
-                                    ${totalPaid >= total ? change.toFixed(2) : Math.abs(remainingBalance).toFixed(2)}
+                                    {formatAmountWithComma(totalPaid >= total ? change : Math.abs(remainingBalance))}
                                 </Typography>
                             </Stack>
                             
                             {totalPaid > 0 && (
                                 <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.5 }}>
                                     <Typography variant="caption" color="text.secondary" fontWeight={600}>Total Paid</Typography>
-                                    <Typography variant="caption" fontWeight={700}>${totalPaid.toFixed(2)}</Typography>
+                                    <Typography variant="caption" fontWeight={700}>{formatAmountWithComma(totalPaid)}</Typography>
                                 </Stack>
                             )}
                         </Paper>
@@ -1514,10 +1594,16 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                             label="New Price" 
                             type="number"
                             value={newPrice} 
-                            onChange={(e) => setNewPrice(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || parseFloat(val) >= 0) {
+                                    setNewPrice(val);
+                                }
+                            }}
                             autoFocus
+                            inputProps={{ min: 0, step: "0.01" }}
                             InputProps={{
-                                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                startAdornment: <InputAdornment position="start">{getCurrencySymbol()}</InputAdornment>,
                                 sx: { fontWeight: 700, fontSize: '1.2rem' }
                             }}
                         />
@@ -1572,15 +1658,18 @@ const InfoDialog = ({ open, onClose }) => {
       }
 const PosTerminal = () => {
   const theme = useTheme();
+  const { storeCode } = useParams();
   // Redux hooks
   const dispatch = useDispatch();
   const { products, loading } = useSelector((state) => state.product);
   const { user } = useSelector((state) => state.login);
   const { stores } = useSelector((state) => state.store);
+  const { discounts } = useSelector((state) => state.discount);
 
   // Initial Fetch logic
   useEffect(() => {
     dispatch(fetchStores());
+    dispatch(fetchDiscounts());
   }, [dispatch]);
 
   useEffect(() => {
@@ -1613,7 +1702,7 @@ const PosTerminal = () => {
   const [isHeldBillsDialogOpen, setIsHeldBillsDialogOpen] = useState(false);
   
   // New State for Discount and Note
-  const [discount, setDiscount] = useState(0);
+  const [selectedDiscount, setSelectedDiscount] = useState(null);
   const [note, setNote] = useState('');
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
@@ -1628,6 +1717,42 @@ const PosTerminal = () => {
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
+  
+  const [storeConfig, setStoreConfig] = useState(null);
+
+  useEffect(() => {
+    let storeToUse = null;
+    
+    // Find store ID by storeCode from URL
+    if (storeCode && stores.length > 0) {
+        storeToUse = stores.find(s => s.code === storeCode);
+        if (storeToUse) {
+            // Priority 1: Use the data already in Redux stores list if available
+            setStoreConfig(storeToUse);
+        } else {
+            console.warn(`Store with code ${storeCode} not found in stores list`);
+        }
+    }
+    
+    // Fallback: If not found in stores list, or we want a fresh fetch anyway
+    const storeIdToFetch = storeToUse ? (storeToUse._id || storeToUse.id) : (user?.store ? (typeof user.store === 'object' ? (user.store._id || user.store.id) : user.store) : null);
+
+    if (storeIdToFetch) {
+        const token = localStorage.getItem('token'); 
+        
+        axios.get(`${config.ip}/stores/${storeIdToFetch}`, {
+            headers: { Authorization: token ? `Bearer ${token}` : '' }
+        })
+        .then(res => {
+            if (res.data && res.data.data) {
+                setStoreConfig(res.data.data);
+            }
+        })
+        .catch(err => {
+            console.error('Failed to fetch store config:', err);
+        });
+    }
+  }, [user, storeCode, stores]);
   const [pricelist, setPricelist] = useState('standard');
 
   // Hardware Scanner Hook
@@ -1712,9 +1837,19 @@ const PosTerminal = () => {
     if (typeof productOrBarcode === 'string') {
         product = products.find(p => p.barcode === productOrBarcode || p.sku === productOrBarcode);
         if (!product) {
-            // Show error/toast
+            toast.error('Product not found');
             return; 
         }
+    }
+
+    // Check stock availability
+    const existingItem = cart.find(item => item.id === product.id);
+    const currentQtyInCart = existingItem ? existingItem.quantity : 0;
+    const availableStock = product.stock || 0;
+
+    if (currentQtyInCart >= availableStock) {
+        toast.error(`Cannot add more. Only ${availableStock} units available in stock.`);
+        return;
     }
 
     setCart(prev => {
@@ -1729,9 +1864,22 @@ const PosTerminal = () => {
   };
 
   const updateQuantity = (id, delta) => {
+    const product = products.find(p => (p.id || p._id) === id);
+    const cartItem = cart.find(item => item.id === id);
+    
+    if (!product || !cartItem) return;
+
+    const newQty = cartItem.quantity + delta;
+    const availableStock = product.stock || 0;
+
+    // Check if trying to increase beyond available stock
+    if (delta > 0 && newQty > availableStock) {
+        toast.error(`Cannot add more. Only ${availableStock} units available in stock.`);
+        return;
+    }
+
     setCart(prev => prev.map(item => {
       if (item.id === id) {
-        const newQty = item.quantity + delta;
         return newQty > 0 ? { ...item, quantity: newQty } : item;
       }
       return item;
@@ -1765,7 +1913,7 @@ const PosTerminal = () => {
         id: Date.now(),
         items: [...cart],
         customer: customer,
-        discount: discount,
+        discount: selectedDiscount,
         note: note,
         subtotal: subtotal,
         tax: tax,
@@ -1776,14 +1924,14 @@ const PosTerminal = () => {
     setHeldBills(prev => [newHeldBill, ...prev]);
     setCart([]);
     setCustomer(null);
-    setDiscount(0);
+    setSelectedDiscount(null);
     setNote('');
   };
 
   const handleResumeBill = (heldBill) => {
     setCart(heldBill.items);
     setCustomer(heldBill.customer);
-    setDiscount(heldBill.discount || 0);
+    setSelectedDiscount(heldBill.discount || null);
     setNote(heldBill.note || '');
     setHeldBills(prev => prev.filter(b => b.id !== heldBill.id));
     setIsHeldBillsDialogOpen(false);
@@ -1804,7 +1952,7 @@ const PosTerminal = () => {
   const handleCancelOrder = () => {
     setCart([]);
     setCustomer(null);
-    setDiscount(0);
+    setSelectedDiscount(null);
     setNote('');
     handleMenuClose();
   };
@@ -1834,8 +1982,12 @@ const PosTerminal = () => {
         customer: customer._id || customer.id,
         items: cart.map(item => ({
           product: item._id || item.id,
+          name: item.name,
+          sku: item.sku,
           quantity: item.quantity,
           price: item.price,
+          originalPrice: item.originalPrice || item.price,
+          isPriceOverridden: item.isPriceOverridden || false,
           discount: item.discount || 0
         })),
         total: total,
@@ -1844,12 +1996,36 @@ const PosTerminal = () => {
           amount: p.amount
         })),
         discount: discountAmount,
+        discountDetails: selectedDiscount ? {
+          code: selectedDiscount.code || 'MANUAL',
+          name: selectedDiscount.name || 'Manual Discount',
+          type: selectedDiscount.type,
+          value: selectedDiscount.value
+        } : null,
         notes: note
       };
 
       await orderService.createOrder(orderData);
 
-      // 2. Update customer purchase history
+      // 2. Track discount usage if a discount was applied
+      if (selectedDiscount && selectedDiscount._id && !selectedDiscount.isManual) {
+        try {
+          const token = localStorage.getItem('token');
+          await fetch(`${config.ip}/discounts/${selectedDiscount._id}/usage`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ amount: discountAmount })
+          });
+        } catch (discountError) {
+          console.error('Error tracking discount usage:', discountError);
+          // Don't fail the order if discount tracking fails
+        }
+      }
+
+      // 3. Update customer purchase history
       const response = await customerService.updatePurchaseHistory(
         customer._id || customer.id,
         total
@@ -1861,11 +2037,11 @@ const PosTerminal = () => {
       }
 
       // Generate payment breakdown for the message
-      const paymentBreakdown = payments.map(p => `${p.method.toUpperCase()}: $${p.amount.toFixed(2)}`).join('\n');
-      const changeMsg = change > 0 ? `\n\nTotal Change: $${change.toFixed(2)}` : '';
+      const paymentBreakdown = payments.map(p => `${p.method.toUpperCase()}: ${formatAmountWithComma(p.amount)}`).join('\n');
+      const changeMsg = change > 0 ? `\n\nTotal Change: ${formatAmountWithComma(change)}` : '';
 
       // Show success message
-      toast.success(`Payment of $${total.toFixed(2)} processed successfully!`, {
+      toast.success(`Payment of ${formatAmountWithComma(total)} processed successfully!`, {
         position: "top-center",
         autoClose: 5000,
         hideProgressBar: false,
@@ -1874,9 +2050,27 @@ const PosTerminal = () => {
         draggable: true
       });
 
+      // Refetch products to update stock levels in UI
+      let warehouseName = '';
+      if (user?.store) {
+          if (typeof user.store === 'object') {
+              warehouseName = user.store.name;
+          } else if (stores.length > 0) {
+               const s = stores.find(st => st.id === user.store || st._id === user.store);
+               if (s) warehouseName = s.name;
+          }
+      }
+      
+      dispatch(fetchProducts({ 
+          page: 1, 
+          limit: 1000,
+          warehouseName: warehouseName,
+          isActive: true
+      }));
+
       // Clear cart and reset transaction
       setCart([]);
-      setDiscount(0);
+      setSelectedDiscount(null);
       setNote('');
       setIsCheckoutDialogOpen(false);
       // Keep customer selected for next transaction
@@ -1892,7 +2086,23 @@ const PosTerminal = () => {
   const pricelistDiscountFactor = pricelist === 'wholesale' ? 0.05 : (pricelist === 'vip' ? 0.10 : 0);
   const pricelistDiscountAmount = subtotal * pricelistDiscountFactor;
   
-  const discountAmount = (subtotal - pricelistDiscountAmount) * (discount / 100);
+  const calculateDiscount = () => {
+    if (!selectedDiscount) return 0;
+    
+    if (selectedDiscount.type === 'PERCENTAGE') {
+        let amount = (subtotal - pricelistDiscountAmount) * (selectedDiscount.value / 100);
+        // Apply max discount if applicable
+        if (selectedDiscount.maxDiscountAmount && amount > selectedDiscount.maxDiscountAmount) {
+            amount = selectedDiscount.maxDiscountAmount;
+        }
+        return amount;
+    } else {
+        // Fixed amount
+        return Math.min(selectedDiscount.value, subtotal - pricelistDiscountAmount);
+    }
+  };
+
+  const discountAmount = calculateDiscount();
   const currentSubtotal = subtotal - pricelistDiscountAmount - discountAmount;
   const tax = currentSubtotal * 0.08;
   const total = currentSubtotal + tax;
@@ -2039,7 +2249,7 @@ const PosTerminal = () => {
       {/* Cart Column */}
       <Box 
         sx={{ 
-          width: { xs: '100%', md: 400 }, 
+          width: { xs: '100%', md: 340 }, 
           bgcolor: 'white', 
           borderLeft: { md: layoutPosition === 'right' ? '1px solid' : 'none' }, 
           borderRight: { md: layoutPosition === 'left' ? '1px solid' : 'none' },
@@ -2131,11 +2341,11 @@ const PosTerminal = () => {
                         <Stack direction="row" spacing={2} sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'divider' }}>
                             <Box>
                                 <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.65rem' }}>Total Spent</Typography>
-                                <Typography variant="caption" fontWeight={800} color="success.dark">${(customer.totalSpent || 0).toFixed(2)}</Typography>
+                                <Typography variant="caption" fontWeight={800} color="success.dark">{formatAmountWithComma(customer.totalSpent || 0)}</Typography>
                             </Box>
                             <Box>
                                 <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.65rem' }}>Last Purchase</Typography>
-                                <Typography variant="caption" fontWeight={800} color="primary.main">${(customer.lastPurchaseAmount || 0).toFixed(2)}</Typography>
+                                <Typography variant="caption" fontWeight={800} color="primary.main">{formatAmountWithComma(customer.lastPurchaseAmount || 0)}</Typography>
                             </Box>
                         </Stack>
                     </Box>
@@ -2187,7 +2397,7 @@ const PosTerminal = () => {
                             <Box sx={{ flex: 1 }}>
                                 <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ fontSize: '0.8rem' }}>{item.name}</Typography>
                                 <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-                                    ${item.price.toFixed(2)}
+                                    {formatAmountWithComma(item.price)}
                                 </Typography>
                             </Box>
                             <Stack alignItems="flex-end" spacing={0.5}>
@@ -2294,7 +2504,7 @@ const PosTerminal = () => {
                     flex: 1
                 }}
             >
-                Checkout ${total.toFixed(2)}
+                Checkout {formatAmountWithComma(total)}
             </Button>
         </Stack>
 
@@ -2316,8 +2526,10 @@ const PosTerminal = () => {
         <DiscountDialog 
             open={isDiscountDialogOpen}
             onClose={() => setIsDiscountDialogOpen(false)}
-            discount={discount}
-            onApply={(v) => setDiscount(v)}
+            discounts={discounts}
+            currentDiscount={selectedDiscount}
+            onApply={(v) => setSelectedDiscount(v)}
+            subtotal={subtotal}
         />
 
         <NoteDialog 
@@ -2372,7 +2584,7 @@ const PosTerminal = () => {
             onClose={() => setIsCheckoutDialogOpen(false)}
             cart={cart}
             customer={customer}
-            discount={discount}
+            discount={selectedDiscount ? (selectedDiscount.type === 'PERCENTAGE' ? selectedDiscount.value : 0) : 0}
             note={note}
             subtotal={subtotal}
             tax={tax}
@@ -2386,6 +2598,7 @@ const PosTerminal = () => {
             onHold={handleHoldBill}
             onMenuOpen={handleMenuOpen}
             onUpdateItemPrice={updateItemPrice}
+            allowedPaymentModes={storeConfig?.allowedPaymentModes}
         />
       </Box>
     </Box>

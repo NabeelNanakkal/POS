@@ -1,5 +1,7 @@
 import Store from '../models/Store.js';
 import User from '../models/User.js';
+import Employee from '../models/Employee.js';
+import Country from '../models/Country.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -19,9 +21,15 @@ export const getStores = asyncHandler(async (req, res) => {
   
   const query = {};
   
-  // If not Super Admin or Admin or Manager, show only own stores
-  if (!['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'INVENTORY_MANAGER'].includes(req.user.role)) {
-    query.manager = req.user._id;
+  // Super admins see all stores (handled in super admin routes)
+  // Store admins see only their own stores
+  if (req.user.role === 'STORE_ADMIN') {
+    query.owner = req.user._id;
+  } else if (req.user.role !== 'SUPER_ADMIN') {
+    // Other users see stores they're associated with
+    if (req.storeId) {
+      query._id = req.storeId;
+    }
   }
 
   // Search by name, code, or address
@@ -41,21 +49,36 @@ export const getStores = asyncHandler(async (req, res) => {
 
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
+  // Build employee query to match store query
+  const employeeStoreQuery = {};
+  if (req.user.role === 'STORE_ADMIN') {
+    // Get all stores owned by this store admin
+    const ownedStores = await Store.find({ owner: req.user._id }).distinct('_id');
+    employeeStoreQuery.store = { $in: ownedStores };
+  } else if (req.user.role !== 'SUPER_ADMIN' && req.storeId) {
+    employeeStoreQuery.store = req.storeId;
+  }
+
   const [stores, total, activeStores, totalStaff, currentMonthStores, lastMonthStores] = await Promise.all([
     Store.find(query)
+      .populate('owner', 'username email')
       .populate('manager', 'username email')
+      .populate('country', 'country flag iso2 iso3 currency')
+      .populate('allowedPaymentModes')
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ name: 1 }),
     Store.countDocuments(query),
     Store.countDocuments({ ...query, isActive: true }),
-    User.countDocuments({ role: { $in: ['MANAGER', 'CASHIER', 'INVENTORY_MANAGER'] } }),
+    Employee.countDocuments(employeeStoreQuery),
     Store.countDocuments({ 
+      ...query,
       createdAt: { 
         $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) 
       } 
     }),
     Store.countDocuments({ 
+      ...query,
       createdAt: { 
         $gte: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
         $lt: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -78,7 +101,7 @@ export const getStores = asyncHandler(async (req, res) => {
       activeStores,
       totalStaff,
       growth: {
-        value: 14.2, // Placeholder for overall growth target or similar
+        value: 14.2,
         trend: growthTrend
       }
     }
@@ -91,7 +114,10 @@ export const getStores = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const getStoreById = asyncHandler(async (req, res) => {
-  const store = await Store.findById(req.params.id).populate('manager', 'username email role');
+  const store = await Store.findById(req.params.id)
+    .populate('manager', 'username email role')
+    .populate('country', 'country flag iso2 iso3 currency')
+    .populate('allowedPaymentModes');
 
   if (!store) {
     throw ApiError.notFound('Store not found');
@@ -111,12 +137,30 @@ export const getStoreById = asyncHandler(async (req, res) => {
  * @access  Private (Admin)
  */
 export const createStore = asyncHandler(async (req, res) => {
+  // Set owner to current user (store admin creating their store)
+  req.body.owner = req.user._id;
+  
   // If manager not provided, assign current user
   if (!req.body.manager) {
     req.body.manager = req.user._id;
   }
   
+  // If country is provided, fetch and populate currency
+  if (req.body.country) {
+    const country = await Country.findById(req.body.country);
+    if (country) {
+      req.body.currency = {
+        code: country.currency.code,
+        symbol: country.currency.symbol,
+        name: country.currency.name
+      };
+    }
+  }
+  
   const store = await Store.create(req.body);
+  
+  // Update user's store reference
+  await User.findByIdAndUpdate(req.user._id, { store: store._id });
 
   res.status(201).json(ApiResponse.created(store, 'Store created successfully'));
 });
@@ -142,7 +186,8 @@ export const updateStore = asyncHandler(async (req, res) => {
     req.params.id,
     req.body,
     { new: true, runValidators: true }
-  ).populate('manager', 'username email');
+  ).populate('manager', 'username email')
+   .populate('allowedPaymentModes');
 
   res.json(ApiResponse.success(store, 'Store updated successfully'));
 });

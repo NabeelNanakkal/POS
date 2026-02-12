@@ -14,13 +14,16 @@ import {
 import { useTheme, alpha } from '@mui/material/styles';
 import LockClockOutlinedIcon from '@mui/icons-material/LockClockOutlined';
 
+import { getCurrencySymbol } from 'utils/formatAmount';
+
 const ShiftStartModal = ({ open, onClose, onConfirm, loading }) => {
   const theme = useTheme();
   const [openingBalance, setOpeningBalance] = useState('');
 
   const handleConfirm = () => {
-    if (openingBalance) {
-      onConfirm(parseFloat(openingBalance));
+    const val = parseFloat(openingBalance);
+    if (val >= 0) {
+      onConfirm(val);
     }
   };
 
@@ -72,12 +75,18 @@ const ShiftStartModal = ({ open, onClose, onConfirm, loading }) => {
               placeholder="0.00"
               type="number"
               value={openingBalance}
-              onChange={(e) => setOpeningBalance(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || parseFloat(val) >= 0) {
+                  setOpeningBalance(val);
+                }
+              }}
+              inputProps={{ min: 0, step: "0.01" }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
                     <Typography fontWeight={700} color="text.secondary">
-                      $
+                      {getCurrencySymbol()}
                     </Typography>
                   </InputAdornment>
                 ),
@@ -91,6 +100,7 @@ const ShiftStartModal = ({ open, onClose, onConfirm, loading }) => {
           </Box>
         </Stack>
       </DialogContent>
+
       <DialogActions sx={{ px: 3, pb: 4 }}>
         <Button
           fullWidth

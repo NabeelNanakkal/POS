@@ -20,6 +20,7 @@ import upload from 'container/UploadContainer/slice';
 import report from 'container/ReportContainer/slice';
 import store from 'container/StoreContainer/slice';
 import employee from 'container/EmployeeContainer/slice';
+import discount from 'container/DiscountContainer/slice';
 
 import menu from './menu';
 import customizationReducer from 'store/customizationReducer';
@@ -46,7 +47,8 @@ const reducer = combineReducers({
   upload: upload,
   report: report,
   store: store,
-  employee: employee
+  employee: employee,
+  discount: discount
 });
 
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -30,6 +30,7 @@ import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 import GroupsIcon from '@mui/icons-material/Groups';
 import AddHomeIcon from '@mui/icons-material/AddHome';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 
 // Components
 import RevenueChart from 'views/cashier/components/RevenueChart';
@@ -160,6 +161,7 @@ const QuickActionCard = ({ title, subtitle, icon: Icon, color = 'primary', onCli
 const AdminDashboard = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { storeCode } = useParams();
   const dispatch = useDispatch();
   const { stores } = useSelector((state) => state.store);
   const { employees } = useSelector((state) => state.employee);
@@ -230,28 +232,28 @@ const AdminDashboard = () => {
                 subtitle="Expand operations"
                 icon={AddHomeIcon} 
                 color="secondary"
-                onClick={() => navigate('/admin/stores')}
+                onClick={() => navigate(`/pos/${storeCode}/stores`)}
             />
             <QuickActionCard 
                 title="Hire Employee" 
                 subtitle="Onboard staff"
                 icon={PersonAddAlt1Icon} 
                 color="success"
-                onClick={() => navigate('/admin/employees')}
+                onClick={() => navigate(`/pos/${storeCode}/employees`)}
             />
             <QuickActionCard 
                 title="Global Reports" 
                 subtitle="RetailOS metrics"
                 icon={AssessmentOutlinedIcon} 
                 color="info"
-                onClick={() => navigate('/pos/reports')}
+                onClick={() => navigate(`/pos/${storeCode}/reports`)}
             />
             <QuickActionCard 
-                title="Store Hub" 
-                subtitle="Manage outlets"
-                icon={StorefrontIcon} 
-                color="primary"
-                onClick={() => navigate('/admin/stores')}
+                title="Inventory" 
+                subtitle="Stock & Products"
+                icon={Inventory2OutlinedIcon} 
+                color="warning"
+                onClick={() => navigate(`/pos/${storeCode}/inventory`)}
             />
         </Box>
       </Box>
@@ -318,7 +320,7 @@ const AdminDashboard = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            <Button fullWidth variant="outlined" sx={{ mt: 2, borderRadius: 2 }} onClick={() => navigate('/admin/stores')}>
+            <Button fullWidth variant="outlined" sx={{ mt: 2, borderRadius: 2 }} onClick={() => navigate(`/pos/${storeCode}/stores`)}>
               View All Stores
             </Button>
           </Paper>

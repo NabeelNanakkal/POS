@@ -20,7 +20,9 @@ const storeSlice = createSlice({
       }
     },
     loading: false,
-    error: null
+    loading: false,
+    error: null,
+    paymentModes: []
   },
   reducers: {
     fetchStores: (state) => {
@@ -129,6 +131,18 @@ const storeSlice = createSlice({
     deleteStoreFail: (state, action) => {
       state.loading = false;
       state.error = action.payload;
+    },
+    fetchPaymentModes: (state) => {
+        state.loading = true;
+    },
+    fetchPaymentModesSuccess: (state, action) => {
+        state.loading = false;
+        console.log('fetchPaymentModesSuccess payload:', action.payload);
+        state.paymentModes = action.payload.data || [];
+    },
+    fetchPaymentModesFail: (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
     }
   }
 });
@@ -139,7 +153,8 @@ export const {
   createStore, createStoreSuccess, createStoreFail,
   updateStore, updateStoreSuccess, updateStoreFail,
   toggleStoreStatus, toggleStoreStatusSuccess, toggleStoreStatusFail,
-  deleteStore, deleteStoreSuccess, deleteStoreFail
+  deleteStore, deleteStoreSuccess, deleteStoreFail,
+  fetchPaymentModes, fetchPaymentModesSuccess, fetchPaymentModesFail
 } = storeSlice.actions;
 
 export default storeSlice.reducer;

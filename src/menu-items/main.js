@@ -7,7 +7,14 @@ import {
   IconPackage, 
   IconArchive, 
   IconReceipt2, 
-  IconReportAnalytics 
+  IconReportAnalytics,
+  IconDatabase,
+  IconCategory,
+  IconUserCircle,
+  IconCreditCard,
+  IconDiscount,
+  IconBinaryTree,
+  IconSettings
 } from '@tabler/icons-react';
 
 // ==============================|| POS MENU ITEMS ||============================== //
@@ -21,27 +28,27 @@ const main = {
       id: 'admin-dashboard',
       title: 'Admin Dashboard',
       type: 'item',
-      url: '/admin/dashboard',
+      url: '/pos/dashboard',
       icon: IconLayoutDashboard,
-      permittedRoles: ['ADMIN', 'SUPER_ADMIN'],
+      permittedRoles: ['STORE_ADMIN'],
       breadcrumbs: false
     },
     {
       id: 'admin-stores',
       title: 'Store Management',
       type: 'item',
-      url: '/admin/stores',
+      url: '/pos/stores',
       icon: IconBuildingStore,
-      permittedRoles: ['ADMIN', 'SUPER_ADMIN'],
+      permittedRoles: ['STORE_ADMIN'],
       breadcrumbs: false
     },
     {
       id: 'admin-employees',
       title: 'Employee Management',
       type: 'item',
-      url: '/admin/employees',
+      url: '/pos/employees',
       icon: IconUsers,
-      permittedRoles: ['ADMIN', 'SUPER_ADMIN'],
+      permittedRoles: ['STORE_ADMIN'],
       breadcrumbs: false
     },
     {
@@ -50,7 +57,7 @@ const main = {
       type: 'item',
       url: '/pos/dashboard',
       icon: IconLayoutDashboard,
-      permittedRoles: ['MANAGER', 'CASHIER', 'INVENTORY_MANAGER'],
+      permittedRoles: ['MANAGER', 'CASHIER', 'INVENTORY_MANAGER', 'ACCOUNTANT'],
       breadcrumbs: false
     },
     {
@@ -86,7 +93,7 @@ const main = {
       type: 'item',
       url: '/pos/inventory',
       icon: IconArchive,
-      permittedRoles: ['MANAGER', 'INVENTORY_MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+      permittedRoles: ['MANAGER', 'INVENTORY_MANAGER', 'STORE_ADMIN', 'ACCOUNTANT'],
       breadcrumbs: false
     },
     {
@@ -95,8 +102,44 @@ const main = {
       type: 'item',
       url: '/pos/reports',
       icon: IconReportAnalytics,
-      permittedRoles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+      permittedRoles: ['MANAGER', 'STORE_ADMIN', 'ACCOUNTANT'],
       breadcrumbs: false
+    },
+    {
+      id: 'customers',
+      title: 'Customers',
+      type: 'item',
+      url: '/pos/customers',
+      icon: IconUserCircle,
+      permittedRoles: ['MANAGER', 'STORE_ADMIN', 'ACCOUNTANT'],
+      breadcrumbs: false
+    },
+    {
+      id: 'settings',
+      title: 'Settings',
+      type: 'collapse',
+      icon: IconSettings,
+      permittedRoles: ['MANAGER'],
+      children: [
+        {
+          id: 'categories',
+          title: 'Categories',
+          type: 'item',
+          url: '/pos/settings/categories',
+          icon: IconBinaryTree,
+          permittedRoles: ['MANAGER'],
+          breadcrumbs: false
+        },
+        {
+          id: 'discounts',
+          title: 'Discounts',
+          type: 'item',
+          url: '/pos/settings/discounts',
+          icon: IconDiscount,
+          permittedRoles: ['MANAGER'],
+          breadcrumbs: false
+        }
+      ]
     }
   ]
 };

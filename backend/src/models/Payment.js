@@ -12,6 +12,11 @@ const paymentSchema = new mongoose.Schema(
       required: true,
       min: [0, 'Amount cannot be negative'],
     },
+    store: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Store',
+      required: true,
+    },
     method: {
       type: String,
       enum: ['CASH', 'CARD', 'UPI', 'WALLET', 'OTHER'],
@@ -57,6 +62,7 @@ const paymentSchema = new mongoose.Schema(
 paymentSchema.index({ order: 1 });
 paymentSchema.index({ transactionId: 1 });
 paymentSchema.index({ status: 1, createdAt: -1 });
+paymentSchema.index({ store: 1 });
 
 const Payment = mongoose.model('Payment', paymentSchema);
 

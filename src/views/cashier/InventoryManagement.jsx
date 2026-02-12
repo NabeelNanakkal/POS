@@ -62,6 +62,8 @@ import SmartphoneIcon from '@mui/icons-material/Smartphone';
 import PrintIcon from '@mui/icons-material/Print';
 import CableIcon from '@mui/icons-material/Cable';
 import SettingsInputComponentIcon from '@mui/icons-material/SettingsInputComponent';
+import CloseIcon from '@mui/icons-material/Close';
+import NoDataLottie from 'ui-component/NoDataLottie';
 
 // UI Helper: Generate consistent colors from strings
 const stringToColor = (string) => {
@@ -180,7 +182,13 @@ const AdjustmentDialog = ({ open, onClose, product, onAdjust }) => {
                         type="number" 
                         fullWidth 
                         value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || parseInt(val) >= 0) {
+                                setQuantity(val);
+                            }
+                        }}
+                        inputProps={{ min: 0 }}
                         InputProps={{ sx: { borderRadius: 2 } }}
                     />
 
@@ -250,18 +258,34 @@ const OrderStockDialog = ({ open, onClose, inventory, onOrder }) => {
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 5, p: 0 } }}>
+        <Dialog 
+            open={open} 
+            onClose={(event, reason) => {
+                if (reason !== 'backdropClick') {
+                    onClose();
+                }
+            }} 
+            maxWidth="md" 
+            fullWidth 
+            PaperProps={{ sx: { borderRadius: 5, p: 0 } }}
+        >
             <Box sx={{ p: 3, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
                     <Typography variant="h3" fontWeight={900}>Restock Inventory</Typography>
                     <Typography variant="body2" color="text.secondary">Create a new Purchase Order for your vendors</Typography>
                 </Box>
-                <Chip 
-                    label={`${selectedItems.length} Items Selected`} 
-                    color="primary" 
-                    variant="outlined" 
-                    sx={{ fontWeight: 800, borderRadius: 2 }} 
-                />
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip 
+                        label={`${selectedItems.length} Selected`} 
+                        color="primary" 
+                        variant="outlined" 
+                        size="small"
+                        sx={{ fontWeight: 800, borderRadius: 2 }} 
+                    />
+                    <IconButton onClick={onClose} size="small">
+                        <CloseIcon />
+                    </IconButton>
+                </Stack>
             </Box>
 
             <Box sx={{ maxHeight: 500, overflowY: 'auto', p: 2 }}>
@@ -301,7 +325,13 @@ const OrderStockDialog = ({ open, onClose, inventory, onOrder }) => {
                                             type="number" 
                                             disabled={!isSelected}
                                             value={orderQuantities[item.id] || ''}
-                                            onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '' || parseInt(val) >= 0) {
+                                                    handleQtyChange(item.id, val);
+                                                }
+                                            }}
+                                            inputProps={{ min: 0 }}
                                             InputProps={{ sx: { borderRadius: 2, fontSize: '0.85rem' } }}
                                         />
                                     </TableCell>
@@ -438,22 +468,7 @@ const InventoryManagement = () => {
                 onClose={() => setIsOrderSuccessOpen(false)} 
             />
 
-            {/* Header & Title */}
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                    <Typography variant="h2" fontWeight={900} color="text.primary">Inventory Control</Typography>
-                    <Typography variant="body1" color="text.secondary">Real-time stock monitoring & warehouse management</Typography>
-                </Box>
-                <Button 
-                    variant="contained" 
-                    color="primary" 
-                    startIcon={<ShoppingCartCheckoutIcon />}
-                    onClick={() => setIsOrderDialogOpen(true)}
-                    sx={{ borderRadius: 3, px: 3, py: 1.2, fontWeight: 700 }}
-                >
-                    Order Stock
-                </Button>
-            </Box>
+
 
             {/* Stats Overview */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
@@ -488,6 +503,15 @@ const InventoryManagement = () => {
                         ))}
                     </Select>
                 </FormControl>
+                <Button 
+                    variant="contained" 
+                    color="primary" 
+                    startIcon={<ShoppingCartCheckoutIcon />}
+                    onClick={() => setIsOrderDialogOpen(true)}
+                    sx={{ borderRadius: 3, px: 3, py: 1, fontWeight: 700, whiteSpace: 'nowrap' }}
+                >
+                    Order Stock
+                </Button>
             </Paper>
 
             {/* Inventory Table */}
@@ -505,78 +529,86 @@ const InventoryManagement = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredInventory.map((item) => {
-                            const isLowStock = item.stock < item.reorderPoint;
-                            return (
-                                <TableRow key={item.id} hover sx={{ transition: '0.3s' }}>
-                                    <TableCell sx={{ pl: 4, py: 2 }}>
-                                        <Stack direction="row" spacing={2} alignItems="center">
-                                            <Avatar 
-                                              variant="rounded" 
-                                              src={item.image} 
-                                              sx={{ 
-                                                width: 44, 
-                                                height: 44, 
-                                                borderRadius: 2,
-                                                bgcolor: stringToColor(item.name || ''),
-                                                color: 'white'
-                                              }} 
-                                            >
-                                               {getProductIcon(item.name, typeof item.category === 'object' ? item.category.name : item.category)}
-                                            </Avatar>
-                                            <Box>
-                                                <Typography variant="subtitle2" fontWeight={800}>{item.name}</Typography>
-                                                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'Monospace' }}>{item.sku}</Typography>
-                                            </Box>
-                                        </Stack>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip 
-                                            label={item.warehouseName || 'Main Warehouse'} 
-                                            size="small" 
-                                            sx={{ fontWeight: 700, bgcolor: '#f1f5f9', color: 'text.secondary' }} 
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={800} color={isLowStock ? 'error.main' : 'text.primary'}>
-                                            {item.stock} Units
-                                        </Typography>
-                                        {isLowStock && (
-                                            <Typography variant="caption" color="error" fontWeight={600} sx={{ display: 'block' }}>
-                                                Below limit
-                                            </Typography>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" color="text.secondary" fontWeight={600}>{item.committed || 0}</Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={800}>{item.stock - (item.committed || 0)}</Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" color="text.disabled" fontWeight={700}>{item.reorderPoint}</Typography>
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ pr: 4 }}>
-                                        <Tooltip title="Stock Adjustment">
-                                            <IconButton 
+                        {filteredInventory.length > 0 ? (
+                            filteredInventory.map((item) => {
+                                const isLowStock = item.stock < item.reorderPoint;
+                                return (
+                                    <TableRow key={item.id} hover sx={{ transition: '0.3s' }}>
+                                        <TableCell sx={{ pl: 4, py: 2 }}>
+                                            <Stack direction="row" spacing={2} alignItems="center">
+                                                <Avatar 
+                                                  variant="rounded" 
+                                                  src={item.image} 
+                                                  sx={{ 
+                                                    width: 44, 
+                                                    height: 44, 
+                                                    borderRadius: 2,
+                                                    bgcolor: stringToColor(item.name || ''),
+                                                    color: 'white'
+                                                  }} 
+                                                >
+                                                   {getProductIcon(item.name, typeof item.category === 'object' ? item.category.name : item.category)}
+                                                </Avatar>
+                                                <Box>
+                                                    <Typography variant="subtitle2" fontWeight={800}>{item.name}</Typography>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'Monospace' }}>{item.sku}</Typography>
+                                                </Box>
+                                            </Stack>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip 
+                                                label={item.warehouseName || 'Main Warehouse'} 
                                                 size="small" 
-                                                onClick={() => {
-                                                    setSelectedProduct(item);
-                                                    setIsAdjustmentOpen(true);
-                                                }}
-                                                sx={{ 
-                                                    color: 'primary.main', 
-                                                    bgcolor: alpha(theme.palette.primary.main, 0.05),
-                                                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
-                                                }}
-                                            >
-                                                <EditOutlinedIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
+                                                sx={{ fontWeight: 700, bgcolor: '#f1f5f9', color: 'text.secondary' }} 
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" fontWeight={800} color={isLowStock ? 'error.main' : 'text.primary'}>
+                                                {item.stock} Units
+                                            </Typography>
+                                            {isLowStock && (
+                                                <Typography variant="caption" color="error" fontWeight={600} sx={{ display: 'block' }}>
+                                                    Below limit
+                                                </Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" color="text.secondary" fontWeight={600}>{item.committed || 0}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" fontWeight={800}>{item.stock - (item.committed || 0)}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" color="text.disabled" fontWeight={700}>{item.reorderPoint}</Typography>
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ pr: 4 }}>
+                                            <Tooltip title="Stock Adjustment">
+                                                <IconButton 
+                                                    size="small" 
+                                                    onClick={() => {
+                                                        setSelectedProduct(item);
+                                                        setIsAdjustmentOpen(true);
+                                                    }}
+                                                    sx={{ 
+                                                        color: 'primary.main', 
+                                                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                                                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+                                                    }}
+                                                >
+                                                    <EditOutlinedIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                                    <NoDataLottie message="No inventory items found" />
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </TableContainer>

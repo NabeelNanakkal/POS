@@ -19,10 +19,10 @@ router.use(verifyToken);
 // Store routes
 router.get('/', getStores);
 router.get('/:id', getStoreById);
-router.post('/', authorize('ADMIN', 'SUPER_ADMIN'), createStore);
-router.post('/bulk', authorize('ADMIN', 'SUPER_ADMIN'), bulkCreateStores);
-router.put('/:id', authorize('ADMIN', 'SUPER_ADMIN'), updateStore);
-router.patch('/:id/status', authorize('ADMIN', 'SUPER_ADMIN'), toggleStoreStatus);
-router.delete('/:id', authorize('SUPER_ADMIN', 'ADMIN'), deleteStore);
+router.post('/', authorize('STORE_ADMIN', 'SUPER_ADMIN'), createStore);
+router.post('/bulk', authorize('STORE_ADMIN', 'SUPER_ADMIN'), bulkCreateStores);
+router.put('/:id', authorize('STORE_ADMIN', 'SUPER_ADMIN'), updateStore);
+router.patch('/:id/status', authorize('STORE_ADMIN', 'SUPER_ADMIN'), toggleStoreStatus);
+router.delete('/:id', authorize('SUPER_ADMIN', 'STORE_ADMIN'), deleteStore);
 
 export default router;

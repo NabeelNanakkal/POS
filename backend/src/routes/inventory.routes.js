@@ -20,7 +20,7 @@ router.get('/alerts', getLowStockAlerts);
 // Inventory routes
 router.get('/', getInventory);
 router.get('/:id', getInventoryById);
-router.post('/adjust', authorize('INVENTORY_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'), adjustInventory);
-router.post('/transfer', authorize('INVENTORY_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'), transferInventory);
+router.post('/adjust', authorize('INVENTORY_MANAGER', 'MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), adjustInventory);
+router.post('/transfer', authorize('INVENTORY_MANAGER', 'MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), transferInventory);
 
 export default router;

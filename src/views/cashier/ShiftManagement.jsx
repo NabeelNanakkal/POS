@@ -62,6 +62,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import NoDataLottie from 'ui-component/NoDataLottie';
 import { startBreak, endBreak, fetchCurrentShift, openShift, closeShift } from 'container/ShiftContainer/slice';
+import { formatAmountWithComma, getCurrencySymbol } from 'utils/formatAmount';
 
 const ShiftManagement = () => {
   const theme = useTheme();
@@ -372,17 +373,17 @@ const ShiftManagement = () => {
                         </Box>
                       </Stack>
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>${shift.openingBalance?.toFixed(2)}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{formatAmountWithComma(shift.openingBalance || 0)}</TableCell>
                     <TableCell>{new Date(shift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
                     <TableCell>
                       {shift.endTime ? new Date(shift.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>
-                      ${shift.totalSales?.toFixed(2) || '0.00'}
+                      {formatAmountWithComma(shift.totalSales || 0)}
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>
                       {shift.status === 'CLOSED' 
-                        ? `$${(shift.closingBalance !== undefined ? shift.closingBalance : (shift.openingBalance + shift.totalSales)).toFixed(2)}` 
+                        ? formatAmountWithComma(shift.closingBalance !== undefined ? shift.closingBalance : (shift.openingBalance + shift.totalSales)) 
                         : 'NA'}
                     </TableCell>
                     <TableCell align="center">
@@ -451,7 +452,7 @@ const ShiftManagement = () => {
             } 
           }}
         >
-          <DialogTitle sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <DialogTitle component="div" sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Box sx={{ p: 1, bgcolor: alpha(theme.palette.warning.main, 0.1), borderRadius: 2, color: 'warning.main', display: 'flex' }}>
                 <CoffeeIcon />
@@ -595,11 +596,17 @@ const ShiftManagement = () => {
                         fullWidth
                         placeholder="0.00"
                         value={openingBalance}
-                        onChange={(e) => setOpeningBalance(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || parseFloat(val) >= 0) {
+                                setOpeningBalance(val);
+                            }
+                        }}
                         type="number"
                         sx={{ mb: 4 }}
+                        inputProps={{ min: 0, step: "0.01" }}
                         InputProps={{
-                            startAdornment: <InputAdornment position="start"><Typography fontWeight={700}>$</Typography></InputAdornment>,
+                            startAdornment: <InputAdornment position="start"><Typography fontWeight={700}>{getCurrencySymbol()}</Typography></InputAdornment>,
                         }}
                     />
 
@@ -632,8 +639,8 @@ const ShiftManagement = () => {
                         <DataRow label="Closed By" value={user?.username || 'User'} />
                         <DataRow label="End Time" value="Yesterday, 9:00 PM" />
                         <Divider />
-                        <DataRow label="Total Sales" value="$4,530.50" bold />
-                        <DataRow label="Discrepancy" value="-$5.00" color="error.main" />
+                        <DataRow label="Total Sales" value={formatAmountWithComma(4530.50)} bold />
+                        <DataRow label="Discrepancy" value={`-${getCurrencySymbol()}5.00`} color="error.main" />
                     </Stack>
                 </Paper>
             </Grid>
@@ -786,7 +793,7 @@ const ShiftManagement = () => {
                                     </TableCell>
                                     <TableCell>{row.method}</TableCell>
                                     <TableCell align="right" sx={{ fontWeight: 700, color: row.amount < 0 ? 'error.main' : 'inherit' }}>
-                                        {row.amount < 0 ? '-' : ''}${Math.abs(row.amount).toFixed(2)}
+                                        {row.amount < 0 ? '-' : ''}{getCurrencySymbol()}{Math.abs(row.amount).toFixed(2)}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -816,7 +823,7 @@ const ShiftManagement = () => {
 
                 <Box sx={{ textAlign: 'center', py: 2, bgcolor: 'primary.lighter', borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}>
                     <Typography variant="body2" fontWeight={700} color="primary.main" gutterBottom>EXPECTED CASH IN DRAWER</Typography>
-                    <Typography variant="h2" fontWeight={900} color="primary.main">${calculateExpectedCash().toFixed(2)}</Typography>
+                    <Typography variant="h2" fontWeight={900} color="primary.main">{formatAmountWithComma(calculateExpectedCash())}</Typography>
                 </Box>
 
                 <Stack spacing={2} sx={{ mt: 4 }}>
@@ -853,7 +860,7 @@ const ShiftManagement = () => {
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ p: 4, bgcolor: 'transparent', color: 'text.primary', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <DialogTitle component="div" sx={{ p: 4, bgcolor: 'transparent', color: 'text.primary', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
                      <LockClockOutlinedIcon color="primary" sx={{ fontSize: 28 }} />
@@ -903,7 +910,7 @@ const ShiftManagement = () => {
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ p: 3, bgcolor: payDialog.type === 'IN' ? 'success.lighter' : 'error.lighter', color: payDialog.type === 'IN' ? 'success.dark' : 'error.dark' }}>
+        <DialogTitle component="div" sx={{ p: 3, bgcolor: payDialog.type === 'IN' ? 'success.lighter' : 'error.lighter', color: payDialog.type === 'IN' ? 'success.dark' : 'error.dark' }}>
             <Typography variant="h6" fontWeight={800}>{payDialog.type === 'IN' ? 'Pay In (Add Cash)' : 'Pay Out (Remove Cash)'}</Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 3, pt: 3 }}>
@@ -913,9 +920,15 @@ const ShiftManagement = () => {
                     fullWidth 
                     type="number" 
                     value={payDialog.amount}
-                    onChange={(e) => setPayDialog({ ...payDialog, amount: e.target.value })}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || parseFloat(val) >= 0) {
+                            setPayDialog({ ...payDialog, amount: val });
+                        }
+                    }}
+                    inputProps={{ min: 0, step: "0.01" }}
                     InputProps={{ 
-                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                        startAdornment: <InputAdornment position="start">{getCurrencySymbol()}</InputAdornment>,
                         style: { fontSize: '1.5rem', fontWeight: 700 }
                     }}
                     autoFocus
@@ -962,7 +975,7 @@ const CalculationRow = ({ label, value, icon, color = 'text.primary' }) => (
             {icon}
             <Typography variant="body2" fontWeight={600} color="text.secondary">{label}</Typography>
         </Box>
-        <Typography variant="body1" fontWeight={700} color={color}>${value.toFixed(2)}</Typography>
+        <Typography variant="body1" fontWeight={700} color={color}>{formatAmountWithComma(value || 0)}</Typography>
     </Box>
 );
 
@@ -981,13 +994,12 @@ const DetailCard = ({ title, value, icon, color, isNegative }) => (
             justifyContent: 'space-between',
             alignItems: 'center',
             transition: 'transform 0.2s',
-            '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 20px rgba(0,0,0,0.08)' }
         }}
     >
         <Box>
              <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ mb: 0.5, letterSpacing: 0.5, textTransform: 'uppercase' }}>{title}</Typography>
              <Typography variant="h3" fontWeight={800} color="text.primary" sx={{ lineHeight: 1 }}>
-                {isNegative ? '-' : ''}${value.toFixed(2)}
+                {isNegative ? '-' : ''}{formatAmountWithComma(value || 0)}
              </Typography>
         </Box>
         <Box sx={{ color: `${color}.main`, opacity: 0.8 }}>
@@ -1003,18 +1015,24 @@ const ReconciliationRow = ({ label, system, value, onChange, icon }) => (
         </Box>
         <Box sx={{ flex: 1 }}>
             <Typography variant="subtitle2" fontWeight={700}>{label}</Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={500}>System: ${system.toFixed(2)}</Typography>
+            <Typography variant="caption" color="text.secondary" fontWeight={500}>System: {formatAmountWithComma(system)}</Typography>
         </Box>
         <TextField 
             variant="standard"
             placeholder="0.00" 
             value={value} 
-            onChange={(e) => onChange(e.target.value)} 
+            onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || parseFloat(val) >= 0) {
+                    onChange(val);
+                }
+            }} 
             type="number"
             sx={{ width: 140, '& .MuiInput-input': { fontSize: '1.25rem', fontWeight: 700, textAlign: 'right' } }}
+            inputProps={{ min: 0, step: "0.01" }}
             InputProps={{ 
                 disableUnderline: true,
-                startAdornment: <InputAdornment position="start"><Typography variant="h6" color="text.secondary" fontWeight={700}>$</Typography></InputAdornment> 
+                startAdornment: <InputAdornment position="start"><Typography variant="h6" color="text.secondary" fontWeight={700}>{getCurrencySymbol()}</Typography></InputAdornment> 
             }}
         />
     </Paper>

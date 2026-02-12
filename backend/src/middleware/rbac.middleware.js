@@ -31,7 +31,7 @@ export const authorizeOwnerOrAdmin = (resourceUserIdField = 'userId') => {
 
     const resourceUserId = req.params[resourceUserIdField];
     const isOwner = req.user._id.toString() === resourceUserId;
-    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role);
+    const isAdmin = ['SUPER_ADMIN', 'STORE_ADMIN'].includes(req.user.role);
 
     if (!isOwner && !isAdmin) {
       throw ApiError.forbidden('You do not have permission to access this resource');
@@ -42,6 +42,36 @@ export const authorizeOwnerOrAdmin = (resourceUserIdField = 'userId') => {
 };
 
 /**
+ * Require super admin role
+ */
+export const requireSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Authentication required');
+  }
+
+  if (req.user.role !== 'SUPER_ADMIN') {
+    throw ApiError.forbidden('Super admin access required');
+  }
+
+  next();
+};
+
+/**
+ * Require store admin role or higher
+ */
+export const requireStoreAdmin = (req, res, next) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Authentication required');
+  }
+
+  if (!['SUPER_ADMIN', 'STORE_ADMIN'].includes(req.user.role)) {
+    throw ApiError.forbidden('Store admin access required');
+  }
+
+  next();
+};
+
+/**
  * Check if user belongs to the same store or is admin
  */
 export const authorizeSameStoreOrAdmin = (req, res, next) => {
@@ -49,7 +79,7 @@ export const authorizeSameStoreOrAdmin = (req, res, next) => {
     throw ApiError.unauthorized('Authentication required');
   }
 
-  const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role);
+  const isAdmin = ['SUPER_ADMIN', 'STORE_ADMIN'].includes(req.user.role);
   
   if (isAdmin) {
     return next();

@@ -30,6 +30,13 @@ const orderSchema = new mongoose.Schema(
         required: true,
         min: [0, 'Price cannot be negative'],
       },
+      originalPrice: {
+        type: Number,
+      },
+      isPriceOverridden: {
+        type: Boolean,
+        default: false,
+      },
       discount: {
         type: Number,
         default: 0,
@@ -59,6 +66,15 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: [0, 'Discount cannot be negative'],
+    },
+    discountDetails: {
+      code: String,
+      name: String,
+      type: {
+        type: String,
+        enum: ['PERCENTAGE', 'FIXED']
+      },
+      value: Number
     },
     total: {
       type: Number,

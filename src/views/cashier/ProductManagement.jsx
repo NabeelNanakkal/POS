@@ -71,6 +71,8 @@ import SettingsInputComponentIcon from '@mui/icons-material/SettingsInputCompone
 import * as XLSX from 'xlsx';
 import NoDataLottie from 'ui-component/NoDataLottie';
 
+import { formatAmountWithComma, getCurrencySymbol } from 'utils/formatAmount';
+
 import { 
     fetchProducts, 
     createProduct, 
@@ -475,10 +477,23 @@ const ProductManagement = () => {
   };
 
   const handleSaveProduct = () => {
+    // Map frontend fields to backend schema
+    const payload = {
+      ...formState,
+      price: parseFloat(formState.retailPrice) || 0,
+      cost: parseFloat(formState.purchaseRate) || 0,
+      sku: formState.sku || `SKU-${Math.floor(Math.random() * 100000)}`,
+      barcode: formState.barcode || `BC-${Math.floor(Math.random() * 100000000)}`,
+      // Ensure other required fields have defaults if empty
+      reorderPoint: parseInt(formState.reorderPoint) || 50,
+      stock: parseInt(formState.stock) || 0,
+      taxPercentage: parseFloat(formState.taxPercentage) || 0
+    };
+
     if (selectedProduct) {
         setIsUpdateConfirmOpen(true);
     } else {
-        dispatch(createProduct({ ...formState, refetch: true }));
+        dispatch(createProduct({ ...payload, refetch: true }));
         setIsDrawerOpen(false);
     }
   };
@@ -545,7 +560,7 @@ const ProductManagement = () => {
         <StatCard title="Total Products" value={stats?.totalProducts || 0} icon={<InventoryIcon />} color={theme.palette.primary.main} />
         <StatCard title="Low Stock" value={stats?.lowStockCount || 0} icon={<WarningAmberIcon />} color={theme.palette.error.main} />
         <StatCard title="Categories" value={stats?.totalCategories || 0} icon={<CategoryIcon />} color={theme.palette.success.main} />
-        <StatCard title="Catalog Value" value={`$${(stats?.catalogValue || 0).toLocaleString()}`} icon={<PaidIcon />} color={theme.palette.warning.main} />
+        <StatCard title="Catalog Value" value={formatAmountWithComma(stats?.catalogValue || 0)} icon={<PaidIcon />} color={theme.palette.warning.main} />
       </Box>
 
       {/* Refined Tool Bar */}
@@ -769,7 +784,7 @@ const ProductManagement = () => {
                                 </Stack>
                                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1.5 }}>
                                     <Typography variant="h5" fontWeight={900} color="primary.main">
-                                      ${(product.retailPrice || 0).toFixed(2)}
+                                      {formatAmountWithComma(product.retailPrice || 0)}
                                     </Typography>
                                     <Chip 
                                         label={product.stock < 5 ? 'Low Stock' : 'In Stock'} 
@@ -974,7 +989,7 @@ const ProductManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="subtitle1" fontWeight={900} color="primary.main">
-                        ${(product.retailPrice || 0).toFixed(2)}
+                        {formatAmountWithComma(product.retailPrice || 0)}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -1175,10 +1190,17 @@ const ProductManagement = () => {
                 <TextField 
                     fullWidth 
                     size="small" 
+                    type="number"
                     placeholder="0.00" 
                     value={formState.retailPrice || ''} 
-                    onChange={(e) => setFormState({ ...formState, retailPrice: e.target.value })}
-                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || parseFloat(val) >= 0) {
+                            setFormState({ ...formState, retailPrice: val });
+                        }
+                    }}
+                    inputProps={{ min: 0, step: "0.01" }}
+                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">{getCurrencySymbol()}</InputAdornment> }} 
                 />
               </Box>
 
@@ -1244,10 +1266,17 @@ const ProductManagement = () => {
                 <TextField 
                     fullWidth 
                     size="small" 
+                    type="number"
                     placeholder="0.00" 
                     value={formState.purchaseRate || ''} 
-                    onChange={(e) => setFormState({ ...formState, purchaseRate: e.target.value })}
-                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || parseFloat(val) >= 0) {
+                            setFormState({ ...formState, purchaseRate: val });
+                        }
+                    }}
+                    inputProps={{ min: 0, step: "0.01" }}
+                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">{getCurrencySymbol()}</InputAdornment> }} 
                 />
               </Box>
 
@@ -1303,7 +1332,13 @@ const ProductManagement = () => {
                     type="number" 
                     placeholder="5" 
                     value={formState.reorderPoint || ''} 
-                    onChange={(e) => setFormState({ ...formState, reorderPoint: e.target.value })}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || parseInt(val) >= 0) {
+                            setFormState({ ...formState, reorderPoint: val });
+                        }
+                    }}
+                    inputProps={{ min: 0 }}
                     InputProps={{ sx: { borderRadius: 2 } }} 
                 />
               </Box>
@@ -1330,7 +1365,13 @@ const ProductManagement = () => {
                     type="number" 
                     placeholder="0" 
                     value={formState.stock || ''} 
-                    onChange={(e) => setFormState({ ...formState, stock: e.target.value })}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || parseInt(val) >= 0) {
+                            setFormState({ ...formState, stock: val });
+                        }
+                    }}
+                    inputProps={{ min: 0 }}
                     InputProps={{ sx: { borderRadius: 2 } }} 
                 />
               </Box>
@@ -1344,8 +1385,14 @@ const ProductManagement = () => {
                     type="number" 
                     placeholder="0.00" 
                     value={formState.initialStockRate || ''} 
-                    onChange={(e) => setFormState({ ...formState, initialStockRate: e.target.value })}
-                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || parseFloat(val) >= 0) {
+                            setFormState({ ...formState, initialStockRate: val });
+                        }
+                    }}
+                    inputProps={{ min: 0, step: "0.01" }}
+                    InputProps={{ sx: { borderRadius: 2 }, startAdornment: <InputAdornment position="start">{getCurrencySymbol()}</InputAdornment> }} 
                 />
               </Box>
 
@@ -1407,7 +1454,13 @@ const ProductManagement = () => {
                     type="number" 
                     placeholder="15" 
                     value={formState.taxPercentage || ''} 
-                    onChange={(e) => setFormState({ ...formState, taxPercentage: e.target.value })}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || parseFloat(val) >= 0) {
+                            setFormState({ ...formState, taxPercentage: val });
+                        }
+                    }}
+                    inputProps={{ min: 0, step: "0.01" }}
                     InputProps={{ sx: { borderRadius: 2 }, endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
                 />
               </Box>

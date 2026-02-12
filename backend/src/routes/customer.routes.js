@@ -23,6 +23,6 @@ router.post('/', createCustomer);
 router.put('/:id', updateCustomer);
 router.patch('/:id/loyalty', updateLoyaltyPoints);
 router.patch('/:id/purchase', updatePurchaseHistory);
-router.delete('/:id', authorize('ADMIN', 'SUPER_ADMIN'), deleteCustomer);
+router.delete('/:id', authorize('STORE_ADMIN', 'SUPER_ADMIN'), deleteCustomer);
 
 export default router;

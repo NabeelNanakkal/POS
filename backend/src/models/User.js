@@ -24,12 +24,12 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
+      minlength: [4, 'Password must be at least 4 characters'],
       select: false, // Don't include password in queries by default
     },
     role: {
       type: String,
-      enum: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_MANAGER'],
+      enum: ['SUPER_ADMIN', 'STORE_ADMIN', 'MANAGER', 'CASHIER', 'INVENTORY_MANAGER', 'ACCOUNTANT'],
       default: 'CASHIER',
     },
     isActive: {
@@ -51,6 +51,19 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Validate password before hashing (numeric passwords allowed for all roles)
+userSchema.pre('validate', function (next) {
+  // Only validate if password is being modified
+  // For SUPER_ADMIN and STORE_ADMIN, password MUST be numeric
+  // For other roles, password CAN be numeric or alphanumeric
+  if (this.isModified('password') && (this.role === 'SUPER_ADMIN' || this.role === 'STORE_ADMIN')) {
+    if (!/^\d+$/.test(this.password)) {
+      this.invalidate('password', 'Super admin and store admin passwords must contain only numbers (PIN format)');
+    }
+  }
+  next();
+});
+
 // Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
@@ -69,17 +82,20 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 // Generate access token
 userSchema.methods.generateAccessToken = function () {
-  return jwt.sign(
-    {
-      id: this._id,
-      email: this.email,
-      role: this.role,
-    },
-    config.jwt.accessSecret,
-    {
-      expiresIn: config.jwt.accessExpiry,
-    }
-  );
+  const payload = {
+    id: this._id,
+    email: this.email,
+    role: this.role,
+  };
+  
+  // Add storeId for non-super-admins
+  if (this.role !== 'SUPER_ADMIN' && this.store) {
+    payload.storeId = this.store;
+  }
+  
+  return jwt.sign(payload, config.jwt.accessSecret, {
+    expiresIn: config.jwt.accessExpiry,
+  });
 };
 
 // Generate refresh token

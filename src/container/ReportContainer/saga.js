@@ -9,9 +9,17 @@ import {
 
 function* getSalesReport(action) {
   try {
-    const { storeId, startDate, endDate } = action.payload;
-    let url = `${config.ip}/reports/sales?startDate=${startDate}&endDate=${endDate}`;
-    if (storeId) url += `&storeId=${storeId}`;
+    const { storeId, startDate, endDate, period, page, limit } = action.payload;
+    const queryParams = new URLSearchParams();
+    
+    if (startDate) queryParams.append('startDate', startDate);
+    if (endDate) queryParams.append('endDate', endDate);
+    if (period) queryParams.append('period', period);
+    if (storeId) queryParams.append('storeId', storeId);
+    if (page) queryParams.append('page', page);
+    if (limit) queryParams.append('limit', limit);
+
+    const url = `${config.ip}/reports/sales?${queryParams.toString()}`;
     
     const params = {
       api: url,

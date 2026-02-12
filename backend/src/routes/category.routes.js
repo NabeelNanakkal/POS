@@ -19,8 +19,8 @@ router.get('/', getCategories);
 router.get('/:id', getCategoryById);
 
 // Protected routes (Manager, Admin, Super Admin)
-router.post('/', authorize('MANAGER', 'ADMIN', 'SUPER_ADMIN'), createCategory);
-router.put('/:id', authorize('MANAGER', 'ADMIN', 'SUPER_ADMIN'), updateCategory);
-router.delete('/:id', authorize('ADMIN', 'SUPER_ADMIN'), deleteCategory);
+router.post('/', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), createCategory);
+router.put('/:id', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), updateCategory);
+router.delete('/:id', authorize('STORE_ADMIN', 'SUPER_ADMIN'), deleteCategory);
 
 export default router;

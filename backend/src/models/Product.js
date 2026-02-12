@@ -10,9 +10,13 @@ const productSchema = new mongoose.Schema(
     sku: {
       type: String,
       required: [true, 'SKU is required'],
-      unique: true,
       uppercase: true,
       trim: true,
+    },
+    store: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Store',
+      required: [true, 'Store is required'],
     },
     barcode: {
       type: String,
@@ -138,10 +142,11 @@ productSchema.virtual('profitMargin').get(function () {
 });
 
 // Indexes for faster lookups
-productSchema.index({ sku: 1 });
+productSchema.index({ sku: 1, store: 1 }, { unique: true }); // SKU unique per store
 productSchema.index({ barcode: 1 });
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1, isActive: 1 });
+productSchema.index({ store: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 

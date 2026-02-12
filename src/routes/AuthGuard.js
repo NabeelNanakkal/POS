@@ -18,10 +18,21 @@ const AuthGuard = ({ children, permittedRoles }) => {
       return;
     }
 
+    // Role-based access control
     if (permittedRoles && permittedRoles.length > 0 && !permittedRoles.includes('all')) {
       if (!user || !permittedRoles.includes(user.role)) {
-        // Redirection logic if unauthorized
-        navigate('/pos/dashboard');
+        // Redirect based on user role
+        if (user?.role === 'SUPER_ADMIN') {
+          // Super admins should go to super admin dashboard
+          navigate('/super-admin/dashboard');
+        } else if (user?.role === 'STORE_ADMIN') {
+          // Store admins should go to admin dashboard
+          navigate('/admin/dashboard');
+        } else {
+          // Other users go to POS dashboard
+          const storeCode = user?.store?.code || 'store';
+          navigate(`/pos/${storeCode}/dashboard`);
+        }
       }
     }
   }, [navigate, permittedRoles]);
@@ -30,7 +41,8 @@ const AuthGuard = ({ children, permittedRoles }) => {
 };
 
 AuthGuard.propTypes = {
-  children: PropTypes.element.isRequired
+  children: PropTypes.element.isRequired,
+  permittedRoles: PropTypes.arrayOf(PropTypes.string)
 };
 
 export default AuthGuard;

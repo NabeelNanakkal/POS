@@ -13,6 +13,11 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   const query = {};
 
+  // Filter by store (tenant isolation)
+  if (req.storeId) {
+    query.store = req.storeId;
+  }
+
   // Filter by warehouse
   if (warehouseName) {
     query.warehouseName = warehouseName;
@@ -67,7 +72,14 @@ export const getProducts = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const getProductById = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.id).populate('category', 'name description');
+  const query = { _id: req.params.id };
+  
+  // Filter by store
+  if (req.storeId) {
+    query.store = req.storeId;
+  }
+  
+  const product = await Product.findOne(query).populate('category', 'name description');
 
   if (!product) {
     throw ApiError.notFound('Product not found');
@@ -130,10 +142,17 @@ export const deleteProduct = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const getLowStockProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find({
+  const query = {
     $expr: { $lte: ['$stock', '$reorderPoint'] },
     isActive: true,
-  }).populate('category', 'name');
+  };
+  
+  // Filter by store
+  if (req.storeId) {
+    query.store = req.storeId;
+  }
+  
+  const products = await Product.find(query).populate('category', 'name');
 
   res.json(ApiResponse.success(products));
 });
@@ -170,11 +189,19 @@ export const bulkCreateProducts = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const getProductStats = asyncHandler(async (req, res) => {
+  const query = {};
+  
+  // Filter by store
+  if (req.storeId) {
+    query.store = req.storeId;
+  }
+  
   const [counts, lowStock, totalCategories, catalogValue] = await Promise.all([
-    Product.countDocuments(),
-    Product.countDocuments({ $expr: { $lte: ['$stock', '$reorderPoint'] }, isActive: true }),
-    Product.distinct('category'),
+    Product.countDocuments(query),
+    Product.countDocuments({ ...query, $expr: { $lte: ['$stock', '$reorderPoint'] }, isActive: true }),
+    Product.distinct('category', query),
     Product.aggregate([
+      { $match: query },
       {
         $group: {
           _id: null,

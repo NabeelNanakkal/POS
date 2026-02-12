@@ -1,11 +1,13 @@
+// Payment Saga
 import { takeEvery, call, put } from 'redux-saga/effects';
 import commonApi from '../api';
 import config from '../../config';
 import {
+  fetchPayments, fetchPaymentsSuccess, fetchPaymentsFail,
   processPayment, processPaymentSuccess, processPaymentFail,
   refundPayment, refundPaymentSuccess, refundPaymentFail,
   fetchPaymentsByOrder, fetchPaymentsByOrderSuccess, fetchPaymentsByOrderFail,
-  fetchPaymentStatistics, fetchPaymentStatisticsSuccess, fetchPaymentStatisticsFail
+  fetchPaymentStats, fetchPaymentStatsSuccess, fetchPaymentStatsFail
 } from './slice';
 
 function* postPayment(action) {
@@ -40,6 +42,21 @@ function* postRefund(action) {
   }
 }
 
+function* getPayments() {
+  try {
+    const params = {
+      api: `${config.ip}/payments`,
+      method: 'GET',
+      successAction: fetchPaymentsSuccess(),
+      failAction: fetchPaymentsFail(),
+      authourization: 'Bearer'
+    };
+    yield call(commonApi, params);
+  } catch (error) {
+    console.error('Fetch payments failed:', error);
+  }
+}
+
 function* getPaymentsByOrder(action) {
   try {
     const { orderId } = action.payload;
@@ -56,13 +73,13 @@ function* getPaymentsByOrder(action) {
   }
 }
 
-function* getPaymentStatistics() {
+function* getPaymentStats() {
   try {
     const params = {
       api: `${config.ip}/payments/statistics`,
       method: 'GET',
-      successAction: fetchPaymentStatisticsSuccess(),
-      failAction: fetchPaymentStatisticsFail(),
+      successAction: fetchPaymentStatsSuccess(),
+      failAction: fetchPaymentStatsFail(),
       authourization: 'Bearer'
     };
     yield call(commonApi, params);
@@ -74,6 +91,7 @@ function* getPaymentStatistics() {
 export default function* PaymentActionWatcher() {
   yield takeEvery(processPayment.type, postPayment);
   yield takeEvery(refundPayment.type, postRefund);
+  yield takeEvery(fetchPayments.type, getPayments);
   yield takeEvery(fetchPaymentsByOrder.type, getPaymentsByOrder);
-  yield takeEvery(fetchPaymentStatistics.type, getPaymentStatistics);
+  yield takeEvery(fetchPaymentStats.type, getPaymentStats);
 }

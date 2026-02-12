@@ -1,0 +1,41 @@
+Logging in...
+Login successful. Token obtained.
+Fetching Payment Modes...
+Response Status: 200
+Response Data: {
+  "statusCode": 200,
+  "success": true,
+  "message": "Success",
+  "data": [
+    {
+      "_id": "698843684fdfcd87d884dd86",
+      "value": "cash",
+      "__v": 0,
+      "createdAt": "2026-02-08T08:03:52.109Z",
+      "icon": "????",
+      "isActive": true,
+      "name": "Cash",
+      "updatedAt": "2026-02-08T08:03:52.109Z"
+    },
+    {
+      "_id": "698843684fdfcd87d884dd88",
+      "value": "card",
+      "__v": 0,
+      "createdAt": "2026-02-08T08:03:52.221Z",
+      "icon": "????",
+      "isActive": true,
+      "name": "Card",
+      "updatedAt": "2026-02-08T08:03:52.221Z"
+    },
+    {
+      "_id": "698843684fdfcd87d884dd8a",
+      "value": "digital",
+      "__v": 0,
+      "createdAt": "2026-02-08T08:03:52.256Z",
+      "icon": "????",
+      "isActive": true,
+      "name": "Digital",
+      "updatedAt": "2026-02-08T08:03:52.256Z"
+    }
+  ]
+}

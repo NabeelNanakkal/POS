@@ -7,7 +7,8 @@ import {
   updateStore, updateStoreSuccess, updateStoreFail,
   deleteStore, deleteStoreSuccess, deleteStoreFail,
   toggleStoreStatus, toggleStoreStatusSuccess, toggleStoreStatusFail,
-  bulkCreateStore, bulkCreateStoreSuccess, bulkCreateStoreFail
+  bulkCreateStore, bulkCreateStoreSuccess, bulkCreateStoreFail,
+  fetchPaymentModes, fetchPaymentModesSuccess, fetchPaymentModesFail
 } from './slice';
 
 import { toast } from 'react-toastify';
@@ -133,6 +134,22 @@ function* postBulkStores(action) {
   }
 }
 
+function* getPaymentModes(action) {
+    try {
+        const params = {
+            api: `${config.ip}/payment-modes`,
+            method: 'GET',
+            successAction: fetchPaymentModesSuccess(),
+            failAction: fetchPaymentModesFail(),
+            authourization: 'Bearer'
+        };
+        yield call(commonApi, params);
+    } catch (error) {
+        console.error('Fetch payment modes failed:', error);
+        toast.error('Failed to load payment modes');
+    }
+}
+
 export default function* StoreActionWatcher() {
   yield takeEvery(fetchStores.type, getStores);
   yield takeEvery(createStore.type, postStore);
@@ -140,4 +157,5 @@ export default function* StoreActionWatcher() {
   yield takeEvery(deleteStore.type, removeStore);
   yield takeEvery(toggleStoreStatus.type, patchStoreStatus);
   yield takeEvery(bulkCreateStore.type, postBulkStores);
+  yield takeEvery(fetchPaymentModes.type, getPaymentModes);
 }

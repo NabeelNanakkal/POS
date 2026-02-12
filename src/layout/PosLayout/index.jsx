@@ -39,6 +39,9 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
 import CoffeeIcon from '@mui/icons-material/Coffee';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import Collapse from '@mui/material/Collapse';
 
 const drawerWidth = 260;
 const miniDrawerWidth = 80;
@@ -46,6 +49,179 @@ const miniDrawerWidth = 80;
 import menuItems from 'menu-items';
 import { tokenManager } from 'utils/tokenManager';
 import { filterRoutesByRole } from 'utils/filterRoutesByRole';
+
+const NavItem = ({ item, sidebarCollapsed, theme, location, level = 0 }) => {
+  const isActive = location.pathname === item.url;
+  const Icon = item.icon;
+  
+  return (
+    <ListItem key={item.id} disablePadding sx={{ mb: 1, pl: level * 2 }}>
+      <ListItemButton
+        component={item.url ? RouterLink : 'div'}
+        to={item.url}
+        sx={{
+          borderRadius: 4,
+          py: 1.2,
+          px: 2,
+          position: 'relative',
+          overflow: 'hidden',
+          bgcolor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+          color: isActive ? 'primary.main' : 'text.secondary',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            left: 0,
+            top: '20%',
+            bottom: '20%',
+            width: 4,
+            bgcolor: 'primary.main',
+            borderRadius: '0 4px 4px 0',
+            transform: isActive ? 'scaleY(1)' : 'scaleY(0)',
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          },
+          '&:hover': {
+            bgcolor: isActive ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.main, 0.04),
+            color: 'primary.main',
+            transform: 'translateX(4px)',
+            '& .MuiListItemIcon-root': {
+              transform: 'scale(1.1) rotate(-5deg)',
+              color: 'primary.main'
+            }
+          }
+        }}
+      >
+        <ListItemIcon 
+          sx={{ 
+            color: isActive ? 'primary.main' : 'inherit', 
+            minWidth: sidebarCollapsed ? 0 : 38,
+            justifyContent: 'center',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          {Icon && <Icon sx={{ fontSize: 20 }} />}
+        </ListItemIcon>
+        {!sidebarCollapsed && (
+          <ListItemText 
+            primary={item.title} 
+            primaryTypographyProps={{ 
+              fontWeight: isActive ? 800 : 600,
+              fontSize: '0.85rem',
+              letterSpacing: 0.2
+            }} 
+          />
+        )}
+        {isActive && (
+          <Box 
+            sx={{ 
+              width: 6, 
+              height: 6, 
+              borderRadius: '50%', 
+              bgcolor: 'primary.main',
+              boxShadow: `0 0 10px ${theme.palette.primary.main}`
+            }} 
+          />
+        )}
+      </ListItemButton>
+    </ListItem>
+  );
+};
+
+const NavCollapse = ({ item, sidebarCollapsed, theme, location, level = 0 }) => {
+  const [open, setOpen] = useState(false);
+  
+  const hasActiveChild = item.children?.some(child => {
+    if (child.url === location.pathname) return true;
+    if (child.children?.some(c => c.url === location.pathname)) return true;
+    return false;
+  });
+
+  useEffect(() => {
+    if (hasActiveChild) {
+      setOpen(true);
+    }
+  }, [hasActiveChild, location.pathname]);
+
+  const handleClick = () => {
+    setOpen(!open);
+  };
+
+  const Icon = item.icon;
+
+  return (
+    <>
+      <ListItem disablePadding sx={{ mb: 1, pl: level * 2 }}>
+        <ListItemButton
+          onClick={handleClick}
+          sx={{
+            borderRadius: 4,
+            py: 1.2,
+            px: 2,
+            position: 'relative',
+            overflow: 'hidden',
+            bgcolor: hasActiveChild ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+            color: hasActiveChild ? 'primary.main' : 'text.secondary',
+            transition: 'all 0.3s ease',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              top: '20%',
+              bottom: '20%',
+              width: 4,
+              bgcolor: 'primary.main',
+              borderRadius: '0 4px 4px 0',
+              transform: hasActiveChild ? 'scaleY(1)' : 'scaleY(0)',
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            },
+            '&:hover': {
+              bgcolor: hasActiveChild ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.main, 0.04),
+              color: 'primary.main',
+              transform: 'translateX(4px)',
+              '& .MuiListItemIcon-root': {
+                transform: 'scale(1.1) rotate(-5deg)',
+                color: 'primary.main'
+              }
+            }
+          }}
+        >
+          <ListItemIcon 
+            sx={{ 
+              color: hasActiveChild ? 'primary.main' : 'inherit', 
+              minWidth: sidebarCollapsed ? 0 : 38,
+              justifyContent: 'center',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            {Icon && <Icon sx={{ fontSize: 20 }} />}
+          </ListItemIcon>
+          {!sidebarCollapsed && (
+            <>
+              <ListItemText 
+                primary={item.title} 
+                primaryTypographyProps={{ 
+                  fontWeight: hasActiveChild ? 800 : 600,
+                  fontSize: '0.85rem',
+                  letterSpacing: 0.2
+                }} 
+              />
+              {open ? <ExpandLess sx={{ fontSize: 18 }} /> : <ExpandMore sx={{ fontSize: 18 }} />}
+            </>
+          )}
+        </ListItemButton>
+      </ListItem>
+      <Collapse in={open} timeout="auto" unmountOnExit>
+        <List component="div" disablePadding>
+          {item.children?.map((child) => (
+            child.type === 'collapse' ? 
+              <NavCollapse key={child.id} item={child} sidebarCollapsed={sidebarCollapsed} theme={theme} location={location} level={level + 1} /> :
+              <NavItem key={child.id} item={child} sidebarCollapsed={sidebarCollapsed} theme={theme} location={location} level={level + 1} />
+          ))}
+        </List>
+      </Collapse>
+    </>
+  );
+};
 
 const PosLayout = () => {
   const theme = useTheme();
@@ -115,8 +291,33 @@ const PosLayout = () => {
   const filteredMenu = useMemo(() => {
     // menuItems is an array (from menu-items/index.js), we take the first group 'main'
     const mainGroup = menuItems[0];
-    return filterRoutesByRole([mainGroup], userRole)[0]?.children || [];
-  }, [userRole]);
+    const filtered = filterRoutesByRole([mainGroup], userRole)[0]?.children || [];
+    
+    // Inject store code into URLs
+    const storeCode = user?.store?.code || 'store';
+    
+    function injectStoreCode(items) {
+      if (!items) return [];
+      return items.map(item => {
+        const newItem = { ...item };
+        if (newItem.url && (newItem.url.startsWith('/pos/') || newItem.url.startsWith('/admin/'))) {
+          const parts = newItem.url.split('/').filter(Boolean);
+          // If the second segment is NOT the storeCode, inject it
+          if (parts.length >= 2 && parts[1] !== storeCode) {
+            const prefix = parts[0];
+            const rest = parts.slice(1).join('/');
+            newItem.url = `/${prefix}/${storeCode}/${rest}`;
+          }
+        }
+        if (newItem.children) {
+          newItem.children = injectStoreCode(newItem.children);
+        }
+        return newItem;
+      });
+    }
+    
+    return injectStoreCode(filtered);
+  }, [userRole, user?.store?.code]);
 
   // drawerOpen is true when expanded, false when collapsed/closed
   const drawerOpen = menuMaster?.isDashboardDrawerOpened ?? false;
@@ -247,7 +448,9 @@ const PosLayout = () => {
               </Box>
               <Box>
                 <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>Retail POS</Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mt: -0.2 }}>Downtown Branch</Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mt: -0.2 }}>
+                  {user?.store?.name || 'Store'}
+                </Typography>
               </Box>
             </Box>
           )}
@@ -277,81 +480,11 @@ const PosLayout = () => {
           '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.1)', borderRadius: '10px' }
         }}>
           <List sx={{ p: 0 }}>
-            {filteredMenu.map((item) => {
-              const isActive = location.pathname === item.url;
-              const Icon = item.icon;
-              return (
-                <ListItem key={item.id} disablePadding sx={{ mb: 1.5 }}>
-                  <ListItemButton
-                    component={RouterLink}
-                    to={item.url}
-                    sx={{
-                      borderRadius: 4,
-                      py: 1.5,
-                      px: 2,
-                      position: 'relative',
-                      overflow: 'hidden',
-                      bgcolor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                      color: isActive ? 'primary.main' : 'text.secondary',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        left: 0,
-                        top: '20%',
-                        bottom: '20%',
-                        width: 4,
-                        bgcolor: 'primary.main',
-                        borderRadius: '0 4px 4px 0',
-                        transform: isActive ? 'scaleY(1)' : 'scaleY(0)',
-                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      },
-                      '&:hover': {
-                        bgcolor: isActive ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.main, 0.04),
-                        color: 'primary.main',
-                        transform: 'translateX(4px)',
-                        '& .MuiListItemIcon-root': {
-                          transform: 'scale(1.1) rotate(-5deg)',
-                          color: 'primary.main'
-                        }
-                      }
-                    }}
-                  >
-                    <ListItemIcon 
-                      sx={{ 
-                        color: isActive ? 'primary.main' : 'inherit', 
-                        minWidth: sidebarCollapsed ? 0 : 42,
-                        justifyContent: 'center',
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      <Icon sx={{ fontSize: 22 }} />
-                    </ListItemIcon>
-                    {!sidebarCollapsed && (
-                      <ListItemText 
-                        primary={item.title} 
-                        primaryTypographyProps={{ 
-                          fontWeight: isActive ? 800 : 600,
-                          fontSize: '0.9rem',
-                          letterSpacing: 0.2
-                        }} 
-                      />
-                    )}
-                    {isActive && (
-                      <Box 
-                        sx={{ 
-                          width: 6, 
-                          height: 6, 
-                          borderRadius: '50%', 
-                          bgcolor: 'primary.main',
-                          boxShadow: `0 0 10px ${theme.palette.primary.main}`
-                        }} 
-                      />
-                    )}
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
+            {filteredMenu.map((item) => (
+              item.type === 'collapse' ? 
+                <NavCollapse key={item.id} item={item} sidebarCollapsed={sidebarCollapsed} theme={theme} location={location} /> :
+                <NavItem key={item.id} item={item} sidebarCollapsed={sidebarCollapsed} theme={theme} location={location} />
+            ))}
           </List>
         </Box>
 

@@ -17,14 +17,14 @@ const router = express.Router();
 router.use(verifyToken);
 
 // Stats route (before /:id to avoid conflict)
-router.get('/stats', authorize('MANAGER', 'ADMIN', 'SUPER_ADMIN'), getOrderStats);
+router.get('/stats', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), getOrderStats);
 
 // Order routes
 router.get('/top-selling', getTopSellingItems);
 router.get('/', getOrders);
 router.get('/:id', getOrderById);
 router.post('/', createOrder);
-router.patch('/:id/status', authorize('MANAGER', 'ADMIN', 'SUPER_ADMIN'), updateOrderStatus);
-router.post('/:id/refund', authorize('MANAGER', 'ADMIN', 'SUPER_ADMIN'), refundOrder);
+router.patch('/:id/status', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), updateOrderStatus);
+router.post('/:id/refund', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), refundOrder);
 
 export default router;

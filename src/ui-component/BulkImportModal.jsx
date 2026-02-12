@@ -70,7 +70,11 @@ const BulkImportModal = ({ open, onClose, onImport, columns, sampleFileName, tit
   return (
     <Dialog 
       open={open} 
-      onClose={handleModalClose} 
+      onClose={(event, reason) => {
+        if (reason !== 'backdropClick') {
+          handleModalClose();
+        }
+      }} 
       fullWidth 
       maxWidth="md"
       PaperProps={{ sx: { borderRadius: 4, p: 1 } }}

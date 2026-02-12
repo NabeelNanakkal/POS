@@ -36,8 +36,8 @@ const customerSlice = createSlice({
     },
     fetchCustomersSuccess: (state, action) => {
       state.loading = false;
-      state.customers = action.payload.data;
-      state.pagination = action.payload.pagination;
+      state.customers = Array.isArray(action.payload.data?.customers) ? action.payload.data.customers : [];
+      state.pagination = action.payload.data?.pagination || action.payload.pagination;
     },
     fetchCustomersFail: (state, action) => {
       state.loading = false;
@@ -79,10 +79,40 @@ const customerSlice = createSlice({
     },
     searchCustomersSuccess: (state, action) => {
       state.loading = false;
-      state.customers = action.payload.data;
-      state.pagination = action.payload.pagination;
+      state.customers = Array.isArray(action.payload.data?.customers) ? action.payload.data.customers : [];
+      state.pagination = action.payload.data?.pagination || action.payload.pagination;
     },
     searchCustomersFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
+    // Delete customer
+    deleteCustomer: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    deleteCustomerSuccess: (state, action) => {
+      state.loading = false;
+      state.customers = state.customers.filter(c => c._id !== action.payload.data._id);
+    },
+    deleteCustomerFail: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
+    // Update customer
+    updateCustomer: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    updateCustomerSuccess: (state, action) => {
+      state.loading = false;
+      state.customers = state.customers.map(c => 
+        (c._id === action.payload.data._id || c.id === action.payload.data.id) ? action.payload.data : c
+      );
+    },
+    updateCustomerFail: (state, action) => {
       state.loading = false;
       state.error = action.payload;
     }
@@ -94,7 +124,9 @@ export const {
   fetchCustomers, fetchCustomersSuccess, fetchCustomersFail,
   fetchCustomerById, fetchCustomerByIdSuccess, fetchCustomerByIdFail,
   fetchCustomerByPhone, fetchCustomerByPhoneSuccess, fetchCustomerByPhoneFail,
-  searchCustomers, searchCustomersSuccess, searchCustomersFail
+  searchCustomers, searchCustomersSuccess, searchCustomersFail,
+  deleteCustomer, deleteCustomerSuccess, deleteCustomerFail,
+  updateCustomer, updateCustomerSuccess, updateCustomerFail
 } = customerSlice.actions;
 
 export default customerSlice.reducer;

@@ -23,6 +23,6 @@ router.post('/break/start', startBreak);
 router.post('/break/end', endBreak);
 
 // Reporting routes (restricted to Manager/Admin)
-router.get('/store', authorize('MANAGER', 'ADMIN', 'SUPER_ADMIN'), getStoreShifts);
+router.get('/store', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), getStoreShifts);
 
 export default router;

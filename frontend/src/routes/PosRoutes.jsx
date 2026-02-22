@@ -24,6 +24,7 @@ const Categories = Loadable(lazy(() => import('views/cashier/Categories')));
 const Customers = Loadable(lazy(() => import('views/cashier/Customers')));
 const PaymentMethods = Loadable(lazy(() => import('views/cashier/PaymentMethods')));
 const Discounts = Loadable(lazy(() => import('views/cashier/Discounts')));
+const Integrations = Loadable(lazy(() => import('views/cashier/settings/Integrations')));
 
 import AuthGuard from './AuthGuard';
 
@@ -104,6 +105,10 @@ const PosRoutes = {
                 {
                   path: 'discounts',
                   element: <AuthGuard permittedRoles={['MANAGER', 'STORE_ADMIN']}><Discounts /></AuthGuard>
+                },
+                {
+                  path: 'integrations',
+                  element: <AuthGuard permittedRoles={['STORE_ADMIN', 'SUPER_ADMIN']}><Integrations /></AuthGuard>
                 }
               ]
             },

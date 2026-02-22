@@ -1,12 +1,12 @@
 // assets
-import { 
-  IconLayoutDashboard, 
-  IconDeviceGamepad2, 
-  IconBuildingStore, 
-  IconUsers, 
-  IconPackage, 
-  IconArchive, 
-  IconReceipt2, 
+import {
+  IconLayoutDashboard,
+  IconDeviceGamepad2,
+  IconBuildingStore,
+  IconUsers,
+  IconPackage,
+  IconArchive,
+  IconReceipt2,
   IconReportAnalytics,
   IconDatabase,
   IconCategory,
@@ -14,7 +14,8 @@ import {
   IconCreditCard,
   IconDiscount,
   IconBinaryTree,
-  IconSettings
+  IconSettings,
+  IconPlugConnected
 } from '@tabler/icons-react';
 
 // ==============================|| POS MENU ITEMS ||============================== //
@@ -119,7 +120,7 @@ const main = {
       title: 'Settings',
       type: 'collapse',
       icon: IconSettings,
-      permittedRoles: ['MANAGER'],
+      permittedRoles: ['MANAGER', 'STORE_ADMIN'],
       children: [
         {
           id: 'categories',
@@ -127,7 +128,7 @@ const main = {
           type: 'item',
           url: '/pos/settings/categories',
           icon: IconBinaryTree,
-          permittedRoles: ['MANAGER'],
+          permittedRoles: ['MANAGER', 'STORE_ADMIN'],
           breadcrumbs: false
         },
         {
@@ -136,7 +137,16 @@ const main = {
           type: 'item',
           url: '/pos/settings/discounts',
           icon: IconDiscount,
-          permittedRoles: ['MANAGER'],
+          permittedRoles: ['MANAGER', 'STORE_ADMIN'],
+          breadcrumbs: false
+        },
+        {
+          id: 'integrations',
+          title: 'Integrations',
+          type: 'item',
+          url: '/pos/settings/integrations',
+          icon: IconPlugConnected,
+          permittedRoles: ['STORE_ADMIN'],
           breadcrumbs: false
         }
       ]

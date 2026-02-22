@@ -11,13 +11,13 @@ function* login(action) {
 
     // Call the new backend API
     const response = yield call(authService.login, email, password);
-    
+
     if (response && response.data) {
       const { user, accessToken, refreshToken } = response.data;
 
       // Store tokens using token manager
       yield call(tokenManager.setTokens, accessToken, refreshToken);
-      
+
       // Store user data
       yield localStorage.setItem('user', JSON.stringify(user));
 
@@ -43,17 +43,13 @@ function* login(action) {
   } catch (error) {
     console.error('Login failed:', error);
     yield put(loginFail({ message: error.message || 'Login failed' }));
-    
-    if (action.payload.navigate) {
-      yield call(action.payload.navigate, '/login', { replace: true });
-    }
   }
 }
 
 function* logOut() {
   try {
     const refreshToken = yield call(tokenManager.getRefreshToken);
-    
+
     // Call logout API to invalidate refresh token
     if (refreshToken) {
       try {
@@ -68,7 +64,7 @@ function* logOut() {
     yield call(tokenManager.clearTokens);
     yield localStorage.removeItem('user');
     yield localStorage.removeItem('redirectAfterLogin');
-    
+
     // Redirect to login
     window.location.replace('/login');
   } catch (error) {

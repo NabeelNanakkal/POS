@@ -29,6 +29,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { userLogin, selectError } from 'container/LoginContainer/slice';
 import { useNavigate } from 'react-router-dom';
 import config from 'config';
+import { getRoleBasedRedirect } from 'constants/roleBasedRedirects';
 
 // ==============================|| RETAIL OS LOGIN ||============================== //
 
@@ -79,11 +80,10 @@ const LoginRetailOS = () => {
     const token = tokenManager.getAccessToken();
     const userString = localStorage.getItem('user');
     const user = userString ? JSON.parse(userString) : null;
-    
+
     if (token && user) {
-      const path = ['SUPER_ADMIN', 'ADMIN'].includes(user.role) 
-        ? '/admin/dashboard' 
-        : '/pos/dashboard';
+      const storeCode = user?.store?.code || 'store';
+      const path = getRoleBasedRedirect(user.role, storeCode);
       navigate(path);
     }
   }, [navigate]);
@@ -103,7 +103,7 @@ const LoginRetailOS = () => {
         setIsOnline(false);
       }
     };
-    
+
     checkHealth();
     const interval = setInterval(checkHealth, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
@@ -126,8 +126,7 @@ const LoginRetailOS = () => {
     // Mapping Email/Password for backend compatibility
     const payload = {
       email: email,
-      password: password,
-      navigate: navigate
+      password: password
     };
     dispatch(userLogin(payload));
   };
@@ -269,6 +268,11 @@ const LoginRetailOS = () => {
                     </InputAdornment>
                   )
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSubmit();
+                  }
+                }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     bgcolor: '#fff',
@@ -287,7 +291,7 @@ const LoginRetailOS = () => {
           )}
 
           {/* Submit Button */}
-{/* <Button
+          {/* <Button
             fullWidth
             variant="contained"
             size="large"
@@ -316,10 +320,10 @@ const LoginRetailOS = () => {
               </Grid>
             ))}
             <Grid size={{ xs: 4 }}>
-              <KeypadButton 
-                value={<BackspaceOutlinedIcon fontSize="small" />} 
+              <KeypadButton
+                value={<BackspaceOutlinedIcon fontSize="small" />}
                 onClick={() => handleKeypadClick('backspace')}
-                isAction="backspace" 
+                isAction="backspace"
                 sx={{ bgcolor: 'rgba(0,0,0,0.03) !important', border: 'none !important' }}
               />
             </Grid>
@@ -327,10 +331,10 @@ const LoginRetailOS = () => {
               <KeypadButton value={0} onClick={() => handleKeypadClick('0')} />
             </Grid>
             <Grid size={{ xs: 4 }}>
-              <KeypadButton 
-                value={<CheckIcon />} 
-                onClick={() => handleKeypadClick('submit')} 
-                isAction="submit" 
+              <KeypadButton
+                value={<CheckIcon />}
+                onClick={() => handleKeypadClick('submit')}
+                isAction="submit"
               />
             </Grid>
           </Grid>
@@ -349,7 +353,7 @@ const LoginRetailOS = () => {
               <Typography variant="caption" fontWeight={500}>Contact Support</Typography>
             </Box>
           </Box>
-          
+
           <Typography variant="caption" display="block" textAlign="center" sx={{ mt: 3, color: 'text.disabled' }}>
             © 2026 RetailOS Inc. v2.4.1
           </Typography>

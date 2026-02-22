@@ -6,7 +6,7 @@ import {
   getStoreShifts,
   startBreak,
   endBreak
-} from '../controllers/shiftController.js';
+} from '../controllers/shift.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 

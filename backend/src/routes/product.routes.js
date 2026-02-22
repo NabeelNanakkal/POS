@@ -8,33 +8,27 @@ import {
   getLowStockProducts,
   bulkCreateProducts,
   getProductStats,
-  adjustStock
-} from '../controllers/productController.js';
-import { verifyToken } from '../middleware/auth.middleware.js';
+  adjustStock,
+} from '../controllers/product.controller.js';
 import { authorize } from '../middleware/rbac.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
+import {
+  createProductValidator,
+  updateProductValidator,
+  adjustStockValidator,
+} from '../validators/product.validator.js';
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(verifyToken);
-
-// Get low stock products (before /:id to avoid route conflict)
 router.get('/low-stock', getLowStockProducts);
-
-// Get product stats
 router.get('/stats', getProductStats);
-
-// Bulk create products
-router.post('/bulk', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), bulkCreateProducts);
-
-// Public product routes (for all authenticated users)
 router.get('/', getProducts);
 router.get('/:id', getProductById);
 
-// Protected routes (Manager, Admin, Super Admin)
-router.post('/', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), createProduct);
-router.put('/:id', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), updateProduct);
-router.put('/adjust-stock/:id', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), adjustStock);
+router.post('/bulk', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), bulkCreateProducts);
+router.post('/', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), createProductValidator, validate, createProduct);
+router.put('/adjust-stock/:id', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), adjustStockValidator, validate, adjustStock);
+router.put('/:id', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), updateProductValidator, validate, updateProduct);
 router.delete('/:id', authorize('STORE_ADMIN', 'SUPER_ADMIN'), deleteProduct);
 
 export default router;

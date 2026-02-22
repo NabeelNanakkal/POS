@@ -7,7 +7,7 @@ import {
   refundOrder,
   getOrderStats,
   getTopSellingItems,
-} from '../controllers/orderController.js';
+} from '../controllers/order.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { getDashboardStats, getActivityCounts, getEmployeeStats } from '../controllers/dashboardController.js';
+import { getDashboardStats, getActivityCounts, getEmployeeStats } from '../controllers/dashboard.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 

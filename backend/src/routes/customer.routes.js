@@ -7,7 +7,7 @@ import {
   deleteCustomer,
   updateLoyaltyPoints,
   updatePurchaseHistory,
-} from '../controllers/customerController.js';
+} from '../controllers/customer.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 

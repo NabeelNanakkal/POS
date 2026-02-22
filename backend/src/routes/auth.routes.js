@@ -7,10 +7,10 @@ import {
   changePassword,
   getMe,
   setupAdmin,
-} from '../controllers/authController.js';
+} from '../controllers/auth.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { authLimiter } from '../middleware/rateLimiter.middleware.js';
+import { authLimiter } from '../middleware/rate-limiter.middleware.js';
 import {
   registerValidator,
   loginValidator,

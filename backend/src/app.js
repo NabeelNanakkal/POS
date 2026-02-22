@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config/constants.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
-import { apiLimiter } from './middleware/rateLimiter.middleware.js';
+import { apiLimiter } from './middleware/rate-limiter.middleware.js';
 import routes from './routes/index.js';
 import logger from './utils/logger.js';
 

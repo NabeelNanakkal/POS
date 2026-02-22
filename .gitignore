@@ -1,8 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# ── Dependencies ──────────────────────────────────────────
+node_modules/
+.pnp
 .pnp.js
 .yarn/*
 !.yarn/patches
@@ -11,22 +9,32 @@
 !.yarn/sdks
 !.yarn/versions
 
-# testing
-/coverage
-
-# production
-/build
-/dist
-
-# misc
-.DS_Store
+# ── Environment variables ──────────────────────────────────
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env
 
+# ── Build outputs ──────────────────────────────────────────
+dist/
+build/
+.dist/
+
+# ── Logs ──────────────────────────────────────────────────
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-/.idea/
+
+# ── Cache ─────────────────────────────────────────────────
+.vite/
+.cache/
+coverage/
+
+# ── OS & Editor ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json

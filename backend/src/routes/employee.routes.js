@@ -7,7 +7,7 @@ import {
   updateEmployee,
   deleteEmployee,
   resetEmployeePassword,
-} from '../controllers/employeeController.js';
+} from '../controllers/employee.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 

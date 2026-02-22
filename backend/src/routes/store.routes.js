@@ -7,7 +7,7 @@ import {
   deleteStore,
   toggleStoreStatus,
   bulkCreateStores
-} from '../controllers/storeController.js';
+} from '../controllers/store.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 

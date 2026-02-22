@@ -1,0 +1,30 @@
+import { lazy } from 'react';
+
+// project imports
+import Loadable from 'components/Loadable';
+import MinimalLayout from 'layout/MinimalLayout';
+import ErrorFallback from 'components/ErrorFallback';
+
+// login option 3 routing
+const AuthLogin3 = Loadable(lazy(() => import('views/auth/authentication3/LoginRetailOS')));
+const AuthRegister3 = Loadable(lazy(() => import('views/auth/authentication3/Register3')));
+
+// ==============================|| AUTHENTICATION ROUTING ||============================== //
+
+const AuthenticationRoutes = {
+  path: '/',
+  element: <MinimalLayout />,
+  errorElement: <ErrorFallback />,
+  children: [
+    {
+      path: '/login',
+      element: <AuthLogin3 />
+    },
+    {
+      path: '/signup',
+      element: <AuthRegister3 />
+    }
+  ]
+};
+
+export default AuthenticationRoutes;

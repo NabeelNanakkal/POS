@@ -5,7 +5,7 @@ import {
   adjustInventory,
   transferInventory,
   getLowStockAlerts,
-} from '../controllers/inventoryController.js';
+} from '../controllers/inventory.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 

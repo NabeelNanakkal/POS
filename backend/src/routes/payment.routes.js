@@ -4,7 +4,7 @@ import {
   getPaymentById,
   createPayment,
   getPaymentStats,
-} from '../controllers/paymentController.js';
+} from '../controllers/payment.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 

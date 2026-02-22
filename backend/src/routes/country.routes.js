@@ -1,6 +1,6 @@
 // Country routes
 import express from 'express';
-import { getAllCountries, getCountryById, getCountryByCode } from '../controllers/countryController.js';
+import { getAllCountries, getCountryById, getCountryByCode } from '../controllers/country.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();

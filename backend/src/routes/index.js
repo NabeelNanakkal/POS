@@ -1,6 +1,6 @@
 import express from 'express';
 import authRoutes from './auth.routes.js';
-import superAdminRoutes from './superAdmin.routes.js';
+import superAdminRoutes from './super-admin.routes.js';
 import productRoutes from './product.routes.js';
 import categoryRoutes from './category.routes.js';
 import customerRoutes from './customer.routes.js';
@@ -12,7 +12,7 @@ import paymentRoutes from './payment.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import shiftRoutes from './shift.routes.js';
 import discountRoutes from './discount.routes.js';
-import paymentModeRoutes from './paymentModeRoutes.js';
+import paymentModeRoutes from './payment-mode.routes.js';
 import countryRoutes from './country.routes.js';
 import reportRoutes from './report.routes.js';
 import { verifyToken } from '../middleware/auth.middleware.js';

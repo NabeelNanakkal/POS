@@ -16,6 +16,8 @@ import paymentModeRoutes from './payment-mode.routes.js';
 import countryRoutes from './country.routes.js';
 import reportRoutes from './report.routes.js';
 import zohoRoutes from './zoho.routes.js';
+import cashSessionRoutes from './cashSession.routes.js';
+import printerRoutes from './printer.routes.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { tenantFilter, injectStore } from '../middleware/tenant.middleware.js';
 
@@ -52,5 +54,7 @@ router.use('/payment-modes', verifyToken, tenantFilter, injectStore, paymentMode
 router.use('/countries', countryRoutes); // No tenant filtering for countries
 router.use('/reports', verifyToken, tenantFilter, reportRoutes);
 router.use('/zoho', zohoRoutes);
+router.use('/cash-sessions', verifyToken, tenantFilter, cashSessionRoutes);
+router.use('/printers', verifyToken, tenantFilter, injectStore, printerRoutes);
 
 export default router;

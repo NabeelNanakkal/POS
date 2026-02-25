@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -30,7 +31,8 @@ import {
   Tooltip,
   Dialog,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  CircularProgress
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 
@@ -84,6 +86,8 @@ import {
 } from 'container/product/slice';
 import { fetchCategories } from 'container/category/slice';
 import { fetchStores } from 'container/store/slice';
+import printerService from 'services/printer.service';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
 
 // Components
 const StatCard = ({ title, value, icon, color, trend }) => {
@@ -401,6 +405,8 @@ const FileUploadDialog = ({ open, onClose, onImport }) => {
 const ProductManagement = () => {
   const theme = useTheme();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { storeCode } = useParams();
   const { products, loading, pagination, stats, error: empError } = useSelector((state) => state.product);
   const { categories } = useSelector((state) => state.category);
   const { stores } = useSelector((state) => state.store);
@@ -461,6 +467,31 @@ const ProductManagement = () => {
   const handleDeleteClick = (product) => {
     setProductToDelete(product);
     setIsDeleteDialogOpen(true);
+  };
+
+  // ── Barcode / Print handlers ──────────────────────────────────────────────
+  const [generatingBarcodeId, setGeneratingBarcodeId] = useState(null);
+
+  const handlePrintSticker = (product) => {
+    navigate(`/pos/${storeCode}/barcode-print`, {
+      state: { preSelectedProducts: [{ product, quantity: 1 }] },
+    });
+  };
+
+  const handleGenerateBarcode = async (product) => {
+    if (product.barcode) {
+      handlePrintSticker(product);
+      return;
+    }
+    setGeneratingBarcodeId(product._id);
+    try {
+      await printerService.generateBarcode(product._id);
+      dispatch(fetchProducts({ page: pagination?.page || 1, limit: 10 }));
+    } catch {
+      // toast shown by global axios handler
+    } finally {
+      setGeneratingBarcodeId(null);
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -695,10 +726,36 @@ const ProductManagement = () => {
               >
                 Export
               </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<PrintIcon sx={{ color: 'primary.main' }} />}
+                onClick={() => navigate(`/pos/${storeCode}/barcode-print`)}
+                sx={{
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  px: 2.5,
+                  height: 40,
+                  border: '2px solid',
+                  borderColor: alpha(theme.palette.primary.main, 0.1),
+                  color: 'text.primary',
+                  bgcolor: alpha(theme.palette.primary.main, 0.02),
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                    transform: 'translateY(-1px)'
+                  }
+                }}
+              >
+                Bulk Print
+              </Button>
             </Stack>
-            
-            <Button 
-              variant="contained" 
+
+            <Button
+              variant="contained"
               startIcon={<AddIcon />}
               onClick={handleAddNew}
               sx={{ 
@@ -1033,13 +1090,45 @@ const ProductManagement = () => {
                             <EditOutlinedIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete Product">
-                          <IconButton 
-                            size="small" 
-                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }}
-                            sx={{ 
+                        <Tooltip title={product.barcode ? 'Print Label' : 'Generate & Print Barcode'}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => { e.stopPropagation(); handleGenerateBarcode(product); }}
+                            disabled={generatingBarcodeId === product._id}
+                            sx={{
                               color: 'text.secondary',
-                              bgcolor: 'white', 
+                              bgcolor: 'white',
+                              border: '1px solid #eee',
+                              '&:hover': { color: 'success.main', borderColor: 'success.light', bgcolor: alpha(theme.palette.success.main, 0.05) }
+                            }}
+                          >
+                            {generatingBarcodeId === product._id
+                              ? <CircularProgress size={14} />
+                              : <QrCode2Icon fontSize="small" />
+                            }
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Print Sticker">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => { e.stopPropagation(); handlePrintSticker(product); }}
+                            sx={{
+                              color: 'text.secondary',
+                              bgcolor: 'white',
+                              border: '1px solid #eee',
+                              '&:hover': { color: 'info.main', borderColor: 'info.light', bgcolor: alpha(theme.palette.info.main, 0.05) }
+                            }}
+                          >
+                            <PrintIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Product">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }}
+                            sx={{
+                              color: 'text.secondary',
+                              bgcolor: 'white',
                               border: '1px solid #eee',
                               '&:hover': { color: 'error.main', borderColor: 'error.light', bgcolor: alpha(theme.palette.error.main, 0.05) }
                             }}

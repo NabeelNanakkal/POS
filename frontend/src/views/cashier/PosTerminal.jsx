@@ -24,10 +24,12 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Alert,
+  Collapse
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
-import { useOutletContext, useParams } from 'react-router-dom';
+import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 // Animations
@@ -75,6 +77,9 @@ import { fetchDiscounts } from 'container/discount/slice';
 import { useSelector, useDispatch } from 'react-redux';
 import customerService from 'services/customer.service';
 import orderService from 'services/order.service';
+import cashSessionService from 'services/cashSession.service';
+import printerService from 'services/printer.service';
+import ReceiptTemplate from 'components/print/ReceiptTemplate';
 import config from 'config';
 import { formatAmountWithComma, getCurrencySymbol } from 'utils/formatAmount';
 // Helper to match ProductManagement color logic
@@ -1770,6 +1775,37 @@ const PosTerminal = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Cash session state
+  const [activeSession, setActiveSession] = useState(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [sessionBannerDismissed, setSessionBannerDismissed] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    cashSessionService.getActive()
+      .then(res => {
+        setActiveSession(res.data?.data || null);
+      })
+      .catch(() => {
+        setActiveSession(null);
+      })
+      .finally(() => {
+        setSessionChecked(true);
+      });
+  }, []);
+
+  const showSessionWarning = sessionChecked && !activeSession && !sessionBannerDismissed;
+
+  // Print config + receipt state
+  const [printConfig, setPrintConfig] = useState(null);
+  const [lastCompletedOrder, setLastCompletedOrder] = useState(null);
+
+  useEffect(() => {
+    printerService.getConfig()
+      .then((res) => setPrintConfig(res.data?.data || null))
+      .catch(() => {});
+  }, []);
+
   // Hardware Scanner Hook
   const [lastScannedRefundCode, setLastScannedRefundCode] = useState('');
   useBarcodeScanner((code) => {
@@ -2014,7 +2050,7 @@ const PosTerminal = () => {
         notes: note
       };
 
-      await orderService.createOrder(orderData);
+      const orderRes = await orderService.createOrder(orderData);
 
       // 2. Track discount usage if a discount was applied
       if (selectedDiscount && selectedDiscount._id && !selectedDiscount.isManual) {
@@ -2048,6 +2084,34 @@ const PosTerminal = () => {
       // Generate payment breakdown for the message
       const paymentBreakdown = payments.map(p => `${p.method.toUpperCase()}: ${formatAmountWithComma(p.amount)}`).join('\n');
       const changeMsg = change > 0 ? `\n\nTotal Change: ${formatAmountWithComma(change)}` : '';
+
+      // Store completed order for receipt printing
+      const savedOrder = orderRes?.data?.data || orderRes?.data || {};
+      setLastCompletedOrder({
+        orderNumber: savedOrder.orderNumber || savedOrder._id,
+        items: cart.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          subtotal: item.price * item.quantity,
+        })),
+        subtotal,
+        tax: 0,
+        discount: discountAmount,
+        total,
+        payments: payments.map(p => ({
+          method: p.method === 'digital' ? 'DIGITAL' : p.method.toUpperCase(),
+          amount: p.amount,
+        })),
+        customer: customer || null,
+        cashier: user,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Auto-print receipt if configured
+      if (printConfig?.autoPrintAfterSale) {
+        setTimeout(() => window.print(), 400);
+      }
 
       // Show success message
       toast.success(`Payment of ${formatAmountWithComma(total)} processed successfully!`, {
@@ -2184,6 +2248,33 @@ const PosTerminal = () => {
           </Box>
         </Stack>
       </Box>
+
+      {/* ── Cash Session Warning Banner ── */}
+      <Collapse in={showSessionWarning}>
+        <Alert
+          severity="warning"
+          onClose={() => setSessionBannerDismissed(true)}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              variant="outlined"
+              sx={{ fontWeight: 700, borderRadius: 1.5, whiteSpace: 'nowrap' }}
+              onClick={() => navigate('/pos/cash-management')}
+            >
+              Open Cash Session
+            </Button>
+          }
+          sx={{
+            borderRadius: 0,
+            px: 3,
+            py: 0.75,
+            '& .MuiAlert-message': { display: 'flex', alignItems: 'center', fontWeight: 600 }
+          }}
+        >
+          No cash session open for today. Start your shift by opening a cash session before processing sales.
+        </Alert>
+      </Collapse>
 
       {/* ── Main two-column layout ── */}
       <Box sx={{
@@ -2748,6 +2839,13 @@ const PosTerminal = () => {
         />
       </Box>
       </Box>
+
+      {/* Receipt template — hidden on screen, visible only when printing */}
+      <ReceiptTemplate
+        order={lastCompletedOrder}
+        config={printConfig}
+        store={storeConfig}
+      />
     </Box>
   );
 };

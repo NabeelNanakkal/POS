@@ -15,7 +15,10 @@ import {
   IconDiscount,
   IconBinaryTree,
   IconSettings,
-  IconPlugConnected
+  IconPlugConnected,
+  IconCash,
+  IconPrinter,
+  IconBarcode
 } from '@tabler/icons-react';
 
 // ==============================|| POS MENU ITEMS ||============================== //
@@ -68,6 +71,24 @@ const main = {
       url: '/pos/terminal',
       icon: IconDeviceGamepad2,
       permittedRoles: ['CASHIER'],
+      breadcrumbs: false
+    },
+    {
+      id: 'cash-management',
+      title: 'Cash Management',
+      type: 'item',
+      url: '/pos/cash-management',
+      icon: IconCash,
+      permittedRoles: ['CASHIER', 'MANAGER', 'STORE_ADMIN'],
+      breadcrumbs: false
+    },
+    {
+      id: 'barcode-print',
+      title: 'Barcode Print',
+      type: 'item',
+      url: '/pos/barcode-print',
+      icon: IconBarcode,
+      permittedRoles: ['MANAGER', 'STORE_ADMIN'],
       breadcrumbs: false
     },
     {
@@ -147,6 +168,15 @@ const main = {
           url: '/pos/settings/integrations',
           icon: IconPlugConnected,
           permittedRoles: ['STORE_ADMIN'],
+          breadcrumbs: false
+        },
+        {
+          id: 'printing',
+          title: 'Printing',
+          type: 'item',
+          url: '/pos/settings/printing',
+          icon: IconPrinter,
+          permittedRoles: ['MANAGER', 'STORE_ADMIN'],
           breadcrumbs: false
         }
       ]

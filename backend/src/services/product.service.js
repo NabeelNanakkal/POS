@@ -115,3 +115,80 @@ export const bulkCreateProducts = async (products) => {
 
   return Product.insertMany(processedProducts);
 };
+
+// ── Barcode auto-generation ────────────────────────────────────────────────────
+
+const computeEan13Checksum = (raw12) => {
+  const digits = raw12.split('').map(Number);
+  const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 1 : 3), 0);
+  return (10 - (sum % 10)) % 10;
+};
+
+const computeUpcaChecksum = (raw11) => {
+  const digits = raw11.split('').map(Number);
+  const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
+  return (10 - (sum % 10)) % 10;
+};
+
+export const generateBarcode = async (id, storeId, barcodeType = 'CODE128') => {
+  const filter = { _id: id };
+  if (storeId) filter.store = storeId;
+
+  const product = await Product.findOne(filter);
+  if (!product) throw ApiError.notFound('Product not found');
+  if (product.barcode && product.barcode.trim()) return product;
+
+  let barcode;
+  let unique = false;
+  let attempts = 0;
+
+  while (!unique && attempts < 20) {
+    if (barcodeType === 'EAN13') {
+      const raw12 =
+        String(Math.floor(Math.random() * 99)).padStart(2, '0') +
+        String(Date.now()).slice(-7) +
+        String(Math.floor(Math.random() * 999)).padStart(3, '0');
+      barcode = raw12 + computeEan13Checksum(raw12);
+    } else if (barcodeType === 'UPCA') {
+      const raw11 = String(Date.now()).slice(-9) + String(Math.floor(Math.random() * 99)).padStart(2, '0');
+      barcode = raw11 + computeUpcaChecksum(raw11);
+    } else {
+      // CODE128 — alphanumeric, always valid
+      barcode = `BC${String(Date.now()).slice(-10)}${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
+    }
+
+    const exists = await Product.findOne({ barcode });
+    if (!exists) unique = true;
+    attempts++;
+  }
+
+  if (!unique) throw ApiError.internal('Could not generate a unique barcode after 20 attempts');
+
+  product.barcode = barcode;
+  await product.save();
+  return product;
+};
+
+export const generateBarcodesForAllMissing = async (storeId) => {
+  const filter = {
+    ...(storeId && { store: storeId }),
+    $or: [{ barcode: null }, { barcode: { $exists: false } }, { barcode: '' }],
+  };
+  const products = await Product.find(filter).select('_id barcode');
+  const results = [];
+
+  for (const p of products) {
+    try {
+      const updated = await generateBarcode(p._id, storeId);
+      results.push({ id: updated._id, barcode: updated.barcode, success: true });
+    } catch {
+      results.push({ id: p._id, success: false });
+    }
+  }
+
+  return {
+    generated: results.filter((r) => r.success).length,
+    total: products.length,
+    results,
+  };
+};

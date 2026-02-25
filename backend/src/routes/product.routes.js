@@ -9,6 +9,8 @@ import {
   bulkCreateProducts,
   getProductStats,
   adjustStock,
+  generateProductBarcode,
+  generateMissingBarcodes,
 } from '../controllers/product.controller.js';
 import { authorize } from '../middleware/rbac.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
@@ -25,6 +27,8 @@ router.get('/stats', getProductStats);
 router.get('/', getProducts);
 router.get('/:id', getProductById);
 
+router.post('/generate-barcode/:id', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), generateProductBarcode);
+router.post('/generate-all-barcodes', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), generateMissingBarcodes);
 router.post('/bulk', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), bulkCreateProducts);
 router.post('/', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), createProductValidator, validate, createProduct);
 router.put('/adjust-stock/:id', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), adjustStockValidator, validate, adjustStock);

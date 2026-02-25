@@ -4,6 +4,38 @@
 // third party
 @use 'react-perfect-scrollbar/dist/css/styles.css';
 
+// ==============================|| PRINT — receipt & barcode labels ||============================== //
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-container,
+  .print-container * {
+    visibility: visible;
+  }
+
+  .print-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3mm;
+    padding: 4mm;
+  }
+
+  .barcode-label {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    margin: 4mm;
+  }
+}
+
 // ==============================|| TAP HIGHLIGHT ||============================== //
 
 * {

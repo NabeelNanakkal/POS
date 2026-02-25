@@ -54,3 +54,14 @@ export const bulkCreateProducts = asyncHandler(async (req, res) => {
   // Fire-and-forget: sync each product to Zoho Books
   if (req.storeId) products.forEach(p => syncProductToZoho(p, req.storeId));
 });
+
+export const generateProductBarcode = asyncHandler(async (req, res) => {
+  const { barcodeType = 'CODE128' } = req.body;
+  const product = await productService.generateBarcode(req.params.id, req.storeId, barcodeType);
+  res.json(ApiResponse.success(product, 'Barcode generated successfully'));
+});
+
+export const generateMissingBarcodes = asyncHandler(async (req, res) => {
+  const result = await productService.generateBarcodesForAllMissing(req.storeId);
+  res.json(ApiResponse.success(result, `Generated ${result.generated} of ${result.total} missing barcodes`));
+});

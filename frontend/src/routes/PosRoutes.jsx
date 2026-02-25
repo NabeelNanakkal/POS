@@ -25,6 +25,9 @@ const Customers = Loadable(lazy(() => import('views/cashier/Customers')));
 const PaymentMethods = Loadable(lazy(() => import('views/cashier/PaymentMethods')));
 const Discounts = Loadable(lazy(() => import('views/cashier/Discounts')));
 const Integrations = Loadable(lazy(() => import('views/cashier/settings/Integrations')));
+const PrintingConfig = Loadable(lazy(() => import('views/cashier/settings/PrintingConfig')));
+const CashManagement = Loadable(lazy(() => import('views/cashier/CashManagement')));
+const BarcodePrint = Loadable(lazy(() => import('views/cashier/BarcodePrint')));
 
 import AuthGuard from './AuthGuard';
 
@@ -109,12 +112,24 @@ const PosRoutes = {
                 {
                   path: 'integrations',
                   element: <AuthGuard permittedRoles={['STORE_ADMIN', 'SUPER_ADMIN']}><Integrations /></AuthGuard>
+                },
+                {
+                  path: 'printing',
+                  element: <AuthGuard permittedRoles={['MANAGER', 'STORE_ADMIN']}><PrintingConfig /></AuthGuard>
                 }
               ]
             },
             {
               path: 'reports',
               element: <AuthGuard permittedRoles={['MANAGER', 'STORE_ADMIN']}><Reports /></AuthGuard>
+            },
+            {
+              path: 'cash-management',
+              element: <AuthGuard permittedRoles={['CASHIER', 'MANAGER', 'STORE_ADMIN']}><CashManagement /></AuthGuard>
+            },
+            {
+              path: 'barcode-print',
+              element: <AuthGuard permittedRoles={['MANAGER', 'STORE_ADMIN']}><BarcodePrint /></AuthGuard>
             }
           ]
         },

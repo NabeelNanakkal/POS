@@ -2230,6 +2230,7 @@ __metadata:
     framer-motion: "npm:^12.10.1"
     html5-qrcode: "npm:^2.3.8"
     js-base64: "npm:^3.7.8"
+    jsbarcode: "npm:^3.12.3"
     lodash-es: "npm:4.17.21"
     lottie-react: "npm:^2.4.1"
     lucide-react: "npm:^0.548.0"
@@ -3983,6 +3984,13 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: 10c0/184a24b4eaacfce40ad9074c64fd42ac83cf74d8c8cd137718d456ced75051229e5061b8633c3366b8aada17945a7a356b337828c19da92b51ae62126575018f
+  languageName: node
+  linkType: hard
+
+"jsbarcode@npm:^3.12.3":
+  version: 3.12.3
+  resolution: "jsbarcode@npm:3.12.3"
+  checksum: 10c0/da6683fe036eb288b92159d4f46b96cc376bcd0b7048715aaa7dc47f20e3d6d505b59e645818ed9685c399ed79c513197e30cf0540c94627d9dee19d0a67ddaa
   languageName: node
   linkType: hard
 

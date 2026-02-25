@@ -85,7 +85,7 @@ const main = {
       type: 'item',
       url: '/pos/products',
       icon: IconPackage,
-      permittedRoles: ['MANAGER'],
+      permittedRoles: ['MANAGER', 'STORE_ADMIN'],
       breadcrumbs: false
     },
     {

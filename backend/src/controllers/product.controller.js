@@ -1,6 +1,7 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import * as productService from '../services/product.service.js';
+import { syncProductToZoho } from '../services/zoho.service.js';
 
 export const getProducts = asyncHandler(async (req, res) => {
   const data = await productService.getProducts(req.query, req.storeId);
@@ -15,11 +16,15 @@ export const getProductById = asyncHandler(async (req, res) => {
 export const createProduct = asyncHandler(async (req, res) => {
   const product = await productService.createProduct(req.body);
   res.status(201).json(ApiResponse.created(product, 'Product created successfully'));
+  // Fire-and-forget: sync to Zoho Books in background
+  if (req.storeId) syncProductToZoho(product, req.storeId);
 });
 
 export const updateProduct = asyncHandler(async (req, res) => {
   const product = await productService.updateProduct(req.params.id, req.body);
   res.json(ApiResponse.success(product, 'Product updated successfully'));
+  // Fire-and-forget: sync to Zoho Books in background
+  if (req.storeId) syncProductToZoho(product, req.storeId);
 });
 
 export const deleteProduct = asyncHandler(async (req, res) => {
@@ -46,4 +51,6 @@ export const adjustStock = asyncHandler(async (req, res) => {
 export const bulkCreateProducts = asyncHandler(async (req, res) => {
   const products = await productService.bulkCreateProducts(req.body.products);
   res.status(201).json(ApiResponse.created(products, `${products.length} products imported successfully`));
+  // Fire-and-forget: sync each product to Zoho Books
+  if (req.storeId) products.forEach(p => syncProductToZoho(p, req.storeId));
 });

@@ -56,7 +56,11 @@ const customerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Store',
       required: true
-    }
+    },
+    zohoContactId: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

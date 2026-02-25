@@ -1423,14 +1423,15 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                         
                         {/* Payment Method Selection */}
                         <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
-                            {(!allowedPaymentModes || allowedPaymentModes.length === 0) ? (
-                                <Box sx={{ p: 2, textAlign: 'center', width: '100%', border: '1px dashed', borderColor: 'divider', borderRadius: 2 }}>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                                        No payment methods configured for this store.
-                                    </Typography>
-                                </Box>
-                            ) : (
-                                allowedPaymentModes.map(pm => {
+                            {(() => {
+                                const defaultModes = [
+                                    { value: 'cash', label: 'Cash', icon: '💵' },
+                                    { value: 'card', label: 'Card', icon: '💳' }
+                                ];
+                                const modes = (allowedPaymentModes && allowedPaymentModes.length > 0)
+                                    ? allowedPaymentModes
+                                    : defaultModes;
+                                return modes.map(pm => {
                                     // Handle both object (from population) and string (if not populated)
                                     const method = typeof pm === 'object' ? {
                                         value: pm.value,
@@ -1467,8 +1468,8 @@ const CheckoutDialog = ({ open, onClose, cart, customer, discount, note, subtota
                                             </Stack>
                                         </Button>
                                     );
-                                })
-                            )}
+                                });
+                            })()}
                         </Stack>
 
                         {/* Amount Display */}
@@ -1755,6 +1756,20 @@ const PosTerminal = () => {
   }, [user, storeCode, stores]);
   const [pricelist, setPricelist] = useState('standard');
 
+  // Live clock
+  const [currentTime, setCurrentTime] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }));
+      setCurrentDate(now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Hardware Scanner Hook
   const [lastScannedRefundCode, setLastScannedRefundCode] = useState('');
   useBarcodeScanner((code) => {
@@ -1963,13 +1978,7 @@ const PosTerminal = () => {
       return;
     }
 
-    // If no customer, open customer dialog
-    if (!customer) {
-      setIsCustomerDialogOpen(true);
-      return;
-    }
-
-    // Open checkout dialog
+    // Open checkout dialog directly — customer is optional (walk-in allowed)
     setIsCheckoutDialogOpen(true);
   };
 
@@ -1979,7 +1988,7 @@ const PosTerminal = () => {
       
       // 1. Create the Order in the database
       const orderData = {
-        customer: customer._id || customer.id,
+        customer: customer ? (customer._id || customer.id) : null,
         items: cart.map(item => ({
           product: item._id || item.id,
           name: item.name,
@@ -2025,15 +2034,15 @@ const PosTerminal = () => {
         }
       }
 
-      // 3. Update customer purchase history
-      const response = await customerService.updatePurchaseHistory(
-        customer._id || customer.id,
-        total
-      );
-
-      // Update local customer state with new values
-      if (response.data) {
-        setCustomer(response.data);
+      // 3. Update customer purchase history (skip for walk-in)
+      if (customer) {
+        const response = await customerService.updatePurchaseHistory(
+          customer._id || customer.id,
+          total
+        );
+        if (response.data) {
+          setCustomer(response.data);
+        }
       }
 
       // Generate payment breakdown for the message
@@ -2108,23 +2117,90 @@ const PosTerminal = () => {
   const total = currentSubtotal + tax;
 
   return (
-    <Box sx={{ 
-        display: 'flex', 
-        flexDirection: {
-            xs: 'column-reverse',
-            md: layoutPosition === 'left' ? 'row-reverse' : 'row'
-        },
-        height: { xs: 'auto', md: '100vh' }, 
-        bgcolor: '#f4f7fa', 
-        overflow: { xs: 'auto', md: 'hidden' }, 
-        m: -3 
-    }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: { xs: 'auto', md: '100vh' }, bgcolor: '#f4f7fa', overflow: 'hidden', m: -3 }}>
+
+      {/* ── POS Header ── */}
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        px: { xs: 2, sm: 3 },
+        py: 1.25,
+        bgcolor: 'white',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+        flexShrink: 0,
+        gap: 2
+      }}>
+        {/* Store identity */}
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box sx={{ p: 0.75, borderRadius: 2, bgcolor: 'primary.main', color: 'white', display: 'flex', boxShadow: theme => `0 4px 10px ${alpha(theme.palette.primary.main, 0.3)}` }}>
+            <StorefrontIcon sx={{ fontSize: '1.25rem' }} />
+          </Box>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={800} sx={{ lineHeight: 1.1 }}>
+              {storeConfig?.name || (typeof user?.store === 'object' ? user?.store?.name : null) || 'POS Terminal'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.65rem' }}>
+              Retail Point of Sale
+            </Typography>
+          </Box>
+        </Stack>
+
+        {/* Cart badge (mobile) */}
+        {cart.length > 0 && (
+          <Chip
+            icon={<ShoppingCartOutlinedIcon sx={{ fontSize: '0.9rem !important' }} />}
+            label={`${cart.length} item${cart.length > 1 ? 's' : ''}`}
+            size="small"
+            color="primary"
+            sx={{ fontWeight: 700, display: { md: 'none' } }}
+          />
+        )}
+
+        {/* Cashier + clock */}
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ flexShrink: 0 }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ display: { xs: 'none', sm: 'flex' } }}>
+            <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.lighter', color: 'primary.main', fontSize: '0.75rem', fontWeight: 800 }}>
+              {(user?.name || user?.username || 'C').charAt(0).toUpperCase()}
+            </Avatar>
+            <Box>
+              <Typography variant="body2" fontWeight={700} sx={{ lineHeight: 1.1 }}>
+                {user?.name || user?.username || 'Cashier'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.62rem' }}>
+                {user?.role ? user.role.replace(/_/g, ' ') : 'Cashier'}
+              </Typography>
+            </Box>
+          </Stack>
+          <Box sx={{ textAlign: 'right', pl: 2, borderLeft: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="body2" fontWeight={900} color="primary.main" sx={{ lineHeight: 1.1, letterSpacing: '0.04em' }}>
+              {currentTime}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.62rem' }}>
+              {currentDate}
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
+
+      {/* ── Main two-column layout ── */}
+      <Box sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: {
+              xs: 'column-reverse',
+              md: layoutPosition === 'left' ? 'row-reverse' : 'row'
+          },
+          overflow: { xs: 'auto', md: 'hidden' },
+      }}>
       {/* Products Column */}
-      <Box sx={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          p: { xs: 2, sm: 3 }, 
+      <Box sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          p: { xs: 2, sm: 3 },
           overflow: { xs: 'visible', md: 'hidden' },
           minHeight: { xs: '100vh', md: 'auto' }
       }}>
@@ -2416,8 +2492,43 @@ const PosTerminal = () => {
             )}
         </Box>
 
-        {/* Actions Removed - Now in Checkout Modal */}
-        <Box sx={{ mb: 2 }} />
+        {/* Quick Actions */}
+        <Stack direction="row" spacing={1} sx={{ mb: 1.5 }}>
+          <Button
+            fullWidth
+            size="small"
+            variant={selectedDiscount ? 'contained' : 'outlined'}
+            onClick={() => setIsDiscountDialogOpen(true)}
+            startIcon={<LocalOfferOutlinedIcon sx={{ fontSize: '0.9rem !important' }} />}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              py: 0.8,
+              ...(selectedDiscount && { color: 'white' })
+            }}
+          >
+            {selectedDiscount ? 'Discount ✓' : 'Discount'}
+          </Button>
+          <Button
+            fullWidth
+            size="small"
+            variant={note ? 'contained' : 'outlined'}
+            onClick={() => setIsNoteDialogOpen(true)}
+            startIcon={<NoteAltOutlinedIcon sx={{ fontSize: '0.9rem !important' }} />}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              py: 0.8,
+              ...(note && { color: 'white' })
+            }}
+          >
+            {note ? 'Note ✓' : 'Add Note'}
+          </Button>
+        </Stack>
 
         <Menu
             anchorEl={anchorEl}
@@ -2463,8 +2574,43 @@ const PosTerminal = () => {
             </MenuItem>
         </Menu>
 
-        {/* Totals Section Removed - Now in Checkout Modal */}
-        <Box sx={{ mb: 2.5 }} />
+        {/* Order Totals */}
+        <Divider sx={{ mb: 1.5 }} />
+        <Stack spacing={0.75} sx={{ mb: 1.5 }}>
+          <Stack direction="row" justifyContent="space-between">
+            <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+            <Typography variant="body2" fontWeight={700}>{formatAmountWithComma(subtotal)}</Typography>
+          </Stack>
+          {pricelistDiscountAmount > 0 && (
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color="primary.main" fontWeight={600}>
+                {pricelist === 'wholesale' ? 'Wholesale (5%)' : 'VIP (10%)'}
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="primary.main">-{formatAmountWithComma(pricelistDiscountAmount)}</Typography>
+            </Stack>
+          )}
+          {discountAmount > 0 && (
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color="error.main" fontWeight={600}>
+                Discount {selectedDiscount?.type === 'PERCENTAGE' ? `(${selectedDiscount.value}%)` : ''}
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="error.main">-{formatAmountWithComma(discountAmount)}</Typography>
+            </Stack>
+          )}
+          {tax > 0 && (
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">Tax</Typography>
+              <Typography variant="body2" fontWeight={700}>{formatAmountWithComma(tax)}</Typography>
+            </Stack>
+          )}
+          <Divider />
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="subtitle1" fontWeight={900}>Total</Typography>
+            <Typography variant="h5" fontWeight={900} color="primary.main" sx={{ letterSpacing: '-0.02em' }}>
+              {formatAmountWithComma(total)}
+            </Typography>
+          </Stack>
+        </Stack>
 
         <Stack direction="row" spacing={1}>
             <Tooltip title="Hold Bill (F8)">
@@ -2504,7 +2650,7 @@ const PosTerminal = () => {
                     flex: 1
                 }}
             >
-                Checkout {formatAmountWithComma(total)}
+                Checkout &nbsp;→&nbsp; {formatAmountWithComma(total)}
             </Button>
         </Stack>
 
@@ -2600,6 +2746,7 @@ const PosTerminal = () => {
             onUpdateItemPrice={updateItemPrice}
             allowedPaymentModes={storeConfig?.allowedPaymentModes}
         />
+      </Box>
       </Box>
     </Box>
   );

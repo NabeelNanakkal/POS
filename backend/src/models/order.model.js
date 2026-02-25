@@ -117,6 +117,10 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    zohoInvoiceId: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

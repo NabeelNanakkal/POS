@@ -32,8 +32,10 @@ if (config.env === 'development') {
   app.use(morgan('combined'));
 }
 
-// Rate limiting
-app.use('/api/', apiLimiter);
+// Rate limiting — skip in development to avoid blocking during testing
+if (config.env !== 'development') {
+  app.use('/api/', apiLimiter);
+}
 
 // API routes
 app.use('/api', routes);

@@ -1,6 +1,7 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import * as customerService from '../services/customer.service.js';
+import { syncCustomerToZoho } from '../services/zoho.service.js';
 
 export const getCustomers = asyncHandler(async (req, res) => {
   const storeId = req.storeId || req.user.store;
@@ -18,11 +19,16 @@ export const createCustomer = asyncHandler(async (req, res) => {
   const storeId = req.storeId || req.user.store;
   const customer = await customerService.createCustomer(req.body, storeId);
   res.status(201).json(ApiResponse.created(customer, 'Customer created successfully'));
+  // Fire-and-forget: sync to Zoho Books as Contact
+  if (storeId) syncCustomerToZoho(customer, storeId);
 });
 
 export const updateCustomer = asyncHandler(async (req, res) => {
+  const storeId = req.storeId || req.user.store;
   const customer = await customerService.updateCustomer(req.params.id, req.body);
   res.json(ApiResponse.success(customer, 'Customer updated successfully'));
+  // Fire-and-forget: sync update to Zoho Books
+  if (storeId) syncCustomerToZoho(customer, storeId);
 });
 
 export const deleteCustomer = asyncHandler(async (req, res) => {

@@ -2,6 +2,7 @@ import authService from '../../services/auth.service';
 import { tokenManager } from '../../utils/tokenManager';
 import 'react-toastify/dist/ReactToastify.css';
 import { loginSuccess, loginFail } from './slice';
+import { setPermissions, clearPermissions } from '../permission/slice';
 import { takeEvery, call, put } from 'redux-saga/effects';
 import { getRoleBasedRedirect } from 'constants/roleBasedRedirects';
 
@@ -21,8 +22,13 @@ function* login(action) {
       // Store user data
       yield localStorage.setItem('user', JSON.stringify(user));
 
+      // Store permissions for synchronous access (AuthGuard, filterMenuByRole)
+      const permissions = user.permissions ?? null;
+      yield localStorage.setItem('permissions', JSON.stringify(permissions));
+
       // Dispatch success action
       yield put(loginSuccess({ user, accessToken, refreshToken }));
+      yield put(setPermissions(permissions));
 
       // Handle redirect
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
@@ -63,7 +69,9 @@ function* logOut() {
     // Clear tokens and user data
     yield call(tokenManager.clearTokens);
     yield localStorage.removeItem('user');
+    yield localStorage.removeItem('permissions');
     yield localStorage.removeItem('redirectAfterLogin');
+    yield put(clearPermissions());
 
     // Redirect to login
     window.location.replace('/login');

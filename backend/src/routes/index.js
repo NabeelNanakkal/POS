@@ -18,6 +18,9 @@ import reportRoutes from './report.routes.js';
 import zohoRoutes from './zoho.routes.js';
 import cashSessionRoutes from './cashSession.routes.js';
 import printerRoutes from './printer.routes.js';
+import rolePermissionRoutes from './rolePermission.routes.js';
+import zohoReportRoutes from './zohoReport.routes.js';
+import dailySummaryRoutes from './dailySummary.routes.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { tenantFilter, injectStore } from '../middleware/tenant.middleware.js';
 
@@ -56,5 +59,8 @@ router.use('/reports', verifyToken, tenantFilter, reportRoutes);
 router.use('/zoho', zohoRoutes);
 router.use('/cash-sessions', verifyToken, tenantFilter, cashSessionRoutes);
 router.use('/printers', verifyToken, tenantFilter, injectStore, printerRoutes);
+router.use('/role-permissions', verifyToken, tenantFilter, rolePermissionRoutes);
+router.use('/zoho-reports',    verifyToken, tenantFilter, zohoReportRoutes);
+router.use('/daily-summary',   verifyToken, tenantFilter, dailySummaryRoutes);
 
 export default router;

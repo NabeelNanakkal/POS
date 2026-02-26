@@ -28,6 +28,10 @@ const Integrations = Loadable(lazy(() => import('views/cashier/settings/Integrat
 const PrintingConfig = Loadable(lazy(() => import('views/cashier/settings/PrintingConfig')));
 const CashManagement = Loadable(lazy(() => import('views/cashier/CashManagement')));
 const BarcodePrint = Loadable(lazy(() => import('views/cashier/BarcodePrint')));
+const RoleManagement       = Loadable(lazy(() => import('views/admin/RoleManagement')));
+const ZohoReports          = Loadable(lazy(() => import('views/admin/ZohoReports')));
+const DailySummary         = Loadable(lazy(() => import('views/admin/DailySummary')));
+const NotificationSettings = Loadable(lazy(() => import('views/admin/NotificationSettings')));
 
 import AuthGuard from './AuthGuard';
 
@@ -116,12 +120,28 @@ const PosRoutes = {
                 {
                   path: 'printing',
                   element: <AuthGuard permittedRoles={['MANAGER', 'STORE_ADMIN']}><PrintingConfig /></AuthGuard>
+                },
+                {
+                  path: 'role-management',
+                  element: <AuthGuard permittedRoles={['STORE_ADMIN']}><RoleManagement /></AuthGuard>
+                },
+                {
+                  path: 'notification-settings',
+                  element: <AuthGuard permittedRoles={['STORE_ADMIN']}><NotificationSettings /></AuthGuard>
                 }
               ]
             },
             {
               path: 'reports',
               element: <AuthGuard permittedRoles={['MANAGER', 'STORE_ADMIN']}><Reports /></AuthGuard>
+            },
+            {
+              path: 'zoho-reports',
+              element: <AuthGuard permittedRoles={['STORE_ADMIN', 'SUPER_ADMIN', 'MANAGER', 'ACCOUNTANT']}><ZohoReports /></AuthGuard>
+            },
+            {
+              path: 'daily-summary',
+              element: <AuthGuard permittedRoles={['STORE_ADMIN', 'SUPER_ADMIN', 'MANAGER', 'ACCOUNTANT']}><DailySummary /></AuthGuard>
             },
             {
               path: 'cash-management',

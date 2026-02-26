@@ -1,21 +1,28 @@
-export const filterMenuByRole = (items, userRole) => {
+const ADMIN_ROLES = ['SUPER_ADMIN', 'STORE_ADMIN'];
+
+/**
+ * @param {Array}  items       - Menu items array
+ * @param {string} userRole    - Current user's role
+ * @param {object|null} permissions - Flat permissions map from Redux/localStorage.
+ *                                    null = full bypass (admin). object = filter by can_view.
+ */
+export const filterMenuByRole = (items, userRole, permissions = null) => {
     // Top level debug log
-    console.log('[filterMenuByRole] CALLED', { 
-        itemCount: items?.length, 
-        userRole, 
-        timestamp: new Date().toISOString() 
+    console.log('[filterMenuByRole] CALLED', {
+        itemCount: items?.length,
+        userRole,
+        timestamp: new Date().toISOString()
     });
 
     if (!items) return [];
 
-    // Temporarily keeping logic simple but verbose to debug
+    const isAdmin = ADMIN_ROLES.includes(userRole);
+
     return items
         .filter(item => {
             const prs = item.permittedRoles;
             if (prs === undefined) return false;
-            // if (!Array.isArray(prs) || prs.length === 0) return false;
 
-            // Simple check logic
             // Exclusions are specified with a leading '!' or 'not:' prefix
             const exclusions = prs
                 .filter(p => typeof p === 'string' && (p.startsWith('!') || p.startsWith('not:')))
@@ -23,28 +30,36 @@ export const filterMenuByRole = (items, userRole) => {
 
             const inclusions = prs.filter(p => !(typeof p === 'string' && (p.startsWith('!') || p.startsWith('not:'))));
 
+            let roleAllowed;
             // If inclusions include 'all' => allow everyone except exclusions
             if (inclusions.includes('all')) {
-                return !exclusions.includes(userRole);
-            }
-
+                roleAllowed = !exclusions.includes(userRole);
             // If explicit inclusions provided => user must be in inclusions and not excluded
-            if (inclusions.length > 0) {
-                return inclusions.includes(userRole) && !exclusions.includes(userRole);
+            } else if (inclusions.length > 0) {
+                roleAllowed = inclusions.includes(userRole) && !exclusions.includes(userRole);
+            // Only exclusions provided => allow all except exclusions
+            } else {
+                roleAllowed = !exclusions.includes(userRole);
             }
 
-            // Only exclusions provided => allow all except exclusions
-            return !exclusions.includes(userRole);
+            if (!roleAllowed) return false;
+
+            // Module-level permission check (skip for admins and items without a module key)
+            if (item.module && !isAdmin && permissions !== null) {
+                if (!permissions[item.module]?.can_view) return false;
+            }
+
+            return true;
         })
         .map(item => {
             if (item.children) {
-                const filteredChildren = filterMenuByRole(item.children, userRole);
-                
+                const filteredChildren = filterMenuByRole(item.children, userRole, permissions);
+
                 if (item.id === 'master-data') {
                     console.log('[filterMenuByRole] DEBUG Master Data:', {
                         original: item.children.length,
                         filtered: filteredChildren.length,
-                        type: item.type, // Check if this is 'collapse'
+                        type: item.type,
                         filteredChildren
                     });
                 }

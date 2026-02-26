@@ -146,8 +146,21 @@ export const getSessions = async ({ storeId, startDate, endDate, status, counter
 export const recordCashSale = async ({ storeId, amount, reference, userId }) => {
   try {
     const session = await getActiveSession(storeId);
-    if (!session) return; // No open session — skip silently
-    await addTransaction({ sessionId: session._id, storeId, type: 'SALE', amount, reference, description: `Cash sale — Order ${reference}`, userId });
+    if (!session) {
+      logger.warn(`Cash session auto-record (SALE): no open session found for store ${storeId}, order ${reference}`);
+      return;
+    }
+    // Use session's own store reference to avoid any ObjectId cast mismatch
+    await addTransaction({
+      sessionId: session._id,
+      storeId: session.store,
+      type: 'SALE',
+      amount,
+      reference,
+      description: `Cash sale — Order ${reference}`,
+      userId,
+    });
+    logger.info(`Cash session auto-record (SALE) OK [${reference}] amount=${amount} session=${session._id}`);
   } catch (err) {
     logger.error(`Cash session auto-record (SALE) failed [${reference}]: ${err.message}`);
   }
@@ -157,8 +170,20 @@ export const recordCashSale = async ({ storeId, amount, reference, userId }) => 
 export const recordCashRefund = async ({ storeId, amount, reference, userId }) => {
   try {
     const session = await getActiveSession(storeId);
-    if (!session) return;
-    await addTransaction({ sessionId: session._id, storeId, type: 'REFUND', amount, reference, description: `Cash refund — Order ${reference}`, userId });
+    if (!session) {
+      logger.warn(`Cash session auto-record (REFUND): no open session found for store ${storeId}, order ${reference}`);
+      return;
+    }
+    await addTransaction({
+      sessionId: session._id,
+      storeId: session.store,
+      type: 'REFUND',
+      amount,
+      reference,
+      description: `Cash refund — Order ${reference}`,
+      userId,
+    });
+    logger.info(`Cash session auto-record (REFUND) OK [${reference}] amount=${amount} session=${session._id}`);
   } catch (err) {
     logger.error(`Cash session auto-record (REFUND) failed [${reference}]: ${err.message}`);
   }

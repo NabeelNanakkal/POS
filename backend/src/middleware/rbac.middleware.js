@@ -72,6 +72,32 @@ export const requireStoreAdmin = (req, res, next) => {
 };
 
 /**
+ * Fine-grained permission check by module + action.
+ * SUPER_ADMIN and STORE_ADMIN always pass (full access).
+ * @param {string} module - Module key (e.g. 'products', 'orders')
+ * @param {string} action - Action key (view | create | edit | delete | print | export)
+ */
+export const checkPermission = (module, action) => async (req, res, next) => {
+  try {
+    if (['SUPER_ADMIN', 'STORE_ADMIN'].includes(req.user?.role)) return next();
+
+    const { getOrCreatePermissions, permissionsArrayToObject } = await import('../services/rolePermission.service.js');
+    const storeId = req.storeId || req.user?.store?._id || req.user?.store;
+    if (!storeId) throw ApiError.forbidden('Permission denied — no store context');
+
+    const doc = await getOrCreatePermissions(storeId, req.user.role);
+    const permsObj = permissionsArrayToObject(doc.permissions);
+
+    if (!permsObj[module]?.[`can_${action}`]) {
+      throw ApiError.forbidden(`You do not have '${action}' permission on '${module}'`);
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * Check if user belongs to the same store or is admin
  */
 export const authorizeSameStoreOrAdmin = (req, res, next) => {

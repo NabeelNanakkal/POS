@@ -2,6 +2,7 @@ import app from './app.js';
 import { config } from './config/constants.js';
 import { connectDB } from './config/database.js';
 import logger from './utils/logger.js';
+import { syncAllStores } from './services/zohoReportSync.service.js';
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
@@ -29,6 +30,13 @@ const server = app.listen(PORT, () => {
 ╚═══════════════════════════════════════════════════════════╝
   `);
   logger.info(`Server running in ${config.env} mode on port ${PORT}`);
+
+  // Zoho report sync — initial run after 45s (let DB settle), then every 5 min
+  const SYNC_INTERVAL_MS = 5 * 60 * 1000;
+  setTimeout(() => {
+    syncAllStores();
+    setInterval(syncAllStores, SYNC_INTERVAL_MS);
+  }, 45 * 1000);
 });
 
 // Handle unhandled promise rejections

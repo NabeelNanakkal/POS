@@ -5,6 +5,7 @@ import RefreshToken from '../models/refresh-token.model.js';
 import Employee from '../models/employee.model.js';
 import ApiError from '../utils/ApiError.js';
 import { config } from '../config/constants.js';
+import { resolveLoginPermissions } from './rolePermission.service.js';
 
 export const register = async (userData, deviceInfo) => {
   const { username, email, password, role, store } = userData;
@@ -62,6 +63,8 @@ export const login = async (email, password, deviceInfo) => {
 
   await RefreshToken.create({ token: refreshToken, user: user._id, expiresAt, deviceInfo });
 
+  const permissions = await resolveLoginPermissions(user);
+
   return {
     user: {
       id: user._id,
@@ -70,6 +73,7 @@ export const login = async (email, password, deviceInfo) => {
       role: user.role,
       store: user.store,
       employeeId: employee ? employee.employeeId : null,
+      permissions,
     },
     accessToken,
     refreshToken,

@@ -387,7 +387,7 @@ const SessionHistoryDialog = ({ open, onClose }) => {
     setLoading(true);
     try {
       const res = await cashSessionService.getSessions({ limit: 30 });
-      setSessions(res.data?.data?.sessions || []);
+      setSessions(res.data?.sessions || []);
     } catch {
       toast.error('Failed to load session history');
     } finally {
@@ -399,7 +399,7 @@ const SessionHistoryDialog = ({ open, onClose }) => {
     setSelected(session);
     try {
       const res = await cashSessionService.getSummary(session._id);
-      setSelectedSummary(res.data?.data);
+      setSelectedSummary(res.data);
     } catch {
       setSelectedSummary(null);
     }
@@ -601,11 +601,11 @@ const CashManagement = () => {
     setLoading(true);
     try {
       const res = await cashSessionService.getActive();
-      const session = res.data?.data;
+      const session = res.data;
       setActiveSession(session || null);
       if (session) {
         const sumRes = await cashSessionService.getSummary(session._id);
-        setSummary(sumRes.data?.data || null);
+        setSummary(sumRes.data || null);
       } else {
         setSummary(null);
       }

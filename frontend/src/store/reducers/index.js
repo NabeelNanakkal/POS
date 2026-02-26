@@ -21,6 +21,7 @@ import report from 'container/report/slice';
 import store from 'container/store/slice';
 import employee from 'container/employee/slice';
 import discount from 'container/discount/slice';
+import permission from 'container/permission/slice';
 
 import menu from './menu';
 import customizationReducer from 'store/customizationReducer';
@@ -48,7 +49,8 @@ const reducer = combineReducers({
   report: report,
   store: store,
   employee: employee,
-  discount: discount
+  discount: discount,
+  permission: permission,
 });
 
 

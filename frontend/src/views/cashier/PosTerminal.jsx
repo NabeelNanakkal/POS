@@ -2020,8 +2020,18 @@ const PosTerminal = () => {
 
   const handlePaymentComplete = async (payments, totalPaid, change) => {
     try {
-      // toast.info('Processing payment...');
-      
+      // Guard: if any payment is CASH and there is no open session, block checkout
+      const hasCashPayment = payments.some(p =>
+        (p.method === 'digital' ? 'DIGITAL' : p.method.toUpperCase()) === 'CASH'
+      );
+      if (hasCashPayment && !activeSession) {
+        toast.warning('A cash session must be open to accept cash payments. Please open a session in Cash Management first.', {
+          position: 'top-center',
+          autoClose: 6000,
+        });
+        return;
+      }
+
       // 1. Create the Order in the database
       const orderData = {
         customer: customer ? (customer._id || customer.id) : null,

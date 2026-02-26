@@ -20,8 +20,8 @@ router.post('/open', openSession);
 // Add manual cash-in / cash-out movement
 router.post('/movement', addCashMovement);
 
-// Session list (managers and above)
-router.get('/', authorize('MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), getSessions);
+// Session list (cashier and above)
+router.get('/', authorize('CASHIER', 'MANAGER', 'STORE_ADMIN', 'SUPER_ADMIN'), getSessions);
 
 // Session detail + transactions
 router.get('/:id/summary', getSessionSummary);

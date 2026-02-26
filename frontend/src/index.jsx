@@ -38,6 +38,18 @@ import { store } from './store/index';
 import { Provider } from 'react-redux';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { setPermissions } from 'container/permission/slice';
+
+// Hydrate permissions from localStorage so AuthGuard and menu filtering
+// work synchronously on hard page refresh (before any API call completes).
+const _storedPermissions = localStorage.getItem('permissions');
+if (_storedPermissions !== null) {
+  try {
+    store.dispatch(setPermissions(JSON.parse(_storedPermissions)));
+  } catch {
+    localStorage.removeItem('permissions');
+  }
+}
 
 root.render(
   <Provider store={store}>

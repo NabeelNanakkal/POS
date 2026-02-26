@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material';
-import { useMemo } from 'react'; // Import useMemo from React
+import { useMemo } from 'react';
+import { useSelector } from 'react-redux';
 
 // project imports
 import NavGroup from './NavGroup';
@@ -7,6 +8,7 @@ import menuItem from 'menu-items';
 import { filterMenuByRole } from 'utils/filterMenuByRole';
 import { getUser } from 'utils/getUser';
 import { useGetMenuMaster } from 'api/menu';
+import { selectPermissions } from 'container/permission/slice';
 
 // ==============================|| SIDEBAR MENU LIST ||============================== //
 
@@ -15,15 +17,17 @@ const MenuList = () => {
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
 
+  const user = getUser();
+  const role = user?.role || '';
+  const permissions = useSelector(selectPermissions);
 
-  // Debug the user and menu filtering on render/refresh to diagnose missing menus
-  if (import.meta.env.DEV) console.debug('[MenuList] user:', user1, 'role:', role, 'menuMaster:', menuMaster);
+  if (import.meta.env.DEV) console.debug('[MenuList] user:', user, 'role:', role, 'menuMaster:', menuMaster);
 
   const filteredItems = useMemo(() => {
-    const items = filterMenuByRole(menuItem, role);
+    const items = filterMenuByRole(menuItem, role, permissions);
     if (import.meta.env.DEV) console.debug('[MenuList] filteredItems:', items);
     return items;
-  }, [role, menuMaster]);
+  }, [role, permissions, menuMaster]);
 
   const navItems = filteredItems.map((item) => {
     switch (item.type) {
@@ -37,8 +41,6 @@ const MenuList = () => {
         );
     }
   });
-
-  // Force log to verify file load - REMOVED
 
   return (
     <Box {...(drawerOpen && { sx: { mt: 1.5 } })}>
